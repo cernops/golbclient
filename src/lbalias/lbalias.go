@@ -32,28 +32,40 @@ type LBcheck struct {
 	Function func(LBalias) bool
 }
 
+var allLBchecks = map[string]LBcheck{
+	"NOLOGIN":       LBcheck{1, checkNoLogin},
+	"AFS":           LBcheck{10, checkAFS},
+	"WEBDAEMON":     LBcheck{8, checkDaemon(80)},
+	"SSHDAEMON":     LBcheck{7, checkDaemon(22)},
+	"FTPDAEMON":     LBcheck{9, checkDaemon(21)},
+	"GRIDFTPDAEMON": LBcheck{11, checkDaemon(2811)},
+	"TMPFULL":       LBcheck{6, checkTmpFull}}
+
+//These are all the current tests
+//
+//
 func daemonListening(port int, proc string) bool {
-	/* try:
-	       f_in=open(procfile,"r")
-	   except:
-	       return False
-	   else:
-	       header = f_in.readline()
-	       for line in f_in:
-	           words = line.split()
-	           (localaddr, localport)   = words[1].split(':')
-	           (remoteaddr, remoteport) = words[2].split(':')
-	           status = words[3]
-	           localport = int(localport,16)
-	           status    = int(status,16)
-	           listening = int('0x0a',16)
-	           if (localport == port) and (status == listening):
-	               return True
-	   finally:
-	       try:
-	           f_in.close()
-	       except NameError:
-	           pass*/
+	file, err := os.Open(proc)
+	if err != nil {
+		fmt.Println("Error openning", proc)
+		return false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	// The format of the file is 'sl  local_address rem_address   st'
+
+	portHex := fmt.Sprintf("%04x", port)
+
+	//fmt.Println("Looking for ", portHex)
+	portOpen, _ := regexp.Compile("^ *[0-9]+: [0-9A-F]+:" + portHex + " [0-9A-F]+:[0-9A-F]+ 0A")
+	for scanner.Scan() {
+		line := scanner.Text()
+		if portOpen.MatchString(line) {
+			fmt.Println("The port is open", port)
+			return true
+		}
+	}
 	return false
 
 }
@@ -112,16 +124,13 @@ func checkNoLogin(lbalias LBalias) bool {
 	if lbalias.Name != "" {
 		nologin[1] += "." + lbalias.Name
 	}
-	fmt.Println("Checking if the files exist", nologin)
 	for _, file := range nologin {
-		fmt.Println("Checking if file exists", file)
 		_, err := os.Stat(file)
 
 		if err == nil {
 			if lbalias.Debug {
 				fmt.Printf("[check_nologin] %s present\n", file)
 			}
-
 			return true
 		}
 	}
@@ -133,56 +142,47 @@ func checkNoLogin(lbalias LBalias) bool {
 
 }
 
-var allLBchecks = map[string]LBcheck{
-	"NOLOGIN":   LBcheck{1, checkNoLogin},
-	"AFS":       LBcheck{10, checkAFS},
-	"WEBDAEMON": LBcheck{8, checkDaemon(80)},
-        "SSHDAEMON": LBcheck{7, checkDaemon(22)},
-        "FTPDAEMON": LBcheck{9, checkDaemon(21)},
-        "GRIDFTPDAEMON": LBcheck{11, checkDaemon(2811)},
-	"TMPFULL":   LBcheck{6, checkTmpFull}}
+//
+// And here we add the methods of the class
+//
+//
 
 func (lbalias LBalias) Evaluate() int {
-	fmt.Println("Evaluating the alias", lbalias)
+	if lbalias.Debug {
+		fmt.Println("[lbalias] Evaluating the alias", lbalias)
+	}
 
 	checks := []string{}
 	for key, _ := range allLBchecks {
 		checks = append(checks, "("+key+")")
 	}
-	//	fmt.Println(checks)
 	f, err := os.Open(lbalias.ConfigFile)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
+
 	scanner := bufio.NewScanner(f)
-	fmt.Println("Configuration file opened")
+	if lbalias.Debug {
+		fmt.Println("[lbalias] Configuration file opened")
+	}
 	comment, _ := regexp.Compile("^(#.*)?$")
 	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checks, "|") + ")")
 	constant, _ := regexp.Compile("(?i)^LOAD (LEMON)|(CONSTANT) (.*)")
 	for scanner.Scan() {
 		line := scanner.Text()
 		if comment.MatchString(line) {
-			//fmt.Println("THERE IS A COMMENT")
 			continue
 		}
 		actions := actions.FindStringSubmatch(line)
 		if len(actions) > 0 {
-			//fmt.Println(actions)
-			//fmt.Println(actions[1])
-			//fmt.Println(actions[1])
-
 			myAction := strings.ToUpper(actions[1])
-			//			fmt.Println("THERE IS AN ACTION", myAction)
-			//if  allLBchecks[myAction].Function != nil {
-			// fmt.Println("CHECKING THE FUNCTION")
 			if allLBchecks[myAction].Function(lbalias) {
 				fmt.Println("THE CHECK OF ", myAction, "FAILED ")
 				return -allLBchecks[myAction].Code
 			}
 			continue
 		}
-		//}
 		if constant.MatchString(line) {
 			fmt.Println("THERE IS A CONSTANT")
 			continue

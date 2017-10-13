@@ -64,12 +64,12 @@ func readLBAliases(filename string) []lbalias.LBalias {
 		configFile := ""
 		if _, err := os.Stat(CONFIG_FILE + "." + aliasNames[i]); !os.IsNotExist(err) {
 			if options.Debug {
-				fmt.Println("  The specific configuration file exists for", aliasNames[i])
+				fmt.Println("[readLBAliases]  The specific configuration file exists for", aliasNames[i])
 			}
 			configFile = CONFIG_FILE + "." + aliasNames[i]
 		} else {
 			if options.Debug {
-				fmt.Println("  The config file does not exist for ", aliasNames[i])
+				fmt.Println("[readLBAliases]  The config file does not exist for ", aliasNames[i])
 			}
 			configFile = CONFIG_FILE
 		}
@@ -99,7 +99,7 @@ func main() {
 	lbAliases := readLBAliases(LBALIASES_FILE)
 
 	if options.Debug {
-		fmt.Println("The aliases from the configuration file are: ", lbAliases)
+		fmt.Println("[main] The aliases from the configuration file are: ", lbAliases)
 	}
 	// Checking the static configuration
 
@@ -108,5 +108,5 @@ func main() {
 		lbalias.Evaluate()
 	}
 
-	fmt.Println("Everything worked!")
+	fmt.Println("[main] Everything worked!")
 }
