@@ -39,9 +39,9 @@ func readLBAliases(filename string) []lbalias.LBalias {
 	aliasNames := []string{}
 	lbAliases := []lbalias.LBalias{}
 	f, err := os.Open(filename)
-	if err!= nil {
-           panic(err)
- } 
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
@@ -74,10 +74,11 @@ func readLBAliases(filename string) []lbalias.LBalias {
 			configFile = CONFIG_FILE
 		}
 		lbAliases = append(lbAliases, lbalias.LBalias{Name: aliasNames[i],
-                                                              Debug: options.Debug,
-                                                              NoLogin: options.NoLogin,
-                                                              Syslog: options.Syslog, 
-                                                              ConfigFile: configFile})
+			Debug:          options.Debug,
+			NoLogin:        options.NoLogin,
+			Syslog:         options.Syslog,
+			ConfigFile:     configFile,
+			CheckXsessions: 0})
 	}
 
 	return lbAliases
