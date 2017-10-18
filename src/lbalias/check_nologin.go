@@ -17,11 +17,11 @@ func checkNoLogin(lbalias *LBalias, line string) bool {
 		_, err := os.Stat(file)
 
 		if err == nil {
-			lbalias.DebugMessage("[check_nologin] %s present\n", file)
+			lbalias.DebugMessage("[check_nologin] ", file, " present")
 			return true
 		}
 	}
-	lbalias.DebugMessage("[check_nologin] users allowed to log in\n")
+	lbalias.DebugMessage("[check_nologin] users allowed to log in")
 	return false
 
 }

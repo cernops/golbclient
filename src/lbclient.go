@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 //Files for configuration
@@ -26,6 +28,8 @@ type Options struct {
 	GData []string `short:"g" long:"gdata" description:"Data for OID (required for snmp interface)"`
 	NData []string `short:"n" long:"ndata" description:"Data for OID (required for snmp interface)"`
 }
+
+const OID = ".1.3.6.1.4.1.96.255.1"
 
 var options Options
 
@@ -62,10 +66,12 @@ func readLBAliases(filename string) []lbalias.LBalias {
 	for i := 0; i < len(aliasNames); i++ {
 		//Check if the file exist
 		configFile := ""
+		aliasName := ""
 		if _, err := os.Stat(CONFIG_FILE + "." + aliasNames[i]); !os.IsNotExist(err) {
 			if options.Debug {
 				fmt.Println("[readLBAliases]  The specific configuration file exists for", aliasNames[i])
 			}
+			aliasName = aliasNames[i]
 			configFile = CONFIG_FILE + "." + aliasNames[i]
 		} else {
 			if options.Debug {
@@ -73,7 +79,7 @@ func readLBAliases(filename string) []lbalias.LBalias {
 			}
 			configFile = CONFIG_FILE
 		}
-		lbAliases = append(lbAliases, lbalias.LBalias{Name: aliasNames[i],
+		lbAliases = append(lbAliases, lbalias.LBalias{Name: aliasName,
 			Debug:          options.Debug,
 			NoLogin:        options.NoLogin,
 			Syslog:         options.Syslog,
@@ -104,10 +110,24 @@ func main() {
 	}
 	// Checking the static configuration
 
-	for i := 0; i < len(lbAliases); i++ {
-		lbalias := lbAliases[i]
-		lbalias.Evaluate()
+	for i, _ := range lbAliases {
+		lbAliases[i].Evaluate()
 	}
+	metricType := "integer"
+	metricValue := ""
+	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
+		metricValue = strconv.Itoa(lbAliases[0].Metric)
+	} else {
+		keyvaluelist := []string{}
+		for _, lbalias := range lbAliases {
+			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
+		}
+		metricValue = strings.Join(keyvaluelist, ",")
+		metricType = "string"
+	}
+	if options.Debug {
+		fmt.Printf("[main] metric = %s\n", metricValue)
+	}
+	fmt.Printf("%s\n%s\n%s\n", OID, metricType, metricValue)
 
-	fmt.Println("[main] Everything worked!")
 }

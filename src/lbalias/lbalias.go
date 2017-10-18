@@ -4,12 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 )
-
-const ACCEPTABLE_BLOCK_RATE = 0.90
-const ACCEPTABLE_INODE_RATE = 0.95
 
 type LBalias struct {
 	Name           string
@@ -21,12 +20,13 @@ type LBalias struct {
 	MData          []string
 	CheckXsessions int
 	RogerState     string
-	//	Metric     string
+	Metric         int
 	//	CheckSwapping bool
 	//	CheckXsessions bool
 	CheckMetricList []MetricEntry
-	//	LoadMetricList []int
-	//	ConstantList []int
+	LoadMetricList  []MetricEntry
+	ConstantList    []int
+	CheckAttributes map[string]bool
 }
 type LBcheck struct {
 	Code     int
@@ -34,7 +34,8 @@ type LBcheck struct {
 }
 
 var allLBchecks = map[string]LBcheck{
-	"NOLOGIN":       LBcheck{1, checkNoLogin},
+	"NOLOGIN": LBcheck{1, checkNoLogin},
+	//"FILEIOE":       LBcheck{2, ,
 	"TMPFULL":       LBcheck{6, checkTmpFull},
 	"SSHDAEMON":     LBcheck{7, checkDaemon(22)},
 	"WEBDAEMON":     LBcheck{8, checkDaemon(80)},
@@ -43,8 +44,10 @@ var allLBchecks = map[string]LBcheck{
 	"GRIDFTPDAEMON": LBcheck{11, checkDaemon(2811)},
 	"LEMON":         LBcheck{12, checkLemon},
 	"ROGER":         LBcheck{13, checkRoger},
+	"COMMAND":       LBcheck{14, checkCommand},
 	//The rest are a bit special. They don't return immediately
-	"XSESSIONS": LBcheck{0, checkXsession}}
+	"XSESSIONS": LBcheck{0, checkAttribute("xsession")},
+	"SWAPPING":  LBcheck{0, checkAttribute("swapping")}}
 
 //These are all the current tests
 //
@@ -52,12 +55,19 @@ var allLBchecks = map[string]LBcheck{
 
 // The lemon metrics are done in two steps: The first one is to add all of them to the configuration
 // The second step is to call all of them in one go
-func checkXsession(lbalias *LBalias, line string) bool {
-	lbalias.DebugMessage("[xsessions] Checking the xsessions")
+func checkAttribute(name string) func(*LBalias, string) bool {
 
-	lbalias.CheckXsessions = 1
-	return false
+	return func(lbalias *LBalias, line string) bool {
+		if lbalias.CheckAttributes == nil {
+			lbalias.CheckAttributes = map[string]bool{}
+		}
+		lbalias.DebugMessage("[check_attribute] Checking the attribute ", name)
+		lbalias.CheckAttributes[name] = true
+
+		return false
+	}
 }
+
 //
 // And here we add the methods of the class
 //
@@ -69,7 +79,7 @@ func (lbalias LBalias) DebugMessage(s ...interface{}) {
 	}
 
 }
-func (lbalias LBalias) Evaluate() int {
+func (lbalias *LBalias) Evaluate() {
 	lbalias.DebugMessage("[lbalias] Evaluating the alias " + lbalias.Name)
 
 	checks := []string{}
@@ -87,7 +97,7 @@ func (lbalias LBalias) Evaluate() int {
 
 	comment, _ := regexp.Compile("^(#.*)?$")
 	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checks, "|") + ")")
-	constant, _ := regexp.Compile("(?i)^LOAD (LEMON)|(CONSTANT) (.*)")
+	constant, _ := regexp.Compile("(?i)^LOAD ((LEMON)|(CONSTANT)) (.*)")
 	for scanner.Scan() {
 		line := scanner.Text()
 		if comment.MatchString(line) {
@@ -98,9 +108,10 @@ func (lbalias LBalias) Evaluate() int {
 
 			myAction := strings.ToUpper(actions[1])
 
-			if allLBchecks[myAction].Function(&lbalias, line) {
-				fmt.Println("THE CHECK OF ", myAction, "FAILED ")
-				return -allLBchecks[myAction].Code
+			if allLBchecks[myAction].Function(lbalias, line) {
+				lbalias.DebugMessage("THE CHECK OF ", myAction, "FAILED ")
+				lbalias.Metric = -allLBchecks[myAction].Code
+				return
 			}
 
 			continue
@@ -116,8 +127,179 @@ func (lbalias LBalias) Evaluate() int {
 	if len(lbalias.CheckMetricList) > 0 {
 		if lbalias.checkLemonMetric() {
 			lbalias.DebugMessage("[main] Lemon metric check failed")
-			return -allLBchecks["LEMON"].Code
+			lbalias.Metric = -allLBchecks["LEMON"].Code
+			return
 		}
 	}
-	return 0
+	lbalias.Metric = 0
+	if len(lbalias.ConstantList) > 0 {
+		lbalias.Metric = lbalias.evaluateConstant()
+	}
+	if len(lbalias.LoadMetricList) > 0 {
+		lbalias.Metric += lbalias.evaluateLoadLemon()
+	}
+	if lbalias.Metric == 0 {
+		lbalias.DebugMessage("Default method to calculate the load")
+		lbalias.Metric = lbalias.defaultLoad()
+	}
+}
+
+func (lbalias *LBalias) evaluateConstant() int {
+	return 100
+}
+func (lbalias *LBalias) evaluateLoadLemon() int {
+	return 10
+}
+
+func (lbalias *LBalias) defaultLoad() int {
+
+	swap := lbalias.swapFree()
+
+	lbalias.DebugMessage(fmt.Sprintf("[main] result of swap formula = %f", swap))
+	cpuload := lbalias.cpuLoad()
+	lbalias.DebugMessage(fmt.Sprintf("[main] result of cpu formula = %f", cpuload))
+
+	swaping := float32(0)
+	if lbalias.CheckAttributes["swapping"] {
+		//   swaping = stat_swaping()
+		lbalias.DebugMessage(fmt.Sprintf("[main] result of swaping formula = %f", swaping))
+	}
+
+	f_sm, nb_processes := lbalias.sessionManager()
+	if lbalias.CheckAttributes["xsessions"] {
+		lbalias.DebugMessage(fmt.Sprintf("[main] result of X sessions formula = %f", f_sm))
+	} else {
+		f_sm = float32(0)
+	}
+
+	lbalias.DebugMessage(fmt.Sprintf("[main] number of processes: %d", int(nb_processes)))
+
+	//  users = count_users()
+	users := float32(3.0)
+	lbalias.DebugMessage(fmt.Sprintf("[main] number of users logged in: %d", int(users)))
+
+	myLoad := (((swap + users / 25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * f_sm)) / 6.
+
+	//((swap + users / 25.) / 2.) + (2. * swaping * self.check_swaping) + (3. * cpuload) + (2. * f_sm * self.check_xsessions)) / 6.
+	lbalias.DebugMessage(fmt.Sprintf("[main] LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, f_sm))
+	return int(myLoad * 1000)
+
+}
+
+func (lbalias *LBalias) swapFree() float32 {
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		fmt.Println("Error openning", "/proc/meminfo")
+		return -2
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	memoryMap := map[string]int{}
+	//fmt.Println("Looking for ", portHex)
+	memory, _ := regexp.Compile("^((MemTotal)|(MemFree)|(SwapTotal)|(SwapFree)|(CommitLimit)|(Committed_AS)): +([0-9]+)")
+	for scanner.Scan() {
+		line := scanner.Text()
+		match := memory.FindStringSubmatch(line)
+		if len(match) > 0 {
+
+			memoryMap[match[1]], _ = strconv.Atoi(match[8])
+		}
+	}
+	lbalias.DebugMessage(fmt.Sprintf(
+		"Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
+		memoryMap["MemTotal"], memoryMap["MemFree"], memoryMap["CommitLimit"],
+		memoryMap["Committed_AS"], memoryMap["SwapTotal"], memoryMap["SwapFree"]))
+
+	if memoryMap["SwapTotal"] == 0 {
+		memoryMap["SwapTotal"], memoryMap["SwapFree"] = memoryMap["MemTotal"], memoryMap["MemFree"]
+	}
+	// recalculate swap numbers in Gbytes
+	memoryMap["SwapTotal"] = memoryMap["SwapTotal"] / (1024 * 1024)
+	memoryMap["SwapFree"] = memoryMap["SwapFree"] / (1024 * 1024)
+
+	if (100*memoryMap["SwapFree"] < 75*memoryMap["SwapTotal"]) ||
+		(100*memoryMap["Committed_AS"] > (75 * memoryMap["CommitLimit"])) {
+		return 5
+	}
+	if memoryMap["SwapTotal"] == 0 {
+		return 0
+	}
+	return (21 - (20. * float32(memoryMap["SwapFree"]) / float32(memoryMap["SwapTotal"]))) / 6.
+}
+
+func (lbalias *LBalias) cpuLoad() float32 {
+	file, err := os.Open("/proc/loadavg")
+	if err != nil {
+		fmt.Println("Error openning", "/proc/loadavg")
+		return -2
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+	line := scanner.Text()
+	cpu := strings.Split(line, " ")
+
+	cpuFloat, _ := strconv.ParseFloat(cpu[0], 32)
+	return float32(cpuFloat / 10.)
+} /*
+
+
+def stat_swaping():
+    P1 = get_pagecounters()
+    time.sleep(2)
+    P2 = get_pagecounters()
+    P=abs((P2-P1)/2)
+    if (P>5000):
+        m=1.
+    else:
+        m=P
+        m=m/5000.
+    if debug:
+        print m
+    return(m)*/
+
+func (lbalias *LBalias) sessionManager() (float32, float32) {
+
+	out, err := exec.Command("/bin/ps", "axw").Output()
+
+	if err != nil {
+		fmt.Println("Error executing the ps command!", err)
+		return -10, -10
+	}
+
+	//Let's parse the output, and collect the number of processes
+	f_sm, nb_processes := 0.0, -1.0
+	//There are 3 processes per gnome sesion, and 4 for the fvm
+	gnome, _ := regexp.Compile("^([^ ]+ +){4}[^ ]*((gnome-session)|(kdesktop))")
+	fvm, _ := regexp.Compile("^([^ ]+ +){4}[^ ]*fvwm")
+
+	for _, line := range strings.Split(string(out), "\n") {
+		nb_processes++
+		if gnome.MatchString(line) {
+			f_sm += 1 / 3.
+		}
+		if fvm.MatchString(line) {
+			f_sm += 1 / 4.
+		}
+	}
+	return float32(f_sm), float32(nb_processes)
+}
+
+func (lbalias *LBalias) count_users() int {
+	//LOGIN_PROCESS := 6
+	//USER_PROCESS := 7
+	nb_users := 0 /*
+	   utmp.utmpaccess.setutent()
+	   while True:
+	       rec = utmp.utmpaccess.getutent()
+	       if rec is None:
+	           utmp.utmpaccess.endutent()
+	           return (nb_users - 1)
+	       elif (rec[0] == USER_PROCESS) or (rec[0] == LOGIN_PROCESS):
+	           nb_users = nb_users + 1
+	*/
+	return nb_users
 }
