@@ -1,30 +1,36 @@
 package lbalias
 
+import (
+	"fmt"
+	"os/exec"
+	"regexp"
+	"strings"
+)
 
-//TO DO
 func checkCommand(lbalias *LBalias, line string) bool {
-	
-	/*
-	    rc = 0
-    childpid = 0
-    if debug:
-        printf("[check_command] Running '%s'\n"," ".join(command))
-    p = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    try:
-        stdoutdata, stderrdata = p.communicate()
-        rc = p.wait()
-        if stderrdata:
-            if debug:
-                printf("[check_command] stderr: %s\n",str(stderrdata))
-        if debug:
-            printf("[check_command] return code: %s\n",str(rc))
-    except Exception as e:
-        if debug:
-            printf("[check_command] exception catched: %s. Ignoring script return code\n", e)
-        rc = 0
-    return rc
-	
-	
-	*/
+	command, _ := regexp.Compile("(?i)^CHECK command[ ]*([^ ]+)[ ]*(.*)")
+
+	found := command.FindStringSubmatch(line)
+
+	if len(found) > 0 {
+		args := []string{}
+		if found[2] != "" {
+			args = strings.Split(found[2], " ")
+		}
+		lbalias.DebugMessage("[check_command] Running '", found[1], args, "'")
+		out, err := exec.Command(found[1], args...).Output()
+
+		if err != nil {
+			fmt.Println(err)
+			rc := err.(*exec.ExitError)
+			fmt.Println("[check_command] exception catched: ", found[1], found[2], ". Ignoring script return code", err)
+			fmt.Println("[check_command] return code: ", rc)
+			return true
+
+		}
+		lbalias.DebugMessage("[check_command] output", string(out))
+		lbalias.DebugMessage("[check_command] return code: 0 ")
+		return false
+	}
 	return true
 }

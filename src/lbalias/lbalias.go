@@ -3,6 +3,7 @@ package lbalias
 import (
 	"bufio"
 	"fmt"
+
 	"os"
 	"os/exec"
 	"regexp"
@@ -25,7 +26,7 @@ type LBalias struct {
 	//	CheckXsessions bool
 	CheckMetricList []MetricEntry
 	LoadMetricList  []MetricEntry
-	ConstantList    []int
+	Constant        float32
 	CheckAttributes map[string]bool
 }
 type LBcheck struct {
@@ -34,20 +35,20 @@ type LBcheck struct {
 }
 
 var allLBchecks = map[string]LBcheck{
-	"NOLOGIN": LBcheck{1, checkNoLogin},
-	//"FILEIOE":       LBcheck{2, ,
+	"NOLOGIN":       LBcheck{1, checkNoLogin},
 	"TMPFULL":       LBcheck{6, checkTmpFull},
 	"SSHDAEMON":     LBcheck{7, checkDaemon(22)},
 	"WEBDAEMON":     LBcheck{8, checkDaemon(80)},
 	"FTPDAEMON":     LBcheck{9, checkDaemon(21)},
 	"AFS":           LBcheck{10, checkAFS},
 	"GRIDFTPDAEMON": LBcheck{11, checkDaemon(2811)},
-	"LEMON":         LBcheck{12, checkLemon},
+	"LEMON":         LBcheck{12, checkLemon("check")},
 	"ROGER":         LBcheck{13, checkRoger},
 	"COMMAND":       LBcheck{14, checkCommand},
 	//The rest are a bit special. They don't return immediately
 	"XSESSIONS": LBcheck{0, checkAttribute("xsession")},
-	"SWAPPING":  LBcheck{0, checkAttribute("swapping")}}
+	"SWAPPING":  LBcheck{0, checkAttribute("swapping")},
+	"LEMONLOAD": LBcheck{17, checkLemon("load")}}
 
 //These are all the current tests
 //
@@ -116,8 +117,22 @@ func (lbalias *LBalias) Evaluate() {
 
 			continue
 		}
-		if constant.MatchString(line) {
-			fmt.Println("THERE IS A CONSTANT")
+		constants :=
+			constant.FindStringSubmatch(line)
+		if len(constants) > 0 {
+			fmt.Println(constants[1])
+			if strings.ToUpper(constants[1]) == "LEMON" {
+				if allLBchecks["LEMONLOAD"].Function(lbalias, line) {
+					fmt.Println("Error adding the lemon metric for the load")
+					lbalias.Metric = -allLBchecks["LEMONLOAD"].Code
+					return
+				}
+			} else {
+				if lbalias.addConstant(constants[4]) {
+					lbalias.Metric = -16
+					return
+				}
+			}
 			continue
 
 		}
@@ -131,24 +146,32 @@ func (lbalias *LBalias) Evaluate() {
 			return
 		}
 	}
-	lbalias.Metric = 0
-	if len(lbalias.ConstantList) > 0 {
-		lbalias.Metric = lbalias.evaluateConstant()
-	}
+	lbalias.Metric = int(lbalias.Constant)
+
 	if len(lbalias.LoadMetricList) > 0 {
-		lbalias.Metric += lbalias.evaluateLoadLemon()
+		lemon_load := lbalias.evaluateLoadLemon()
+		if lemon_load < 0 {
+			fmt.Println("Lemon load returned negative!")
+			lbalias.Metric = -allLBchecks["LEMONLOAD"].Code
+			return
+		}
+		lbalias.Metric += lemon_load
 	}
 	if lbalias.Metric == 0 {
 		lbalias.DebugMessage("Default method to calculate the load")
 		lbalias.Metric = lbalias.defaultLoad()
 	}
 }
-
-func (lbalias *LBalias) evaluateConstant() int {
-	return 100
-}
-func (lbalias *LBalias) evaluateLoadLemon() int {
-	return 10
+func (lbalias *LBalias) addConstant(exp string) bool {
+	lbalias.DebugMessage("[add_constant] Adding Constant ", exp)
+	f, err := strconv.ParseFloat(exp, 32)
+	if err != nil {
+		fmt.Println("Error parsing the number from ", exp)
+		return true
+	}
+	fmt.Println("[add_constant] value=", f)
+	lbalias.Constant += float32(f)
+	return false
 }
 
 func (lbalias *LBalias) defaultLoad() int {
@@ -165,7 +188,7 @@ func (lbalias *LBalias) defaultLoad() int {
 		lbalias.DebugMessage(fmt.Sprintf("[main] result of swaping formula = %f", swaping))
 	}
 
-	f_sm, nb_processes := lbalias.sessionManager()
+	f_sm, nb_processes, users := lbalias.sessionManager()
 	if lbalias.CheckAttributes["xsessions"] {
 		lbalias.DebugMessage(fmt.Sprintf("[main] result of X sessions formula = %f", f_sm))
 	} else {
@@ -174,11 +197,9 @@ func (lbalias *LBalias) defaultLoad() int {
 
 	lbalias.DebugMessage(fmt.Sprintf("[main] number of processes: %d", int(nb_processes)))
 
-	//  users = count_users()
-	users := float32(3.0)
 	lbalias.DebugMessage(fmt.Sprintf("[main] number of users logged in: %d", int(users)))
 
-	myLoad := (((swap + users / 25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * f_sm)) / 6.
+	myLoad := (((swap + users/25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * f_sm)) / 6.
 
 	//((swap + users / 25.) / 2.) + (2. * swaping * self.check_swaping) + (3. * cpuload) + (2. * f_sm * self.check_xsessions)) / 6.
 	lbalias.DebugMessage(fmt.Sprintf("[main] LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, f_sm))
@@ -261,20 +282,22 @@ def stat_swaping():
         print m
     return(m)*/
 
-func (lbalias *LBalias) sessionManager() (float32, float32) {
+func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 
-	out, err := exec.Command("/bin/ps", "axw").Output()
+	out, err := exec.Command("/bin/ps", "auxw").Output()
 
 	if err != nil {
 		fmt.Println("Error executing the ps command!", err)
-		return -10, -10
+		return -10, -10, -10
 	}
 
 	//Let's parse the output, and collect the number of processes
 	f_sm, nb_processes := 0.0, -1.0
+	users := map[string]bool{}
 	//There are 3 processes per gnome sesion, and 4 for the fvm
-	gnome, _ := regexp.Compile("^([^ ]+ +){4}[^ ]*((gnome-session)|(kdesktop))")
-	fvm, _ := regexp.Compile("^([^ ]+ +){4}[^ ]*fvwm")
+	gnome, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
+	fvm, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*fvwm")
+	user, _ := regexp.Compile("^([^ ]+)")
 
 	for _, line := range strings.Split(string(out), "\n") {
 		nb_processes++
@@ -284,22 +307,11 @@ func (lbalias *LBalias) sessionManager() (float32, float32) {
 		if fvm.MatchString(line) {
 			f_sm += 1 / 4.
 		}
-	}
-	return float32(f_sm), float32(nb_processes)
-}
+		a := user.FindStringSubmatch(line)
+		if len(a) > 0 {
+			users[a[1]] = true
+		}
 
-func (lbalias *LBalias) count_users() int {
-	//LOGIN_PROCESS := 6
-	//USER_PROCESS := 7
-	nb_users := 0 /*
-	   utmp.utmpaccess.setutent()
-	   while True:
-	       rec = utmp.utmpaccess.getutent()
-	       if rec is None:
-	           utmp.utmpaccess.endutent()
-	           return (nb_users - 1)
-	       elif (rec[0] == USER_PROCESS) or (rec[0] == LOGIN_PROCESS):
-	           nb_users = nb_users + 1
-	*/
-	return nb_users
+	}
+	return float32(f_sm), float32(nb_processes), float32(len(users) - 1)
 }

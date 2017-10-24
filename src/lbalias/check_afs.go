@@ -1,20 +1,18 @@
 package lbalias
 
+import (
+	"fmt"
+	"io/ioutil"
+)
+
 const AFS_DIR = "/afs/cern.ch/user/"
 
-
-//TO DO 
 func checkAFS(lbalias *LBalias, line string) bool {
-	    /*try:
-        statinfo = os.stat(AFS_DIR)
-        dirs = os.listdir(AFS_DIR)
-        for file in dirs:
-            if debug:
-                printf("[check_afs] %s%s\n", AFS_DIR, file)
-            statinfo = os.stat(AFS_DIR + file)
-    except:
-        return ERR_AFSDEAD	 */
-	
-	return true
-}
+	_, err := ioutil.ReadDir(AFS_DIR)
+	if err != nil {
+		fmt.Println("Error checking afs", err)
+		return true
+	}
 
+	return false
+}

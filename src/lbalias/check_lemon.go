@@ -16,16 +16,16 @@ type MetricEntry struct {
 	Index                int
 	Value                float64
 }
-
-func checkLemon(lbalias *LBalias, line string) bool {
+func checkLemon(operation string) func (lbalias *LBalias, line string) bool {
+	return  func (lbalias *LBalias, line string) bool {
 
 	lbalias.DebugMessage("[add_lemon_check] Adding Lemon metric ", line)
 
-	actions, _ := regexp.Compile("(?i)^CHECK LEMON ([-])?(_)?([0-9]+)(:[0-9]+)?([^0-9]+)([0-9]*.?[0-9]*)")
+	actions, _ := regexp.Compile("(?i)^((CHECK)|(LOAD)) LEMON ([-])?(_)?([0-9]+)(:[0-9]+)?(([^0-9]+)([0-9]*.?[0-9]*))?")
 
 	found := actions.FindStringSubmatch(line)
 	if len(found) > 0 {
-		prefix_op, underscore, metric, index, op, value := found[1], found[2], found[3], found[4], found[5], found[6]
+		prefix_op, underscore, metric, index, op, value := found[4], found[5], found[6], found[7], found[9], found[10]
 		if underscore != "_" {
 			fmt.Printf("[add_lemon_check] Invalid metric.  Must start with _ (", found[0], ")")
 			return true
@@ -40,21 +40,22 @@ func checkLemon(lbalias *LBalias, line string) bool {
 			return true
 		}
 		valueFloat, err := strconv.ParseFloat(value, 64)
+		if operation == "check" {
 		lbalias.CheckMetricList = append(lbalias.CheckMetricList, MetricEntry{prefix_op, metric, op, indexInt, valueFloat})
+		} else {
+					lbalias.LoadMetricList = append(lbalias.LoadMetricList, MetricEntry{prefix_op, metric, op, indexInt, valueFloat})
+
+		}
 		//lbalias.MetricList= append(lbalias.MetricList, "")
 	} else {
-		fmt.Printf("[add_lemon_check] Invalid expresion: ", line)
+		fmt.Println("[add_lemon_check] Invalid expresion: ", line)
 		return true
 	}
 	return false
 }
+}
 
-func (lbalias *LBalias) checkLemonMetric() bool {
-
-	var commandArgs = []string{"--script", "-m", ""}
-	for _, m := range lbalias.CheckMetricList {
-		commandArgs[2] += m.Metric + " "
-	}
+func (lbalias *LBalias) runLemonCommand(commandArgs []string ) map[string]string {
 	lbalias.DebugMessage("Running ", commandArgs)
 	out, err := exec.Command(LEMON_CLI, commandArgs...).Output()
 
@@ -74,6 +75,16 @@ func (lbalias *LBalias) checkLemonMetric() bool {
 		valuelist[result[1]] = strings.Join(result[3:], " ")
 	}
 	lbalias.DebugMessage("[lemon metric] ", valuelist)
+	return valuelist
+}
+
+func (lbalias *LBalias) checkLemonMetric() bool {
+
+	var commandArgs = []string{"--script", "-m", ""}
+	for _, m := range lbalias.CheckMetricList {
+		commandArgs[2] += m.Metric + " "
+	}
+	valuelist := lbalias.runLemonCommand(commandArgs)
 
 	//And now, going through the metrics, let's see if the formula holds
 
@@ -131,3 +142,55 @@ func (lbalias *LBalias) checkLemonMetric() bool {
 
 	return false
 }
+
+func (lbalias *LBalias) evaluateLoadLemon() int {
+	lbalias.DebugMessage("Ready to calculate the lemon load")
+	var commandArgs = []string{"--script", "-m", ""}
+	for _, m := range lbalias.LoadMetricList {
+		commandArgs[2] += m.Metric + " "
+	}
+	valuelist := lbalias.runLemonCommand(commandArgs)
+	lbalias.DebugMessage(valuelist)
+	load := 0
+	for _, m := range lbalias.LoadMetricList {
+			if val, ok := valuelist[m.Metric]; ok {
+			values := strings.Split(val, " ")
+			position := m.Index - 1
+			if len(values) >= position {
+				value, err := strconv.ParseFloat(values[position], 64)
+				if err != nil {
+					fmt.Println("Error converting the string to float")
+				}
+				lbalias.DebugMessage("Lemon Metric ", m.Metric, " value ", value)
+				lbalias.DebugMessage("Compare '", m.Op, "' ", value, " with limit ", m.Value)
+
+				switch m.Op {
+					case "": 
+					load += int(value)
+				case "+":
+					load  += int(value) + int(m.Value)
+				case "*":
+					load  += int(value) * int(m.Value)
+				case "-":
+					load  += int(value) - int(m.Value)
+				case "/":
+					load  += int(value) / int(m.Value)
+				default:
+					fmt.Println("Don't now!")
+					return -1
+				}
+
+			} else {
+				fmt.Println("The metric ", m.Metric, " is supposed to create at least ", position, " values")
+				return -1
+			}
+
+		} else {
+			fmt.Println("The metric ", m.Metric, " does not have a value!")
+			return -1
+		}
+
+	}		
+	return load
+}
+
