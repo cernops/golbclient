@@ -29,6 +29,11 @@ type LBalias struct {
 	Constant        float32
 	CheckAttributes map[string]bool
 }
+
+func (self LBalias) String() string {
+	return  fmt.Sprintf("Alias name %s with load of %f and loadmetrics %v", self.Name, self.Constant, self.LoadMetricList)
+}
+
 type LBcheck struct {
 	Code     int
 	Function func(*LBalias, string) bool
@@ -120,7 +125,7 @@ func (lbalias *LBalias) Evaluate() {
 		constants :=
 			constant.FindStringSubmatch(line)
 		if len(constants) > 0 {
-			fmt.Println(constants[1])
+			//fmt.Println(constants[1])
 			if strings.ToUpper(constants[1]) == "LEMON" {
 				if allLBchecks["LEMONLOAD"].Function(lbalias, line) {
 					fmt.Println("Error adding the lemon metric for the load")

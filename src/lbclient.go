@@ -66,18 +66,18 @@ func readLBAliases(filename string) []lbalias.LBalias {
 	for i := 0; i < len(aliasNames); i++ {
 		//Check if the file exist
 		configFile := ""
-		aliasName := ""
+		aliasName := aliasNames[i]
 		if _, err := os.Stat(CONFIG_FILE + "." + aliasNames[i]); !os.IsNotExist(err) {
 			if options.Debug {
-				fmt.Println("[readLBAliases]  The specific configuration file exists for", aliasNames[i])
+				fmt.Println("[readLBAliases]  The specific configuration file exists for", aliasName)
 			}
-			aliasName = aliasNames[i]
 			configFile = CONFIG_FILE + "." + aliasNames[i]
 		} else {
 			if options.Debug {
-				fmt.Println("[readLBAliases]  The config file does not exist for ", aliasNames[i])
+				fmt.Println("[readLBAliases]  The config file does not exist for ", aliasName)
 			}
-			configFile = CONFIG_FILE
+			continue
+			//configFile = CONFIG_FILE
 		}
 		lbAliases = append(lbAliases, lbalias.LBalias{Name: aliasName,
 			Debug:          options.Debug,
@@ -85,6 +85,11 @@ func readLBAliases(filename string) []lbalias.LBalias {
 			Syslog:         options.Syslog,
 			ConfigFile:     configFile,
 			CheckXsessions: 0})
+		//fmt.Println(lbAliases)
+		//fmt.Println(aliasName)
+	}
+	if len(lbAliases) == 0 {
+		lbAliases = append(lbAliases, lbalias.LBalias{Name: "", Debug: options.Debug, NoLogin: options.NoLogin, Syslog: options.Syslog, ConfigFile: CONFIG_FILE, CheckXsessions: 0})
 	}
 
 	return lbAliases
@@ -119,9 +124,12 @@ func main() {
 		metricValue = strconv.Itoa(lbAliases[0].Metric)
 	} else {
 		keyvaluelist := []string{}
+		fmt.Println("And let's go to print the results")
 		for _, lbalias := range lbAliases {
+			fmt.Println(lbalias)
 			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
 		}
+		fmt.Println(keyvaluelist)
 		metricValue = strings.Join(keyvaluelist, ",")
 		metricType = "string"
 	}

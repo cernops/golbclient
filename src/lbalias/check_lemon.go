@@ -161,24 +161,25 @@ func (lbalias *LBalias) evaluateLoadLemon() int {
 				if err != nil {
 					fmt.Println("Error converting the string to float")
 				}
-				lbalias.DebugMessage("Lemon Metric ", m.Metric, " value ", value)
+				lbalias.DebugMessage("Lemon Metric for Load ", m.Metric, " value ", value)
 				lbalias.DebugMessage("Compare '", m.Op, "' ", value, " with limit ", m.Value)
 
 				switch m.Op {
 					case "": 
 					load += int(value)
 				case "+":
-					load  += int(value) + int(m.Value)
+					load  += int(value + m.Value)
 				case "*":
-					load  += int(value) * int(m.Value)
+					load  += int(value * m.Value)
 				case "-":
-					load  += int(value) - int(m.Value)
+					load  += int(value - m.Value)
 				case "/":
-					load  += int(value) / int(m.Value)
+					load  += int(value / m.Value)
 				default:
 					fmt.Println("Don't now!")
 					return -1
 				}
+				lbalias.DebugMessage("The new load is ", load)
 
 			} else {
 				fmt.Println("The metric ", m.Metric, " is supposed to create at least ", position, " values")
@@ -190,7 +191,8 @@ func (lbalias *LBalias) evaluateLoadLemon() int {
 			return -1
 		}
 
-	}		
+	}
+	lbalias.DebugMessage(fmt.Sprintf("The load for the alias is %v", load))
 	return load
 }
 
