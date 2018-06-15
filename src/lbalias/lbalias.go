@@ -92,7 +92,7 @@ func (lbalias *LBalias) Evaluate() {
 				lbalias.Metric -= allLBchecks[myAction].Code()
 
 				/*
-					Do we really want to abort?
+					Do we really want to abort? YES, PLEASE, with the Code value
 						*	Return [false] for [check] or [-1] for [load]
 				*/
 				//return
