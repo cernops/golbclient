@@ -15,7 +15,7 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 		now = time.Now().UnixNano() / int64(time.Millisecond)
 		defer func() {
 			newNow := time.Now().UnixNano() / int64(time.Millisecond)
-			logger.LOG(logger.DEBUG, false, "\t Runtime: %dms", newNow-now)
+			logger.Debug("\t Runtime: %dms", newNow-now)
 		}()
 	}
 
@@ -28,7 +28,7 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 	if err != nil {
 		if printErrors {
 			errString := strings.TrimRight(errBuff.String(), "\r\n")
-			logger.LOG(logger.ERROR, false, "Execution failed with the following error [%s]", errString)
+			logger.Error("Execution failed with the following error [%s]", errString)
 		}
 		return outBuff.String(), err
 	}

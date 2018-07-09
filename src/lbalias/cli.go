@@ -4,4 +4,5 @@ package lbalias
 type CLI interface {
 	Code() int
 	Run(...interface{}) interface{}
+	//SafeRun(...interface{}) (interface{}, error)
 }
