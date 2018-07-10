@@ -218,30 +218,30 @@ func setCustomLoggingConf() {
 
 // Trace : log with the [TRACE] logging level
 func Trace(format string, v ...interface{}) {
-	LOGC(TRACE, format, v...)
+	LOG(TRACE, false, format, v...)
 }
 
 // Warn : log with the [WARN] logging level
 func Warn(format string, v ...interface{}) {
-	LOGC(WARN, format, v...)
+	LOG(WARN, false, format, v...)
 }
 
 // Debug : log with the [DEBUG] logging level
 func Debug(format string, v ...interface{}) {
-	LOGC(DEBUG, format, v...)
+	LOG(DEBUG, false, format, v...)
 }
 
 // Info : log with the [INFO] logging level
 func Info(format string, v ...interface{}) {
-	LOGC(INFO, format, v...)
+	LOG(INFO, false, format, v...)
 }
 
 // Error : log with the [ERROR] logging level
 func Error(format string, v ...interface{}) {
-	LOGC(ERROR, format, v...)
+	LOG(ERROR, false, format, v...)
 }
 
 // Fatal : log with the [FATAL] logging level
 func Fatal(format string, v ...interface{}) {
-	LOGC(FATAL, format, v...)
+	LOG(FATAL, false, format, v...)
 }

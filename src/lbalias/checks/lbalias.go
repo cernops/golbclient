@@ -40,10 +40,10 @@ var allLBExpressions = map[interface{}]lbalias.CLI{
 	"ROGER":         RogerState{code: 13},
 	"COMMAND":       Command{code: 14},
 	"COLLECTD":      ParamCheck{code: 15, command: "collectd"},
-	"COLLECTDLOAD":  ParamCheck{code: 16, command: "collectd"},
-	"LEMONLOAD":     ParamCheck{code: 17, command: "lemon"},
-	"XSESSIONS":     CheckAttribute{code: 0, name: "xsession"},
-	"SWAPPING":      CheckAttribute{code: 0, name: "swapping"},
+	//"COLLECTDLOAD":  ParamCheck{code: 16, command: "collectd"},
+	//"LEMONLOAD":     ParamCheck{code: 17, command: "lemon"},
+	"XSESSIONS": CheckAttribute{code: 0, name: "xsession"},
+	"SWAPPING":  CheckAttribute{code: 0, name: "swapping"},
 }
 
 /*

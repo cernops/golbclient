@@ -14,6 +14,10 @@ func (nologin NoLogin) Code() int {
 	return nologin.code
 }
 
+func (nologin NoLogin) SetCode(ncode int) {
+	nologin.code = ncode
+}
+
 func (nl NoLogin) Run(a ...interface{}) interface{} {
 	lbalias := a[1].(*LBalias)
 

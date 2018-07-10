@@ -19,6 +19,14 @@ func (g ParamCheck) Code() int {
 	return g.code
 }
 
+func (g ParamCheck) SetCode(ncode int) {
+	g.code = ncode
+}
+
+func (g ParamCheck) SetCommand(ncommand string) {
+	g.command = ncommand
+}
+
 func (g ParamCheck) Run(args ...interface{}) interface{} {
 	var rVal interface{}
 	line := args[0].(string)

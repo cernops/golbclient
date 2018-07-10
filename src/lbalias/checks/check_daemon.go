@@ -40,7 +40,6 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 		}
 	}
 	return false
-
 }
 
 func (daemon DaemonListening) Run(args ...interface{}) interface{} {
