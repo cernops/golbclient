@@ -1,0 +1,105 @@
+---
+image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+stages:
+  - build
+  - test
+  - build_rpm
+  - koji_scratch
+  - koji
+  - deploy_qa
+  - deploy_prod
+
+
+before_script:
+  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
+  - pwd
+  - ls -al 
+  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
+  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
+  - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
+
+#  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
+#  - ls -al /go/src/github.com/reguero/
+#  - ls -al /go/src/github.com/reguero/go-snmplib
+#  - echo "AND IN VENDOR"
+#  - ls -alR vendor
+#  - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
+  - export SPEC=$(ls *spec)
+  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
+  - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+  - klist
+  - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
+
+build-my-project:
+  stage: build
+  script:
+    - yum -y install golang git gcc
+    - export GOPATH=/go
+    - go get github.com/tools/godep
+    - /go/bin/godep restore
+    - /go/bin/godep go build
+    - /go/bin/godep go build -race
+
+test-my-project:
+  stage: test
+  script:
+    - yum -y install golang git gcc
+    - export GOPATH=/go
+    - go get github.com/tools/godep
+    - /go/bin/godep restore
+    - /go/bin/godep go test -v -cover ./...
+    - /go/bin/godep go test -race 
+
+build_rpm:
+  stage: build_rpm
+  script:
+    - mkdir SOURCES
+    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
+  artifacts:
+    paths:
+      - SRPMS/
+    expire_in: 1 week
+
+
+kojicheck:
+  stage: koji_scratch
+  script:
+    - echo "Checking if $PKG_REL exists"
+    - if koji --config=.koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
+  allow_failure: true
+
+kojiscratch:
+  stage: koji_scratch
+  script:
+    - export SRPM="SRPMS/${PKG_REL}.src.rpm"
+    - echo "koji build --wait --scratch $KOJI_TARGET $SRPM"
+    - koji --config=.koji build --wait --scratch $KOJI_TARGET $SRPM
+
+koji:
+  stage: koji
+  script:
+    - export SRPM="SRPMS/${PKG_REL}.src.rpm"
+    - echo "koji build --wait $KOJI_TARGET $SRPM"
+    - koji --config=.koji build --wait $KOJI_TARGET $SRPM
+  only:
+    - tags
+
+tag_qa:
+  stage: deploy_qa
+  when: manual
+  only:
+    - tags
+  script:
+    - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL}
+  allow_failure: false
+
+tag_prod:
+  stage: deploy_prod
+  when: manual
+  only:
+    - tags
+  script:
+    - koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL}
+
