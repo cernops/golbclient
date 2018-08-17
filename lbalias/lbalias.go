@@ -1,10 +1,10 @@
 package lbalias
 
 import (
-	"bufio"
 	"fmt"
-
-	"os"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -14,229 +14,188 @@ import (
 type LBalias struct {
 	Name           string
 	ConfigFile     string
-	Debug          bool
-	NoLogin        bool
+	//NoLogin        bool
 	Syslog         bool
 	GData          []string
 	MData          []string
-	CheckXsessions int
-	RogerState     string
+	//CheckXsessions int
+	//RogerState     string
 	Metric         int
-	//	CheckSwapping bool
-	//	CheckXsessions bool
-	CheckMetricList []MetricEntry
-	LoadMetricList  []MetricEntry
+	//CheckMetricList []MetricEntry
+	//LoadMetricList  []MetricEntry
 	Constant        float32
-	CheckAttributes map[string]bool
+	//CheckAttributes map[string]bool
+	ChecksDone      map[string]bool
+}
+type ExpressionCode struct {
+	code int
+	cli CLI
 }
 
-func (self LBalias) String() string {
-	return  fmt.Sprintf("Alias name %s with load of %f and loadmetrics %v", self.Name, self.Constant, self.LoadMetricList)
+// @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
+var allLBExpressions = map[string] ExpressionCode{
+	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
+	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
+	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
+	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80}},
+	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
+	"AFS":           {code: 10, cli: checks.AFS{}},
+	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
+	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
+	"ROGER":         {code: 13, cli: checks.RogerState{}},
+	"COMMAND":       {code: 14, cli: checks.Command{}},
+	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
+	//"COLLECTDLOAD":  ParamCheck{code: 16, command: "collectd"},
+	//"LEMONLOAD":     ParamCheck{code: 17, command: "lemon"},
+	"XSESSIONS": {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":  {code: 6, cli: checks.CheckAttribute{}},
 }
 
-type LBcheck struct {
-	Code     int
-	Function func(*LBalias, string) bool
-}
 
-var allLBchecks = map[string]LBcheck{
-	"NOLOGIN":       LBcheck{1, checkNoLogin},
-	"TMPFULL":       LBcheck{6, checkTmpFull},
-	"SSHDAEMON":     LBcheck{7, checkDaemon(22)},
-	"WEBDAEMON":     LBcheck{8, checkDaemon(80)},
-	"FTPDAEMON":     LBcheck{9, checkDaemon(21)},
-	"AFS":           LBcheck{10, checkAFS},
-	"GRIDFTPDAEMON": LBcheck{11, checkDaemon(2811)},
-	"LEMON":         LBcheck{12, checkLemon("check")},
-	"ROGER":         LBcheck{13, checkRoger},
-	"COMMAND":       LBcheck{14, checkCommand},
-	//The rest are a bit special. They don't return immediately
-	"XSESSIONS": LBcheck{0, checkAttribute("xsession")},
-	"SWAPPING":  LBcheck{0, checkAttribute("swapping")},
-	"LEMONLOAD": LBcheck{17, checkLemon("load")}}
+/*
+	And here we add the methods of the class
+*/
 
-//These are all the current tests
-//
-//
+// Evaluate : Evaluates a [lbalias] entry
+func (lbalias *LBalias) Evaluate() error {
+	logger.Debug("Evaluating the alias [%s]", lbalias.Name)
 
-// The lemon metrics are done in two steps: The first one is to add all of them to the configuration
-// The second step is to call all of them in one go
-func checkAttribute(name string) func(*LBalias, string) bool {
-
-	return func(lbalias *LBalias, line string) bool {
-		if lbalias.CheckAttributes == nil {
-			lbalias.CheckAttributes = map[string]bool{}
-		}
-		lbalias.DebugMessage("[check_attribute] Checking the attribute ", name)
-		lbalias.CheckAttributes[name] = true
-
-		return false
-	}
-}
-
-//
-// And here we add the methods of the class
-//
-//
-
-func (lbalias LBalias) DebugMessage(s ...interface{}) {
-	if lbalias.Debug {
-		fmt.Println(s)
+	// Create a string array containing all the checks to be performed
+	var checks []string
+	for key := range allLBExpressions {
+		checks = append(checks, fmt.Sprintf("(%s)", key))
 	}
 
-}
-func (lbalias *LBalias) Evaluate() {
-	lbalias.DebugMessage("[lbalias] Evaluating the alias " + lbalias.Name)
-
-	checks := []string{}
-	for key, _ := range allLBchecks {
-		checks = append(checks, "("+key+")")
-	}
-	f, err := os.Open(lbalias.ConfigFile)
+	// Attempt to read the configuration file
+	logger.Debug("Attempting to read the configuration file [%s]", lbalias.ConfigFile)
+	lines, err := filehandler.ReadAllLinesFromFile(lbalias.ConfigFile)
 	if err != nil {
-		panic(err)
+		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
+		return err		
 	}
-	defer f.Close()
+	// Read the configuration file using the scanner API
+	logger.Debug("Successfully opened the alias configuration file")
 
-	scanner := bufio.NewScanner(f)
-	lbalias.DebugMessage("[lbalias] Configuration file opened")
-
+	// Detect all comments
 	comment, _ := regexp.Compile("^(#.*)?$")
+	// Detect all checks to be made
 	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checks, "|") + ")")
-	constant, _ := regexp.Compile("(?i)^LOAD ((LEMON)|(CONSTANT)) (.*)")
-	for scanner.Scan() {
-		line := scanner.Text()
+	// Detect all loads to be made
+	constant, _ := regexp.Compile("(?i)^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)")
+
+	// Read the configuration file line-by-line
+	for _, line := range lines {
 		if comment.MatchString(line) {
 			continue
 		}
-		actions := actions.FindStringSubmatch(line)
-		if len(actions) > 0 {
-
-			myAction := strings.ToUpper(actions[1])
-
-			if allLBchecks[myAction].Function(lbalias, line) {
-				lbalias.DebugMessage("THE CHECK OF ", myAction, "FAILED ")
-				lbalias.Metric = -allLBchecks[myAction].Code
-				return
+		checks := actions.FindStringSubmatch(line)
+		if len(checks) > 0 {
+			/********************************** CHECKS **********************************/
+			myAction := strings.ToUpper(checks[1])
+			if b, ok := allLBExpressions[myAction].cli.Run(line, lbalias.Name).(bool); !b || !ok {
+				lbalias.Metric = -allLBExpressions[myAction].code
+				logger.Error("The check of [%s] failed. Aborting with the code [%d]", myAction, lbalias.Metric)
+				return nil
 			}
-
+			lbalias.ChecksDone[checks[1]] = true
 			continue
 		}
-		constants :=
-			constant.FindStringSubmatch(line)
-		if len(constants) > 0 {
-			//fmt.Println(constants[1])
-			if strings.ToUpper(constants[1]) == "LEMON" {
-				if allLBchecks["LEMONLOAD"].Function(lbalias, line) {
-					fmt.Println("Error adding the lemon metric for the load")
-					lbalias.Metric = -allLBchecks["LEMONLOAD"].Code
-					return
+		loads := constant.FindStringSubmatch(line)
+		if len(loads) > 0 {
+			var result int
+			/********************************** LOADS **********************************/
+			cliName := strings.ToUpper(loads[1])
+			if cliName == "LEMON" || cliName == "COLLECTD" {
+				result = int(allLBExpressions[cliName].cli.Run(line, lbalias.Name).(int32))
+				if result == -1 {
+					logger.Error("[%s] metric returned a negative number [%d]", cliName, result)
+					lbalias.Metric = -allLBExpressions[cliName].code
+					return nil
 				}
 			} else {
-				if lbalias.addConstant(constants[4]) {
-					lbalias.Metric = -16
-					return
+				if lbalias.addConstant(loads[4]) {
+					lbalias.Metric = -20
+					return nil
 				}
 			}
+			// Added metric value to the total in case of no problems
+			lbalias.Metric += result
 			continue
-
 		}
-		fmt.Println("We can't parse the configuration line", line)
+
+		// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
+		logger.Error("Unable to parse the configuration file line [%s]", line)
 
 	}
-	if len(lbalias.CheckMetricList) > 0 {
-		if lbalias.checkLemonMetric() {
-			lbalias.DebugMessage("[main] Lemon metric check failed")
-			lbalias.Metric = -allLBchecks["LEMON"].Code
-			return
-		}
-	}
-	lbalias.Metric = int(lbalias.Constant)
+	// Log
+	logger.Trace("Final metric value [%d]", lbalias.Metric)
 
-	if len(lbalias.LoadMetricList) > 0 {
-		lemon_load := lbalias.evaluateLoadLemon()
-		if lemon_load < 0 {
-			fmt.Println("Lemon load returned negative!")
-			lbalias.Metric = -allLBchecks["LEMONLOAD"].Code
-			return
-		}
-		lbalias.Metric += lemon_load
-	}
 	if lbalias.Metric == 0 {
-		lbalias.DebugMessage("Default method to calculate the load")
+		logger.Info("No metric value was found. Defaulting to the generic load calculation")
 		lbalias.Metric = lbalias.defaultLoad()
 	}
+	return nil
 }
 func (lbalias *LBalias) addConstant(exp string) bool {
-	lbalias.DebugMessage("[add_constant] Adding Constant ", exp)
+	logger.Debug("Adding Constant [%s]", exp)
+	// @TODO: Replace with the parser.ParseInterfaceAsFloat (reflection?)
 	f, err := strconv.ParseFloat(exp, 32)
 	if err != nil {
-		fmt.Println("Error parsing the number from ", exp)
+		logger.Error("Error parsing the floating point number from the value [%s]", exp)
 		return true
 	}
-	fmt.Println("[add_constant] value=", f)
+
+	logger.Debug("\tValue = [%d]", f)
 	lbalias.Constant += float32(f)
 	return false
 }
 
 func (lbalias *LBalias) defaultLoad() int {
-
 	swap := lbalias.swapFree()
-
-	lbalias.DebugMessage(fmt.Sprintf("[main] result of swap formula = %f", swap))
+	logger.Debug("Result of swap formula = %f", swap)
 	cpuload := lbalias.cpuLoad()
-	lbalias.DebugMessage(fmt.Sprintf("[main] result of cpu formula = %f", cpuload))
-
+	logger.Debug("Result of cpu formula = %f", cpuload)
 	swaping := float32(0)
-	if lbalias.CheckAttributes["swapping"] {
-		//   swaping = stat_swaping()
-		lbalias.DebugMessage(fmt.Sprintf("[main] result of swaping formula = %f", swaping))
+	if lbalias.ChecksDone["swapping"] {
+		logger.Debug("Result of swapoing formula = %f", swaping)
 	}
 
 	f_sm, nb_processes, users := lbalias.sessionManager()
-	if lbalias.CheckAttributes["xsessions"] {
-		lbalias.DebugMessage(fmt.Sprintf("[main] result of X sessions formula = %f", f_sm))
+	if lbalias.ChecksDone["xsessions"]  {
+		logger.Debug("Result of X sessions formula = %f", f_sm)
 	} else {
 		f_sm = float32(0)
 	}
 
-	lbalias.DebugMessage(fmt.Sprintf("[main] number of processes: %d", int(nb_processes)))
-
-	lbalias.DebugMessage(fmt.Sprintf("[main] number of users logged in: %d", int(users)))
+	logger.Debug("Number of processes = %d", int(nb_processes))
+	logger.Debug("Number of users logged in = %d ", int(users))
 
 	myLoad := (((swap + users/25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * f_sm)) / 6.
 
 	//((swap + users / 25.) / 2.) + (2. * swaping * self.check_swaping) + (3. * cpuload) + (2. * f_sm * self.check_xsessions)) / 6.
-	lbalias.DebugMessage(fmt.Sprintf("[main] LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, f_sm))
+	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, f_sm)
 	return int(myLoad * 1000)
 
 }
 
 func (lbalias *LBalias) swapFree() float32 {
-	file, err := os.Open("/proc/meminfo")
+	lines, err := filehandler.ReadAllLinesFromFile("/proc/meminfo")
 	if err != nil {
-		fmt.Println("Error openning", "/proc/meminfo")
+		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/meminfo", err.Error())
 		return -2
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
 	memoryMap := map[string]int{}
 	//fmt.Println("Looking for ", portHex)
 	memory, _ := regexp.Compile("^((MemTotal)|(MemFree)|(SwapTotal)|(SwapFree)|(CommitLimit)|(Committed_AS)): +([0-9]+)")
-	for scanner.Scan() {
-		line := scanner.Text()
+	for _, line := range lines {
 		match := memory.FindStringSubmatch(line)
 		if len(match) > 0 {
-
 			memoryMap[match[1]], _ = strconv.Atoi(match[8])
 		}
 	}
-	lbalias.DebugMessage(fmt.Sprintf(
-		"Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
+	logger.Debug("Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
 		memoryMap["MemTotal"], memoryMap["MemFree"], memoryMap["CommitLimit"],
-		memoryMap["Committed_AS"], memoryMap["SwapTotal"], memoryMap["SwapFree"]))
+		memoryMap["Committed_AS"], memoryMap["SwapTotal"], memoryMap["SwapFree"])
 
 	if memoryMap["SwapTotal"] == 0 {
 		memoryMap["SwapTotal"], memoryMap["SwapFree"] = memoryMap["MemTotal"], memoryMap["MemFree"]
@@ -256,50 +215,29 @@ func (lbalias *LBalias) swapFree() float32 {
 }
 
 func (lbalias *LBalias) cpuLoad() float32 {
-	file, err := os.Open("/proc/loadavg")
+	line, err := filehandler.ReadFirstLineFromFile("/proc/loadavg")
 	if err != nil {
-		fmt.Println("Error openning", "/proc/loadavg")
+		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/loadavg", err.Error())
 		return -2
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	scanner.Scan()
-	line := scanner.Text()
 	cpu := strings.Split(line, " ")
-
 	cpuFloat, _ := strconv.ParseFloat(cpu[0], 32)
 	return float32(cpuFloat / 10.)
-} /*
-
-
-def stat_swaping():
-    P1 = get_pagecounters()
-    time.sleep(2)
-    P2 = get_pagecounters()
-    P=abs((P2-P1)/2)
-    if (P>5000):
-        m=1.
-    else:
-        m=P
-        m=m/5000.
-    if debug:
-        print m
-    return(m)*/
+}
 
 func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 
 	out, err := exec.Command("/bin/ps", "auxw").Output()
 
 	if err != nil {
-		fmt.Println("Error executing the ps command!", err)
+		logger.Error("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
 		return -10, -10, -10
 	}
 
-	//Let's parse the output, and collect the number of processes
+	// Let's parse the output, and collect the number of processes
 	f_sm, nb_processes := 0.0, -1.0
 	users := map[string]bool{}
-	//There are 3 processes per gnome sesion, and 4 for the fvm
+	// There are 3 processes per gnome sesion, and 4 for the fvm
 	gnome, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
 	fvm, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*fvwm")
 	user, _ := regexp.Compile("^([^ ]+)")
