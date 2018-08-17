@@ -30,6 +30,10 @@ before_script:
   - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
   - klist
   - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
+ # [lemon-cli]
+  - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
+ # [collectdctl]
+  - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 build-my-project:
   stage: build
@@ -48,8 +52,8 @@ test-my-project:
     - export GOPATH=/go
     - go get github.com/tools/godep
     - /go/bin/godep restore
-    - /go/bin/godep go test -v -cover ./...
-    - /go/bin/godep go test -race 
+    - /go/bin/godep go test -v -cover ./tests/ci/...
+    - /go/bin/godep go test -race ./tests/ci/...
 
 build_rpm:
   stage: build_rpm
