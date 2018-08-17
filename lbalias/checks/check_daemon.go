@@ -60,7 +60,10 @@ func (daemon DaemonListening) scanNetwork(proc string, port int) bool {
 	portHex := fmt.Sprintf("%04x", port)
 
 	logger.Debug("Scanning port [%s]", portHex)
-	portOpen, _ := regexp.Compile("^ *[0-9]+: [0-9A-F]+:" + portHex + " [0-9A-F]+:[0-9A-F]+ 0A")
+
+	//portOpen, _ := regexp.Compile("^ *[0-9]+: [0-9A-F]+:" + portHex + " [0-9A-F]+:[0-9A-F]+ 0A")
+
+	portOpen, _ := regexp.Compile("(?i)(^ *[0-9]+: [0-9A-F]+:" + portHex + " [0-9A-F]+:[0-9A-F]+ 0)")
 	for scanner.Scan() {
 		line := scanner.Text()
 		if portOpen.MatchString(line) {
@@ -226,7 +229,8 @@ func (daemon DaemonListening) processDaemonMetric(line string) (de daemonEntry, 
 	}
 
 	// Discover the port number
-	rawPortNumber := regexp.MustCompile(`[\]][:]`).Split(line, 1)
+	rawPortNumber := regexp.MustCompile(`:`).Split(line, -1)
+	logger.Trace("Port Daemon port raw extraction [%s]", rawPortNumber)
 	if len(rawPortNumber) != 2 {
 		logger.Error("Syntax error detected when attempting to extract the port number from the metric line [%s]. The port number must be supplied using the ':' character at the end of your metric", line)
 		return de, err
