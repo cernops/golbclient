@@ -5,10 +5,10 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"os/exec"
 )
 
 type LBalias struct {
@@ -27,34 +27,33 @@ type LBalias struct {
 	//CheckAttributes map[string]bool
 	ChecksDone      map[string]bool
 }
+
 type ExpressionCode struct {
 	code int
 	cli CLI
 }
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
+// @TODO: test backwards compatibilty with SSHDAEMON, WEBDAEMON, FTPDAEMON, GRIDFTPDAEMON (implement struct code and choose it if none is given)
 var allLBExpressions = map[string] ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
-	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80}},
-	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
+	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22, Protocol: checks.TCP, IPVersion: checks.IPV4}},
+	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80, Protocol: checks.TCP, IPVersion: checks.IPV4}},
+	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21, Protocol: checks.TCP, IPVersion: checks.IPV4}},
+	"DAEMON":		 {code: 7, cli: checks.DaemonListening{}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
+	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
 	"ROGER":         {code: 13, cli: checks.RogerState{}},
 	"COMMAND":       {code: 14, cli: checks.Command{}},
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
-	//"COLLECTDLOAD":  ParamCheck{code: 16, command: "collectd"},
-	//"LEMONLOAD":     ParamCheck{code: 17, command: "lemon"},
+	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
 	"XSESSIONS": {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPPING":  {code: 6, cli: checks.CheckAttribute{}},
+
 }
-
-
-/*
-	And here we add the methods of the class
-*/
 
 // Evaluate : Evaluates a [lbalias] entry
 func (lbalias *LBalias) Evaluate() error {
@@ -73,6 +72,7 @@ func (lbalias *LBalias) Evaluate() error {
 		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
 		return err		
 	}
+
 	// Read the configuration file using the scanner API
 	logger.Debug("Successfully opened the alias configuration file")
 
