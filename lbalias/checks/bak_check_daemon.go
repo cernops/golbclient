@@ -191,6 +191,7 @@ func (daemon DaemonListening) processDaemonMetric(line string) (de daemonEntry, 
 	// Discover the desired transport protocol & IP level (i.e. first set of paired squared parenthesis)
 	rawProtocol := regexp.MustCompile(`\[([^\[\]]*)\]`).FindAllString(rawMetricLine, -1)[0]
 	if len(strings.TrimSpace(rawProtocol)) == 2 {
+		// @ TODO do we want this?
 		logger.Error("Incorrect syntax was detected when processing the metric line [%s]. The desired transport protocol must be specified (e.g. udp/tcp/all)")
 		return de, err
 	}
