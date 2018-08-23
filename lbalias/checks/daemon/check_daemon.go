@@ -15,8 +15,9 @@ const daemonCheckCLI = "/bin/netstat"
 
 type Listening struct {
 	Port []port `default:"[22]"`
-	Protocol []protocol `default:"[]"`
-	IPVersion []ipVersion `default:"[]"`
+	Protocol []protocol `default:"[tcp]"`
+	IPVersion []ipVersion `default:"[ipv4]"`
+	Host []host `default:"[localhost]"`
 }
 
 // Helper structs
@@ -32,12 +33,6 @@ type port int
 
 // protocol : string type used to distinguish between different transport protocol types
 type protocol string
-const (
-	any protocol = "any"
-	tcp = "tcp"
-	udp = "udp"
-	all = "all"
-)
 
 // ipLevel : int type used to distinguish between different IP levels
 type ipVersion string
@@ -94,7 +89,18 @@ func (daemon *Listening) UnmarshalJSON(b []byte) error {
 				}
 				(*daemon).IPVersion = helper.IPVersion
 			}
+		} else if strings.Contains(line, "host") {
+			if !strings.HasPrefix(p, "[") {
+				(*daemon).Host = []host{host(p)}
+			} else {
+				err := json.Unmarshal([]byte(fmt.Sprintf("{%s}", line)), &helper)
+				if err != nil {
+					return err
+				}
+				(*daemon).Host = helper.Host
+			}
 		}
+		
 	}
 	return nil
 }
@@ -109,7 +115,7 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 
 	if len(daemon.Port) != 0 {
 		// Log
-		logger.Trace("Legacy check type detected, running the daemon check with a default port [%d], protocol [%v] and ip version [%v]", daemon.Port, daemon.Protocols, daemon.IPVersions)
+		logger.Trace("Legacy check type detected, running the daemon check with a default port [%d], protocol [%v] and ip version [%v]", daemon.Port, daemon.Protocol, daemon.IPVersion)
 	} else {
 		metric := args[0].(string)
 		// Log
@@ -145,7 +151,7 @@ func (daemon Listening) processDaemonMetric(metric string) error {
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
-func (daemon Listening) isListening(protocols[] protocol, ipVersions[] ipVersion, port int) bool {
+func (daemon Listening) isListening() bool {
 	output, err := runner.RunCommand(daemonCheckCLI, true, true, "l", "u", "n", "t", "a", "p")
 	if err != nil {
 		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
@@ -153,18 +159,23 @@ func (daemon Listening) isListening(protocols[] protocol, ipVersions[] ipVersion
 	}
 
 	// For each of the output lines, check protocols, ipVersions and port
-	for protocol := range protocols {
-		for ipVersion := ipVersions {
+	for _, h := range daemon.Host {
+		for _, p := range daemon.Protocol {
+			for _, pt := range daemon.Port {
+				for _, ip := range daemon.IPVersion {
+					if ip == "ipv4" {
+						ip = ipv4
+					} else {
+						ip = ipv6
+					}
 
-			//var prot protocol
-			//if protocol == "ipv4" {
-			//	prot = ipv4
-			//} else {
-			//	prot = ipv6
-			//}
-			//
-
-			// regexp.MustCompile(fmt.Printf("(?i)(%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+[0-9.]{8,})([:][%d])", )).
+					found := regexp.MustCompile(fmt.Sprintf("(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:][%d])", p, ip, h, pt)).MatchString(output)
+					if !found {
+						// Fail on first failed check
+						return false
+					}
+				}
+			}
 		}
 	}
 	return true
