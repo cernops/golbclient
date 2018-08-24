@@ -3,6 +3,7 @@ package lbalias
 import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks/daemon"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
@@ -38,10 +39,10 @@ type ExpressionCode struct {
 var allLBExpressions = map[string] ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22, Protocol: checks.TCP, IPVersion: checks.IPV4}},
-	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80, Protocol: checks.TCP, IPVersion: checks.IPV4}},
-	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21, Protocol: checks.TCP, IPVersion: checks.IPV4}},
-	"DAEMON":		 {code: 7, cli: checks.DaemonListening{}},
+	"SSHDAEMON":     {code: 7, cli: daemon.Listening{Port: []daemon.Port{22}, Protocol: []daemon.Protocol{"tcp"}, IPVersion: []daemon.IPVersion{"ipv4"}}},
+	"WEBDAEMON":     {code: 8, cli: daemon.Listening{Port: []daemon.Port{80}, Protocol: []daemon.Protocol{"tcp"}, IPVersion: []daemon.IPVersion{"ipv4"}}},
+	"FTPDAEMON":     {code: 9, cli: daemon.Listening{Port: []daemon.Port{21}, Protocol: []daemon.Protocol{"tcp"}, IPVersion: []daemon.IPVersion{"ipv4"}}},
+	"DAEMON":		 {code: 7, cli: daemon.Listening{}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
@@ -258,3 +259,4 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 	}
 	return float32(f_sm), float32(nb_processes), float32(len(users) - 1)
 }
+
