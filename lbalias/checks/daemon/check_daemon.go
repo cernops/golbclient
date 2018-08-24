@@ -1,14 +1,14 @@
 package daemon
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"encoding/json"
+	"fmt"
 	"github.com/creasty/defaults"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
 const daemonCheckCLI = "/bin/netstat"
@@ -50,7 +50,7 @@ const (
 )
 
 // Override the default `UnmarshalJSON` from the json package
-func (daemon* Listening) UnmarshalJSON(b []byte) error {
+func (daemon *Listening) UnmarshalJSON(b []byte) error {
 	var resultingErr error
 	defer func() {
 		if r := recover(); r != nil {
@@ -58,7 +58,7 @@ func (daemon* Listening) UnmarshalJSON(b []byte) error {
 		}
 	}()
 
-	fetched := regexp.MustCompile(`(["][\w]+["][ ]*[:])([ ]*[\["]?[\w,]+([ ]*?[\w]+)?[]"]?)`).FindAllString(string(b), -1)
+	fetched := regexp.MustCompile(`(["][\w]+["][ ]*[:])([ ]*[\["]?[\w,]+([ ]*?[\w.]+)?[]"]?)`).FindAllString(string(b), -1)
 	for _, line := range fetched {
 		p := strings.TrimSpace(strings.Split(line, ":")[1])
 		if strings.HasPrefix(p, `"`) {
@@ -69,7 +69,7 @@ func (daemon* Listening) UnmarshalJSON(b []byte) error {
 		if strings.Contains(line, "port") {
 			if !strings.HasPrefix(p, "[") {
 				logger.Trace("Extracting [Port] single-value to array-value in [%s]...", p)
-				value, err := strconv.Atoi(p)
+				value, err := strconv.Atoi(strings.Split(p, ",")[0])
 				if err != nil {
 					return err
 				}
@@ -157,7 +157,7 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
-func (daemon* Listening) processDaemonMetric(metric string) error {
+func (daemon *Listening) processDaemonMetric(metric string) error {
 	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
 
 	// Unmarshal JSON into struct
@@ -171,7 +171,7 @@ func (daemon* Listening) processDaemonMetric(metric string) error {
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
-func (daemon* Listening) isListening() bool {
+func (daemon *Listening) isListening() bool {
 	output, err := runner.RunCommand(daemonCheckCLI, true, true, "l", "u", "n", "t", "a", "p")
 	if err != nil {
 		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
@@ -185,17 +185,17 @@ func (daemon* Listening) isListening() bool {
 		}
 		for _, p := range daemon.Protocol {
 			for _, pt := range daemon.Port {
-				for _, ip := range daemon.IPVersion {
+				for i, ip := range daemon.IPVersion {
 					if ip == "ipv4" {
 						ip = ipv4
 					} else {
 						ip = ipv6
 					}
 
-					expression := fmt.Sprintf("(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:][%d])", p, ip, h, pt)
+					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))`, p, ip, h, pt)
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
-					found := regexp.MustCompile(expression).MatchString(output)
-					if !found {
+					if !regexp.MustCompile(expression).MatchString(output) {
+						logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
 						// Fail on first failed check
 						return false
 					}
