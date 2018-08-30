@@ -172,7 +172,7 @@ func (daemon *Listening) processDaemonMetric(metric string) error {
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *Listening) isListening() bool {
-	output, err := runner.RunCommand(daemonCheckCLI, true, true, "l", "u", "n", "t", "a", "p")
+	output, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
 	if err != nil {
 		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
 		return false
