@@ -130,6 +130,12 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 		return false
 	}
 
+	// Fetch all listening interfaces
+	res := daemon.fetchAllLocalInterfaces()
+	if !res {
+		return false
+	}
+
 	// Log
 	logger.Debug("Loaded default daemon values [%v]", daemon)
 
@@ -168,6 +174,24 @@ func (daemon *Listening) processDaemonMetric(metric string) error {
 
 	logger.Trace("Finished processing metric file [%v]", daemon)
 	return nil
+}
+
+// fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of hosts to check
+func (daemon *Listening) fetchAllLocalInterfaces() bool {
+	// Log
+	logger.Trace("Fetching all IPs from the local interfaces")
+
+	// Retrieve all interfaces on the machine by default
+	output, err := runner.RunCommand(`ifconfig  | egrep "inet " | grep -v '127.' | awk '{print $2}'`, true, true)
+	if err != nil {
+		logger.Error("Failed to fetch the interfaces from this machine. Error [%s]", err.Error())
+		return false
+	}
+	ips := strings.Split(output, "\n")
+	for _, ip := range ips {
+		daemon.Host = append(daemon.Host, Host(ip))
+	}
+	return true
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
