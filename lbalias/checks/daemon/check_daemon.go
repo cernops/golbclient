@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/creasty/defaults"
+	"github.com/google/go-cmp/cmp"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
@@ -14,10 +15,10 @@ import (
 const daemonCheckCLI = "/bin/netstat"
 
 type Listening struct {
-	Port      []Port      `default:"[22]"`
-	Protocol  []Protocol  `default:"[\"tcp\"]"`
-	IPVersion []IPVersion `default:"[\"ipv4\"]"`
-	Host      []Host      `default:"[\"localhost\"]"`
+	Port      []Port      `default:"[]"`
+	Protocol  []Protocol  `default:"[\"tcp\", \"udp\"]"`
+	IPVersion []IPVersion `default:"[\"ipv4\", \"ipv6\"]"`
+	Host      []Host      `default:"[]"`
 }
 
 // Helper structs
@@ -27,6 +28,9 @@ type helperEntry struct {
 	IPVersion []IPVersion
 	Host      []Host
 }
+
+// defaultCheck : reusable container variable for the default struct
+var defaultCheck *Listening
 
 // port : int type to represent a port number
 type Port int
@@ -48,6 +52,44 @@ type Host string
 const (
 	localhost Host = "127.0.0.1"
 )
+
+func (daemon Listening) Run(args ...interface{}) interface{} {
+	if err := defaults.Set(&daemon); err != nil {
+		logger.Error("An error was detected when attempting to read the default values of a daemon check entry type. Error [%s]", err.Error())
+		return false
+	}
+
+	// Assign default variable
+	defaultCheck = &daemon
+
+	// Fetch all listening interfaces
+	res := daemon.fetchAllLocalInterfaces()
+	if !res {
+		return false
+	}
+
+	// Log
+	logger.Debug("Loaded default daemon values [%v]", daemon)
+
+	metric := args[0].(string)
+	// Log
+	logger.Trace("Processing daemon check on metric line [%s]", metric)
+	// Process the daemon metric & abort if an error was detected
+	if daemon.processDaemonMetric(metric) != nil {
+		return false
+	}
+
+	for _, port := range daemon.Port {
+		// Check if the given port is within bounds
+		if (port < 1) || (port > 65535) {
+			logger.Error("The specified port [%d] is out of range [1-65535]", port)
+			return false
+		}
+	}
+
+	// Check if there is anything listening
+	return daemon.isListening()
+}
 
 // Override the default `UnmarshalJSON` from the json package
 func (daemon *Listening) UnmarshalJSON(b []byte) error {
@@ -124,44 +166,6 @@ func (daemon *Listening) UnmarshalJSON(b []byte) error {
 	return resultingErr
 }
 
-func (daemon Listening) Run(args ...interface{}) interface{} {
-	if err := defaults.Set(&daemon); err != nil {
-		logger.Error("An error was detected when attempting to read the default values of a daemon check entry type. Error [%s]", err.Error())
-		return false
-	}
-
-	// Fetch all listening interfaces
-	res := daemon.fetchAllLocalInterfaces()
-	if !res {
-		return false
-	}
-
-	// Log
-	logger.Debug("Loaded default daemon values [%v]", daemon)
-
-	metric := args[0].(string)
-	// Log
-	logger.Trace("Processing daemon check on metric line [%s]", metric)
-	// Process the daemon metric & abort if an error was detected
-	if daemon.processDaemonMetric(metric) != nil {
-		return false
-	}
-
-	// Log
-	logger.Debug("Loaded daemon values from file [%v]", daemon)
-
-	for _, port := range daemon.Port {
-		// Check if the given port is within bounds
-		if (port < 1) || (port > 65535) {
-			logger.Error("The specified port [%d] is out of range [1-65535]", port)
-			return false
-		}
-	}
-
-	// Check if there is anything listening
-	return daemon.isListening()
-}
-
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *Listening) processDaemonMetric(metric string) error {
 	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
@@ -182,28 +186,40 @@ func (daemon *Listening) fetchAllLocalInterfaces() bool {
 	logger.Trace("Fetching all IPs from the local interfaces")
 
 	// Retrieve all interfaces on the machine by default
-	output, err := runner.RunCommand(`ifconfig  | egrep "inet " | grep -v '127.' | awk '{print $2}'`, true, true)
+	output, err := runner.RunCommand(`ifconfig`, true, true)
 	if err != nil {
 		logger.Error("Failed to fetch the interfaces from this machine. Error [%s]", err.Error())
 		return false
 	}
-	ips := strings.Split(output, "\n")
-	for _, ip := range ips {
-		daemon.Host = append(daemon.Host, Host(ip))
+	outputIPs := regexp.MustCompile(`inet[0-9]?[ ][\w.:]*`).FindAllString(output, -1)
+	logger.Trace("Found local addresses [%v]", outputIPs)
+	for _, ip := range outputIPs {
+		daemon.Host = append(daemon.Host, Host(strings.Split(ip, " addr:")[1]))
 	}
 	return true
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *Listening) isListening() bool {
+	// The port metric argument is mandatory
+	if len(daemon.Port) == 0 {
+		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`. Aborting check...")
+		return false
+	}
+
+	// Run the cli
 	output, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
 	if err != nil {
 		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
 		return false
 	}
 
+	// Detect if the default struct values were changed
+	needAny := cmp.Equal(daemon, defaultCheck)
+
 	// For each of the output lines, check protocols, ipVersions and port
 	for _, h := range daemon.Host {
+		logger.Trace("Checking for host [%s]", h)
 		if h == "localhost" {
 			h = localhost
 		}
@@ -222,10 +238,16 @@ func (daemon *Listening) isListening() bool {
 						logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
 						// Fail on first failed check
 						return false
+					} else {
+						// If the [any] condition is needed, return true upon the first match
+						if needAny {
+							return true
+						}
 					}
 				}
 			}
 		}
 	}
+	// All has passed
 	return true
 }
