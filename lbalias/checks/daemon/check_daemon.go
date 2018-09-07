@@ -196,6 +196,10 @@ func (daemon *Listening) fetchAllLocalInterfaces() bool {
 	for _, ip := range outputIPs {
 		daemon.Host = append(daemon.Host, Host(strings.Split(ip, " addr:")[1]))
 	}
+
+	// Add the any interface static IP pattern
+	daemon.Host = append(daemon.Host, Host("0.0.0.0"))
+
 	return true
 }
 
@@ -215,7 +219,10 @@ func (daemon *Listening) isListening() bool {
 	}
 
 	// Detect if the default struct values were changed
-	needAny := cmp.Equal(daemon, defaultCheck)
+	needAny := cmp.Equal(daemon.Host, defaultCheck.Host) || cmp.Equal(daemon.IPVersion, defaultCheck.IPVersion) || cmp.Equal(daemon.Protocol, defaultCheck.Protocol)
+	logger.Trace("Need any :: [%t]", needAny)
+
+	found := false
 
 	// For each of the output lines, check protocols, ipVersions and port
 	for _, h := range daemon.Host {
@@ -232,22 +239,21 @@ func (daemon *Listening) isListening() bool {
 						ip = ipv6
 					}
 
-					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))`, p, ip, h, pt)
+					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))(.*)(LISTEN)`, p, ip, h, pt)
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
 					if !regexp.MustCompile(expression).MatchString(output) {
-						logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
-						// Fail on first failed check
-						return false
-					} else {
-						// If the [any] condition is needed, return true upon the first match
-						if needAny {
-							return true
+						if !needAny {
+							logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
+							// Fail on first failed check
+							return found
 						}
+					} else {
+						found = true
 					}
 				}
 			}
 		}
 	}
 	// All has passed
-	return true
+	return found
 }
