@@ -37,7 +37,7 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 	return result, err
 }
 
-// RunCommand : runs a command with the given arguments if this is available. Returns a tuple of he output of the command in the desired format and an error
+// RunPippedCommand : runs a command with the given arguments if this is available. Returns a tuple of he output of the command in the desired format and an error
 func RunPippedCommand(pippedCommand string, printErrors bool, printRuntime bool) (string, error) {
 	return RunCommand("bash", printErrors, printRuntime, "-c", pippedCommand)
 }
