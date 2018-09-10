@@ -220,7 +220,7 @@ func (daemon *Listening) isListening() bool {
 
 	// Detect if the default struct values were changed
 	needAny := cmp.Equal(daemon.Host, defaultCheck.Host) || cmp.Equal(daemon.IPVersion, defaultCheck.IPVersion) || cmp.Equal(daemon.Protocol, defaultCheck.Protocol)
-	logger.Trace("Need any :: [%t]", needAny)
+	logger.Trace("Daemon check need any condition :: [%t]", needAny)
 
 	found := false
 
@@ -242,6 +242,7 @@ func (daemon *Listening) isListening() bool {
 					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))(.*)(LISTEN)`, p, ip, h, pt)
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
 					if !regexp.MustCompile(expression).MatchString(output) {
+						// Are all needed?
 						if !needAny {
 							logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
 							// Fail on first failed check

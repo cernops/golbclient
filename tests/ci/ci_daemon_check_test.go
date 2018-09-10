@@ -1,8 +1,8 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"testing"
 )
 
