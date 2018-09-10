@@ -33,11 +33,11 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 		return outBuff.String(), err
 	}
 
-	result := strings.TrimRight(string(outBuff.String()), "\r\n")
+	result := strings.TrimRight(outBuff.String(), "\r\n")
 	return result, err
 }
 
-// RunPippedCommand : runs a command with the given arguments if this is available. Returns a tuple of he output of the command in the desired format and an error
+// RunPippedCommand : runs a command with pipes. Note that all the flags should be directly given to the commands.
 func RunPippedCommand(pippedCommand string, printErrors bool, printRuntime bool) (string, error) {
 	return RunCommand("bash", printErrors, printRuntime, "-c", pippedCommand)
 }
