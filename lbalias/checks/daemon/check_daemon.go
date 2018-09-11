@@ -18,6 +18,7 @@ type Listening struct {
 	Port      []Port      `default:"[]"`
 	Protocol  []Protocol  `default:"[\"tcp\", \"udp\"]"`
 	IPVersion []IPVersion `default:"[\"ipv4\", \"ipv6\"]"`
+	// The host array is fetched at runtime
 	Host      []Host      `default:"[]"`
 }
 
@@ -95,8 +96,8 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	// Account for parsing errors
 	defer func() {
-		if r := recover(); r != nil {
-			err = r.(error)
+		if r, ok := recover().(error); r != nil && ok {
+			err = r
 		}
 	}()
 
@@ -284,7 +285,7 @@ func (daemon *Listening) isListening() bool {
 							return found
 						}
 					} else {
-						logger.Trace(`Found daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]`, h, p, ip, pt)
+						logger.Trace(`Found daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]}`, h, p, ip, pt)
 						found = true
 					}
 				}
