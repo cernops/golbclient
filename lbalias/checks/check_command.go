@@ -1,16 +1,20 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"os/exec"
 	"regexp"
 	"strings"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 type Command struct {
 
 }
+
+/*
+	@TODO use the runner API to enable pipped commands support
+ */
 
 func (command Command) Run(a ...interface{}) interface{} {
 	cmd, _ := regexp.Compile("(?i)(^CHECK[ ]+command)[ ]*([^ ]+)[ ]*(.*)")

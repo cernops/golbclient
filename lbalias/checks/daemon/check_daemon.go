@@ -29,6 +29,9 @@ type helperEntry struct {
 	Host      []Host
 }
 
+// cache result for every single individual call of the application
+var cliCachedOutput *string
+
 // defaultCheck : reusable container variable for the default struct
 var defaultCheck *Listening
 
@@ -194,7 +197,7 @@ func (daemon *Listening) fetchAllLocalInterfaces() bool {
 	outputIPs := regexp.MustCompile(`inet[0-9]?[ ][\w.:]*`).FindAllString(output, -1)
 	logger.Trace("Found local addresses [%v]", outputIPs)
 	for _, ip := range outputIPs {
-		daemon.Host = append(daemon.Host, Host(strings.Split(ip, " addr:")[1]))
+		daemon.Host = append(daemon.Host, Host(regexp.MustCompile("inet([6])?[ ]").Split(ip, -1)[1]))
 	}
 
 	// Add the any interface static IP pattern
@@ -211,11 +214,16 @@ func (daemon *Listening) isListening() bool {
 		return false
 	}
 
-	// Run the cli
-	output, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
-	if err != nil {
-		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
-		return false
+	// If cache pointer is nullptr
+	if cliCachedOutput == nil {
+
+		// Run the cli
+		res, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
+		if err != nil {
+			logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
+			return false
+		}
+		cliCachedOutput = &res
 	}
 
 	// Detect if the default struct values were changed
@@ -241,7 +249,8 @@ func (daemon *Listening) isListening() bool {
 
 					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))(.*)(LISTEN)`, p, ip, h, pt)
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
-					if !regexp.MustCompile(expression).MatchString(output) {
+					if !regexp.MustCompile(expression).MatchString(*cliCachedOutput) {
+						logger.Trace("Unable to find daemon")
 						// Are all needed?
 						if !needAny {
 							logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
@@ -249,6 +258,7 @@ func (daemon *Listening) isListening() bool {
 							return found
 						}
 					} else {
+						logger.Trace("Found daemon")
 						found = true
 					}
 				}
