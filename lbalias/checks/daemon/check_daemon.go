@@ -21,12 +21,12 @@ type Listening struct {
 	Host      []Host      `default:"[]"`
 }
 
-// Helper structs
-type helperEntry struct {
-	Port      []Port
-	Protocol  []Protocol
-	IPVersion []IPVersion
-	Host      []Host
+// Helper struct
+type daemonJsonContainer struct {
+	PortRaw interface{} `json:"port"`
+	Protocol  interface{} `json:"protocol"`
+	IPVersion interface{} `json:"ip"`
+	Host      interface{} `json:"host"`
 }
 
 // cache result for every single individual call of the application
@@ -94,88 +94,118 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 	return daemon.isListening()
 }
 
-// Override the default `UnmarshalJSON` from the json package
-func (daemon *Listening) UnmarshalJSON(b []byte) error {
-	var resultingErr error
+// parseDaemonJSON : parse a given json metric line into the expected schema
+func (daemon *Listening) parseDaemonJSON(line string) (err error) {
+	// Account for parsing errors
 	defer func() {
 		if r := recover(); r != nil {
-			resultingErr = r.(error)
+			err = r.(error)
 		}
 	}()
 
-	fetched := regexp.MustCompile(`(["][\w]+["][ ]*[:])([ ]*[\["]?[\w,]+([ ]*?[\w.]+)?[]"]?)`).FindAllString(string(b), -1)
-	for _, line := range fetched {
-		p := strings.TrimSpace(strings.Split(line, ":")[1])
-		if strings.HasPrefix(p, `"`) {
-			p = strings.Replace(p, `"`, ``, -1)
-		}
-
-		var helper helperEntry
-		if strings.Contains(line, "port") {
-			if !strings.HasPrefix(p, "[") {
-				logger.Trace("Extracting [Port] single-value to array-value in [%s]...", p)
-				value, err := strconv.Atoi(strings.Split(p, ",")[0])
-				if err != nil {
-					return err
-				}
-				daemon.Port = []Port{Port(value)}
-			} else {
-				logger.Trace("Extracting [Port] array-value in [%s]...", p)
-				err := json.Unmarshal([]byte(fmt.Sprintf("{%s}", line)), &helper)
-				if err != nil {
-					return err
-				}
-				daemon.Port = helper.Port
-			}
-		} else if strings.Contains(line, "protocol") {
-			if !strings.HasPrefix(p, "[") {
-				logger.Trace("Extracting [Protocol] single-value to array-value in [%s]...", p)
-				daemon.Protocol = []Protocol{Protocol(p)}
-			} else {
-				logger.Trace("Extracting [Protocol] array-value in [%s]...", p)
-				err := json.Unmarshal([]byte(fmt.Sprintf("{%s}", line)), &helper)
-				if err != nil {
-					return err
-				}
-				daemon.Port = helper.Port
-			}
-		} else if strings.Contains(line, "ip") {
-			if !strings.HasPrefix(p, "[") {
-				logger.Trace("Extracting [IPVersion] single-value to array-value in [%s]...", p)
-				daemon.IPVersion = []IPVersion{IPVersion(p)}
-			} else {
-				logger.Trace("Extracting [IPVersion] array-value in [%s]...", p)
-				err := json.Unmarshal([]byte(fmt.Sprintf("{%s}", line)), &helper)
-				if err != nil {
-					return err
-				}
-				daemon.IPVersion = helper.IPVersion
-			}
-		} else if strings.Contains(line, "host") {
-			if !strings.HasPrefix(p, "[") {
-				logger.Trace("Extracting [Host] single-value to array-value in [%s]...", p)
-				daemon.Host = []Host{Host(p)}
-			} else {
-				logger.Trace("Extracting [Host] array-value in [%s]...", p)
-				err := json.Unmarshal([]byte(fmt.Sprintf("{%s}", line)), &helper)
-				if err != nil {
-					return err
-				}
-				daemon.Host = helper.Host
-			}
-		}
-
+	x := new(daemonJsonContainer)
+	if err := json.NewDecoder(strings.NewReader(line)).Decode(x); err != nil {
+		return err
 	}
-	return resultingErr
+
+	// Parse :: Port
+	port0, ok := x.PortRaw.(interface{})
+	if ok {
+		s, isString := port0.(string)
+		if isString {
+			r, err := strconv.Atoi(s)
+			if err != nil {
+				return err
+			}
+			daemon.Port = append(daemon.Port , Port(r))
+		}
+		i, isFloat := port0.(float64)
+		if isFloat {
+			daemon.Port = []Port{Port(i)}
+		}
+	}
+	port1, ok := x.PortRaw.([]interface{})
+	if ok {
+		for _, p := range port1 {
+			s, isString := p.(string)
+			if isString {
+				r, err := strconv.Atoi(s)
+				if err != nil {
+					return err
+				}
+				daemon.Port = append(daemon.Port , Port(r))
+			}
+			i, isFloat := p.(float64)
+			if isFloat {
+				daemon.Port = append(daemon.Port , Port(i))
+			}
+		}
+	}
+
+	// Parse :: Protocol
+	protocol0, ok := x.Protocol.(interface{})
+	if ok {
+		s, isString := protocol0.(string)
+		if isString {
+			daemon.Protocol = []Protocol{Protocol(s)}
+		}
+	}
+	protocol1, ok := x.Protocol.([]interface{})
+	if ok {
+		for _, p := range protocol1 {
+			s, isString := p.(string)
+			if isString {
+				daemon.Protocol = append(daemon.Protocol , Protocol(s))
+			}
+		}
+	}
+
+	// Parse :: IP version
+	ipV0, ok := x.IPVersion.(interface{})
+	if ok {
+		s, isString := ipV0.(string)
+		if isString {
+			daemon.IPVersion = []IPVersion{IPVersion(s)}
+		}
+	}
+	ipV1, ok := x.IPVersion.([]interface{})
+	if ok {
+		for _, p := range ipV1 {
+			s, isString := p.(string)
+			if isString {
+				daemon.IPVersion = append(daemon.IPVersion , IPVersion(s))
+			}
+		}
+	}
+
+	// Parse :: Host
+	host0, ok := x.Host.(interface{})
+	if ok {
+		s, isString := host0.(string)
+		if isString {
+			daemon.Host = []Host{Host(s)}
+		}
+	}
+	host1, ok := x.Host.([]interface{})
+	if ok {
+		for _, p := range host1 {
+			s, isString := p.(string)
+			if isString {
+				daemon.Host = append(daemon.Host , Host(s))
+			}
+		}
+	}
+	return err
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *Listening) processDaemonMetric(metric string) error {
 	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
 
-	// Unmarshal JSON into struct
-	if err := json.Unmarshal([]byte(metric), &daemon); err != nil {
-		logger.Error("Error when parsing json [%s]. Error [%s]", metric, err.Error())
+	// Parse json
+	err := daemon.parseDaemonJSON(metric)
+	if err != nil {
+		logger.Error("Error when decoding metric [%s]. Error [%s]. Failing metric...", metric, err.Error())
 		return err
 	}
 
@@ -250,7 +280,7 @@ func (daemon *Listening) isListening() bool {
 					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))(.*)(LISTEN)`, p, ip, h, pt)
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
 					if !regexp.MustCompile(expression).MatchString(*cliCachedOutput) {
-						logger.Trace("Unable to find daemon")
+						logger.Trace(`Unable to find daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]`, h, p, ip, pt)
 						// Are all needed?
 						if !needAny {
 							logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
@@ -258,7 +288,7 @@ func (daemon *Listening) isListening() bool {
 							return found
 						}
 					} else {
-						logger.Trace("Found daemon")
+						logger.Trace(`Found daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]`, h, p, ip, pt)
 						found = true
 					}
 				}
