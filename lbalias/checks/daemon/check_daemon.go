@@ -29,9 +29,6 @@ type daemonJsonContainer struct {
 	Host      interface{} `json:"host"`
 }
 
-// cache result for every single individual call of the application
-var cliCachedOutput *string
-
 // defaultCheck : reusable container variable for the default struct
 var defaultCheck *Listening
 
@@ -144,6 +141,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: Protocol
 	protocol0, ok := x.Protocol.(interface{})
+	daemon.Protocol = daemon.Protocol[:0]
 	if ok {
 		s, isString := protocol0.(string)
 		if isString {
@@ -162,6 +160,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: IP version
 	ipV0, ok := x.IPVersion.(interface{})
+	daemon.IPVersion = daemon.IPVersion[:0]
 	if ok {
 		s, isString := ipV0.(string)
 		if isString {
@@ -180,6 +179,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: Host
 	host0, ok := x.Host.(interface{})
+	daemon.Host = daemon.Host[:0]
 	if ok {
 		s, isString := host0.(string)
 		if isString {
@@ -244,16 +244,12 @@ func (daemon *Listening) isListening() bool {
 		return false
 	}
 
-	// If cache pointer is nullptr
-	if cliCachedOutput == nil {
 
-		// Run the cli
-		res, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
-		if err != nil {
-			logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
-			return false
-		}
-		cliCachedOutput = &res
+	// Run the cli
+	res, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
+	if err != nil {
+		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
+		return false
 	}
 
 	// Detect if the default struct values were changed
@@ -279,7 +275,7 @@ func (daemon *Listening) isListening() bool {
 
 					expression := fmt.Sprintf(`(?i)(%s%s)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%d))(.*)(LISTEN)`, p, ip, h, pt)
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
-					if !regexp.MustCompile(expression).MatchString(*cliCachedOutput) {
+					if !regexp.MustCompile(expression).MatchString(res) {
 						logger.Trace(`Unable to find daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]`, h, p, ip, pt)
 						// Are all needed?
 						if !needAny {
