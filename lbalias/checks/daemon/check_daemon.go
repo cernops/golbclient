@@ -101,8 +101,14 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 		}
 	}()
 
+	// Attempt to parse the JSON text
 	x := new(daemonJsonContainer)
 	if err := json.NewDecoder(strings.NewReader(line)).Decode(x); err != nil {
+		return err
+	}
+
+	// Reject wrong data-types
+	if err := validateDataTypes(x); err != nil {
 		return err
 	}
 
@@ -138,13 +144,6 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 				daemon.Port = append(daemon.Port , Port(i))
 			}
 		}
-	}
-
-	// Reject wrong data-types
-	_, wrongType := x.Protocol.(interface{})
-	if wrongType {
-		logger.Warn("Wrong data-type given to the protocol key for the daemon check. Only <string> or <string_array> types are supported.")
-		return fmt.Errorf("")
 	}
 
 	// Parse :: Protocol
@@ -207,6 +206,29 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 		}
 	}
 	return err
+}
+
+// validateDataTypes : type-checks that the given data-types in JSON are supported
+func validateDataTypes(x *daemonJsonContainer) (err error) {
+	// Protocol
+	_, wrongProtocolType := x.Protocol.(float64)
+	if wrongProtocolType {
+		logger.Warn("Wrong data-type given to the `protocol` key for the daemon check. Only <string> or <string_array> types are supported.")
+		return fmt.Errorf("")
+	}
+	// IP version
+	_, wrongIPVersionType := x.IPVersion.(float64)
+	if wrongIPVersionType {
+		logger.Warn("Wrong data-type given to the `ip` key for the daemon check. Only <string> or <string_array> types are supported.")
+		return fmt.Errorf("")
+	}
+	// Host
+	_, wrongHostType := x.Host.(float64)
+	if wrongHostType {
+		logger.Warn("Wrong data-type given to the `host` key for the daemon check. Only <string> or <string_array> types are supported.")
+		return fmt.Errorf("")
+	}
+	return
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
