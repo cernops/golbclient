@@ -140,9 +140,15 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 		}
 	}
 
+	// Reject wrong data-types
+	_, wrongType := x.Protocol.(interface{})
+	if wrongType {
+		logger.Warn("Wrong data-type given to the protocol key for the daemon check. Only <string> or <string_array> types are supported.")
+		return fmt.Errorf("")
+	}
+
 	// Parse :: Protocol
 	protocol0, ok := x.Protocol.(interface{})
-	daemon.Protocol = daemon.Protocol[:0]
 	if ok {
 		s, isString := protocol0.(string)
 		if isString {
@@ -161,7 +167,9 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: IP version
 	ipV0, ok := x.IPVersion.(interface{})
-	daemon.IPVersion = daemon.IPVersion[:0]
+	if x.IPVersion != nil {
+		daemon.IPVersion = daemon.IPVersion[:0]
+	}
 	if ok {
 		s, isString := ipV0.(string)
 		if isString {
@@ -180,7 +188,9 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: Host
 	host0, ok := x.Host.(interface{})
-	daemon.Host = daemon.Host[:0]
+	if x.Host != nil {
+		daemon.Host = daemon.Host[:0]
+	}
 	if ok {
 		s, isString := host0.(string)
 		if isString {
@@ -255,7 +265,7 @@ func (daemon *Listening) isListening() bool {
 
 	// Detect if the default struct values were changed
 	needAny := cmp.Equal(daemon.Host, defaultCheck.Host) || cmp.Equal(daemon.IPVersion, defaultCheck.IPVersion) || cmp.Equal(daemon.Protocol, defaultCheck.Protocol)
-	logger.Trace("Daemon check need any condition :: [%t]", needAny)
+	logger.Trace("Daemon check need any condition :: [%t]. Daemon entry [%v]", needAny)
 
 	found := false
 

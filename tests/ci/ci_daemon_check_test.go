@@ -1,6 +1,7 @@
 package ci
 
 import (
+	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
@@ -9,6 +10,12 @@ import (
 	"testing"
 )
 
+// Parent directory for all daemon tests (fail & success)
+var daemonTestsDir string
+
+func init(){
+	daemonTestsDir = "../test/daemon"
+}
 
 // TestDaemonFunctionality : fundamental functionality test the daemon checks
 func TestDaemonFunctionality(t *testing.T) {
@@ -16,7 +23,7 @@ func TestDaemonFunctionality(t *testing.T) {
 	lba := lbalias.LBalias{Name: "daemon_functionality_test",
 		Syslog:     true,
 		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/daemon/lbclient_daemon_check.conf"}
+		ConfigFile: fmt.Sprintf("%s/lbclient_daemon_check.conf", daemonTestsDir)}
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
@@ -30,20 +37,19 @@ func TestDaemonFunctionality(t *testing.T) {
 
 // TestLemonFailedConfigurationFile : integration test for all the functionality supplied by the lemon-cli, fail test
 func TestDaemonFailedConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.FATAL)
+	logger.SetLevel(logger.TRACE)
 
 	// Read all fail tests
-	failTestDir := "../test/daemon/"
 	failTestsFileNamePattern := "fail_part"
 	var failTestFiles []string
-	err := filepath.Walk(failTestDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(daemonTestsDir, func(path string, info os.FileInfo, err error) error {
 		if strings.Contains(path, failTestsFileNamePattern) {
 			failTestFiles = append(failTestFiles, path)
 		}
 		return nil
 	})
 	if  err != nil {
-		logger.Fatal("Failed to read the test directory [%s]", failTestDir)
+		logger.Fatal("Failed to read the test directory [%s]", daemonTestsDir)
 	}
 
 	// Run the tests on all files found
