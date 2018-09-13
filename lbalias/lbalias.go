@@ -132,7 +132,7 @@ func (lbalias *LBalias) Evaluate() error {
 	logger.Trace("Final metric value [%d]", lbalias.Metric)
 
 	if lbalias.Metric == 0 {
-		logger.Info("No metric value was found. Defaulting to the generic load calculation")
+		logger.Debug("No metric value was found. Defaulting to the generic load calculation")
 		lbalias.Metric = lbalias.defaultLoad()
 	}
 	return nil

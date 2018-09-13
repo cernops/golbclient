@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/creasty/defaults"
 	"github.com/google/go-cmp/cmp"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const daemonCheckCLI = "/bin/netstat"
@@ -107,9 +109,13 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 		return err
 	}
 
+	// Detect duplicated keys
+	benchmarker.TimeItV(validateUniqueKeys, time.Nanosecond, line)
+	//validateUniqueKeys(line)
+
 	// Reject wrong data-types
-	if err := validateDataTypes(x); err != nil {
-		return err
+	if !validateDataTypes(x) {
+		return fmt.Errorf("")
 	}
 
 	// Parse :: Port
@@ -208,27 +214,42 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	return err
 }
 
+// validateUniqueKeys : checks if more than one entry for the same key was detected. If so, present a warning message to the user
+func validateUniqueKeys(line interface{}) {
+	foundKeys := regexp.MustCompile(`("\w+" *:)`).FindAllString(line.(string), -1)
+	foundKeyMap := make(map[string]bool, len(foundKeys))
+	for _, key := range foundKeys {
+		key := strings.Replace(key, " ", "", -1)
+		keyA := []rune(key)
+		if _, exists := foundKeyMap[key]; exists {
+			logger.Warn("The key [%s] was found multiple times. Note that only the last declared key-value pair will be used.", string(keyA[1:len(keyA)-2]))
+		} else {
+			foundKeyMap[key] = true
+		}
+	}
+}
+
 // validateDataTypes : type-checks that the given data-types in JSON are supported
-func validateDataTypes(x *daemonJsonContainer) (err error) {
+func validateDataTypes(x *daemonJsonContainer) (b bool) {
 	// Protocol
 	_, wrongProtocolType := x.Protocol.(float64)
 	if wrongProtocolType {
 		logger.Warn("Wrong data-type given to the `protocol` key for the daemon check. Only <string> or <string_array> types are supported.")
-		return fmt.Errorf("")
+		return
 	}
 	// IP version
 	_, wrongIPVersionType := x.IPVersion.(float64)
 	if wrongIPVersionType {
 		logger.Warn("Wrong data-type given to the `ip` key for the daemon check. Only <string> or <string_array> types are supported.")
-		return fmt.Errorf("")
+		return
 	}
 	// Host
 	_, wrongHostType := x.Host.(float64)
 	if wrongHostType {
 		logger.Warn("Wrong data-type given to the `host` key for the daemon check. Only <string> or <string_array> types are supported.")
-		return fmt.Errorf("")
+		return
 	}
-	return
+	return true
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
