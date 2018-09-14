@@ -52,6 +52,12 @@ build-my-project:
 test-my-project:
   stage: test
   script:
+    - yum -y install nmap-ncat
+    - whoami
+    - nc -l -p 23 &
+    - nc -l -p 60000 &
+    - ps -ef |grep nc
+    - netstat -lunta
     - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
