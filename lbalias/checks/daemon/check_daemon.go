@@ -98,8 +98,10 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	// Account for parsing errors
 	defer func() {
-		if r, ok := recover().(error); r != nil && ok {
-			err = r
+		if r := recover(); r != nil {
+			if re, ok := r.(error); re != nil && ok {
+				err = re
+			}
 		}
 	}()
 

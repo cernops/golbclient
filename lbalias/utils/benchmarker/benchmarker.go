@@ -29,9 +29,12 @@ func TimeItV(f interface{}, precision time.Duration, args ...interface{}) {
 
 // callFunction : reflection method used to call an interface as a function
 func callFunction(f interface{}, args ...interface{}) interface{} {
-	defer func(){
-		if err := recover().(error); err != nil {
-			logger.Error("Failed to benchmark the function [%s]. Error [%s]", getFunctionName(f), err.Error())
+	// Account unexpected errors
+	defer func() {
+		if r := recover(); r != nil {
+			if re, ok := r.(error); re != nil && ok {
+				logger.Error("Failed to benchmark the function [%s]. Error [%s]", getFunctionName(f), re.Error())
+			}
 		}
 	}()
 
