@@ -273,7 +273,7 @@ func (daemon *Listening) fetchAllLocalInterfaces() bool {
 	logger.Trace("Fetching all IPs from the local interfaces")
 
 	// Retrieve all interfaces on the machine by default
-	output, err := runner.RunCommand(`ifconfig`, true, true)
+	output, err := runner.RunCommand(`/usr/sbin/ifconfig`, true, true)
 	if err != nil {
 		logger.Error("Failed to fetch the interfaces from this machine. Error [%s]", err.Error())
 		return false

@@ -12,6 +12,8 @@ stages:
 
 before_script:
   - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
+ # [Required tools]
+  - yum -y install net-tools
   - pwd
   - ls -al 
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
