@@ -52,6 +52,7 @@ build-my-project:
 test-my-project:
   stage: test
   script:
+    - netstat -lunta
     - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
