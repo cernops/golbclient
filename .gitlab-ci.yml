@@ -57,7 +57,6 @@ test-my-project:
     - nc -l -p 23 &
     - nc -l -p 60000 &
     - ps -ef |grep nc
-    - iptables -L
     - netstat -lunta
     - yum -y install golang git gcc
     - export GOPATH=/go
