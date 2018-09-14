@@ -30,7 +30,7 @@ before_script:
  # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
  # [logging level used in the CI tests - daemon only]
-  - export TESTS_LOGGING_LEVEL=TRACE
+  - export TESTS_LOGGING_LEVEL=ERROR
 
 build-my-project:
   stage: build
