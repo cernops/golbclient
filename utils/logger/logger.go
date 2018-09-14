@@ -79,6 +79,11 @@ func getCodeByLevel(level string) Level {
 	}
 }
 
+// GetLevelByString : returns the logger level representation by string [TRACE, WARN, DEBUG, INFO, ERROR, FATAL]. Will default to [INFO] if the given parameter is not valid or an error occurs.
+func GetLevelByString(lvlstr string) Level {
+	return getCodeByLevel(lvlstr)
+}
+
 // SetLevelByString : sets the logger level based on a string [TRACE, WARN, DEBUG, INFO, ERROR, FATAL]. Will default to [INFO] if the given parameter is not valid or an error occurs.
 func SetLevelByString(lvlstr string) {
 	level := getCodeByLevel(lvlstr)

@@ -13,13 +13,17 @@ import (
 // Parent directory for all daemon tests (fail & success)
 var daemonTestsDir string
 
+// Get environment variable
+var loggerLevel logger.Level
+
 func init(){
 	daemonTestsDir = "../test/daemon"
+	loggerLevel = logger.GetLevelByString(os.Getenv("TESTS_LOGGING_LEVEL"))
 }
 
 // TestDaemonFunctionality : fundamental functionality test the daemon checks
 func TestDaemonFunctionality(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
+	logger.SetLevel(loggerLevel)
 	lba := lbalias.LBalias{Name: "daemon_functionality_test",
 		Syslog:     true,
 		ChecksDone: make(map[string]bool),
@@ -37,7 +41,7 @@ func TestDaemonFunctionality(t *testing.T) {
 
 // TestDaemonFailedConfigurationFile : integration test for all the functionality supplied by the lemon-cli, fail tests
 func TestDaemonFailedConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.FATAL)
+	logger.SetLevel(loggerLevel)
 
 	// Read all fail tests
 	failTestsFileNamePattern := "fail_part"
@@ -69,7 +73,7 @@ func TestDaemonFailedConfigurationFile(t *testing.T) {
 
 // TestDaemonWarningConfigurationFile : integration test for all the functionality supplied by the lemon-cli, warning tests
 func TestDaemonWarningConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.INFO)
+	logger.SetLevel(loggerLevel)
 
 	// Read all fail tests
 	failTestsFileNamePattern := "warning_part"

@@ -36,6 +36,8 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
  # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
+ # [logging level used in the CI tests - daemon only]
+  - export TESTS_LOGGING_LEVEL=TRACE
 
 build-my-project:
   stage: build
