@@ -52,6 +52,8 @@ build-my-project:
 test-my-project:
   stage: test
   script:
+    - yum -y install nmap-ncat
+    - nc -l -p 23
     - netstat -lunta
     - yum -y install golang git gcc
     - export GOPATH=/go
