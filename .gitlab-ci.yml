@@ -19,13 +19,6 @@ before_script:
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
-
-#  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
-#  - ls -al /go/src/github.com/reguero/
-#  - ls -al /go/src/github.com/reguero/go-snmplib
-#  - echo "AND IN VENDOR"
-#  - ls -alR vendor
-#  - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
@@ -52,11 +45,11 @@ build-my-project:
 test-my-project:
   stage: test
   script:
+   # [setup daemon checks environment]
     - yum -y install nmap-ncat
-    - whoami
-    - nc -l -p 23 &
-    - nc -l -p 60000 &
-    - ps -ef |grep nc
+    - nc -l -p 22 &
+   # [wait for netcat to start]
+    - sleep 1
     - netstat -lunta
     - yum -y install golang git gcc
     - export GOPATH=/go
