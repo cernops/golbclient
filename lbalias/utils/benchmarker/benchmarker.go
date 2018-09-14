@@ -8,7 +8,7 @@ import (
 )
 
 // TimeItR : measure the runtime duration of a function by supplying the function, the precision of the measurement followed by the arguments to be passed to the function execution. This function should be used when an output is expected.
-func TimeItR(f interface{}, precision time.Duration, args ...interface{}) interface{}{
+func TimeItR(precision time.Duration, f interface{},  args ...interface{}) interface{}{
 	now := time.Now().UnixNano() / int64(precision)
 	defer func() {
 		newNow := time.Now().UnixNano() / int64(precision) - now
@@ -18,7 +18,7 @@ func TimeItR(f interface{}, precision time.Duration, args ...interface{}) interf
 }
 
 // TimeItV : measure the runtime duration of a function by supplying the function, the precision of the measurement followed by the arguments to be passed to the function execution. This function should be used when no output is expected.
-func TimeItV(f interface{}, precision time.Duration, args ...interface{}) {
+func TimeItV(precision time.Duration, f interface{},  args ...interface{}) {
 	now := time.Now().UnixNano() / int64(precision)
 	defer func() {
 		newNow := time.Now().UnixNano() / int64(precision) - now

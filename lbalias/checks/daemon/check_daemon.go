@@ -112,7 +112,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	}
 
 	// Detect duplicated keys
-	benchmarker.TimeItV(validateUniqueKeys, time.Nanosecond, line)
+	benchmarker.TimeItV(time.Nanosecond, validateUniqueKeys, line)
 	//validateUniqueKeys(line)
 
 	// Reject wrong data-types
