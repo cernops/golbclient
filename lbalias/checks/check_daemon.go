@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/creasty/defaults"
@@ -8,6 +9,7 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -37,6 +39,26 @@ var defaultCheck *Listening
 
 // port : int type to represent a port number
 type Port int
+
+// interfaceJoin : joins all the given structs in a string separated with the chosen delimiter.
+func interfaceJoin(iface interface{}, delim string) (_ string) {
+	var arrSize int
+	var res bytes.Buffer
+
+		val := reflect.ValueOf(iface)
+		if val.Kind() == reflect.Slice {
+			for i := 0; i < val.Len(); i++ {
+				if i == arrSize - 1 {
+					delim = ""
+				}
+				res.WriteString(fmt.Sprintf("%s%s", val.Index(i).Interface(), delim))
+			}
+		} else {
+			logger.Error("Unable to join the given interface [%v]", iface)
+			return
+		}
+	return res.String()
+}
 
 // protocol : string type used to distinguish between different transport protocol types
 type Protocol string
@@ -96,6 +118,11 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 
 // parseDaemonJSON : parse a given json metric line into the expected schema
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
+	if len(line) == 0{
+		logger.Trace("Skipping empty metric line...")
+		return err
+	}
+
 	// Account for parsing errors
 	defer func() {
 		if r := recover(); r != nil {
@@ -310,9 +337,24 @@ func (daemon *Listening) isListening() bool {
 
 	// Detect if the default struct values were changed
 	needAny := cmp.Equal(daemon.Host, defaultCheck.Host) || cmp.Equal(daemon.IPVersion, defaultCheck.IPVersion) || cmp.Equal(daemon.Protocol, defaultCheck.Protocol)
-	logger.Trace("Daemon check need any condition :: [%t]. Daemon entry [%v]", needAny)
+	logger.Trace("Daemon check need any condition :: [%t]. Daemon entry [%v]", needAny, *daemon)
 
-	found := false
+	// If the any condition is required, then merge all expression into a single one
+	if needAny {
+		ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Port), " ", "|", -1), "[]")
+		protocols := interfaceJoin(daemon.Protocol, "|")
+		hosts := interfaceJoin(daemon.Host, "|")
+
+		// IP version is not needed because the expression will find all (e.g. tcp/tcp6)
+		expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN)`, protocols, hosts, ports)
+		if regexp.MustCompile(expression).MatchString(res) {
+			logger.Trace(`Found daemon for {"host": [%s], "protocol": [%s], "port":[%v]}`, hosts, protocols, ports)
+			return true
+		}
+
+		logger.Trace(`Unable to find daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v], with expression [%s]`, daemon.Host, daemon.Protocol, daemon.IPVersion, daemon.Port, expression)
+		return false
+	}
 
 	// For each of the output lines, check protocols, ipVersions and port
 	for _, h := range daemon.Host {
@@ -333,20 +375,16 @@ func (daemon *Listening) isListening() bool {
 					logger.Trace("Checking if daemon is listening with expression [%s]", expression)
 					if !regexp.MustCompile(expression).MatchString(res) {
 						logger.Trace(`Unable to find daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]`, h, p, ip, pt)
-						// Are all needed?
-						if !needAny {
-							logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
-							// Fail on first failed check
-							return found
-						}
+						logger.Debug("No daemon is listening on port [%d], IP version [%s] and transport protocol [%s]", pt, daemon.IPVersion[i], p)
+						// Fail on first failed check
+						return false
 					} else {
 						logger.Trace(`Found daemon for {"host": [%s], "protocol": [%s], "ip": [%s], "port":[%v]}`, h, p, ip, pt)
-						found = true
 					}
 				}
 			}
 		}
 	}
 	// All has passed
-	return found
+	return true
 }

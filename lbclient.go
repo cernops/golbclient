@@ -55,7 +55,7 @@ func main() {
 	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
 		metricValue = strconv.Itoa(lbAliases[0].Metric)
 	} else {
-		keyvaluelist := []string{}
+		var keyvaluelist []string
 		for _, lbalias := range lbAliases {
 			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
 			// Log
