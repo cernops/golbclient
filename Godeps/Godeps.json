@@ -1,11 +1,27 @@
 {
-	"ImportPath": "github.com/cernops/golbclient",
+	"ImportPath": "gitlab.cern.ch/lb-experts/golbclient",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v69",
+	"GodepVersion": "v80",
 	"Deps": [
 		{
+			"ImportPath": "github.com/EricLagergren/go-gnulib/endian",
+			"Rev": "cb7a6e136427e242099b2c29d661016c19458801"
+		},
+		{
+			"ImportPath": "github.com/EricLagergren/go-gnulib/util",
+			"Rev": "cb7a6e136427e242099b2c29d661016c19458801"
+		},
+		{
+			"ImportPath": "github.com/ericlagergren/go-gnulib/utmp",
+			"Rev": "80ad1a0678c06486436544311784259d9aeda887"
+		},
+		{
 			"ImportPath": "github.com/jessevdk/go-flags",
-                        "Rev":"f88afde2fa19a30cf50ba4b05b3d13bc6bae3079"
+			"Rev": "f88afde2fa19a30cf50ba4b05b3d13bc6bae3079"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "dad3d9fb7b6e83d0f9ac8f54670f6334c3a287b4"
 		}
 	]
 }
