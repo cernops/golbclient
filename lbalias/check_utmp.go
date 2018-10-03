@@ -2,7 +2,6 @@ package lbalias
 
 import (
 	"encoding/binary"
-	"lbalias/utils/logger"
 	"os"
 )
 
@@ -67,7 +66,6 @@ func readAllUtmpEntries(types ...Type) ([]Utmp, error) {
 	for {
 		err := binary.Read(file, binary.LittleEndian, &uEntry)
 		if err != nil {
-			logger.Error("An error occurred when attempting to read the [utmp] file at [%s]. Error [%s]", utmpFilePath, err.Error())
 			break
 		}
 		if len(types) > 0 {
