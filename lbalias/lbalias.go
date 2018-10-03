@@ -323,17 +323,11 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 }
 
 func (lbalias *LBalias) countUsers() float32 {
-	utmpSlice, err := readAllUtmpEntries()
+	utmpSlice, err := readAllUtmpEntries(LoginProcess, UserProcess)
 	if err != nil {
 		fmt.Println("Error reading the utmp file!", err)
 		return -10
 	} else {
-		nbUsers := 0
-		for _, u := range utmpSlice {
-			if (u.Type == UserProcess) || (u.Type == LoginProcess) {
-				nbUsers++
-			}
-		}
-		return float32(nbUsers - 1)
+		return float32(len(utmpSlice) - 1)
 	}
 }
