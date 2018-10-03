@@ -40,7 +40,7 @@ type Utmp struct {
 
 // Supported Types
 const (
-	Empty Type = iota
+	Unknown Type = iota
 	RunLevel
 	BootTime
 	NewTime
@@ -50,7 +50,6 @@ const (
 	UserProcess
 	DeadProcess
 	Accounting
-	Unknown
 )
 
 // readAllUtmpEntries : given an array of optional Type objects, the [utmp] file will be read and filtered. Returns the array of entries read from the [utmp] file that comply with the imposed desired Type objects
