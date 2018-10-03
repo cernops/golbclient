@@ -31,7 +31,7 @@ type LBalias struct {
 }
 
 func (self LBalias) String() string {
-	return  fmt.Sprintf("Alias name %s with load of %f and loadmetrics %v", self.Name, self.Constant, self.LoadMetricList)
+	return fmt.Sprintf("Alias name %s with load of %f and loadmetrics %v", self.Name, self.Constant, self.LoadMetricList)
 }
 
 type LBcheck struct {
@@ -193,7 +193,8 @@ func (lbalias *LBalias) defaultLoad() int {
 		lbalias.DebugMessage(fmt.Sprintf("[main] result of swaping formula = %f", swaping))
 	}
 
-	f_sm, nb_processes, users := lbalias.sessionManager()
+	f_sm, nb_processes, _ := lbalias.sessionManager()
+	users := lbalias.countUsers()
 	if lbalias.CheckAttributes["xsessions"] {
 		lbalias.DebugMessage(fmt.Sprintf("[main] result of X sessions formula = %f", f_sm))
 	} else {
@@ -319,4 +320,14 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 
 	}
 	return float32(f_sm), float32(nb_processes), float32(len(users) - 1)
+}
+
+func (lbalias *LBalias) countUsers() float32 {
+	utmpSlice, err := readAllUtmpEntries(LoginProcess, UserProcess)
+	if err != nil {
+		fmt.Println("Error reading the utmp file!", err)
+		return -10
+	} else {
+		return float32(len(utmpSlice) - 1)
+	}
 }
