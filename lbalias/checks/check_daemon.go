@@ -7,8 +7,8 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/google/go-cmp/cmp"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -42,13 +42,12 @@ type Port int
 
 // interfaceJoin : joins all the given structs in a string separated with the chosen delimiter.
 func interfaceJoin(iface interface{}, delim string) (_ string) {
-	var arrSize int
 	var res bytes.Buffer
 
 		val := reflect.ValueOf(iface)
 		if val.Kind() == reflect.Slice {
 			for i := 0; i < val.Len(); i++ {
-				if i == arrSize - 1 {
+				if i == val.Len() - 1 {
 					delim = ""
 				}
 				res.WriteString(fmt.Sprintf("%s%s", val.Index(i).Interface(), delim))
@@ -66,17 +65,8 @@ type Protocol string
 // ipLevel : int type used to distinguish between different IP levels
 type IPVersion string
 
-const (
-	ipv4 IPVersion = ""
-	ipv6           = "6"
-)
-
 // host : string type used to identify in which host the daemon should be listening on
 type Host string
-
-const (
-	localhost Host = "127.0.0.1"
-)
 
 func (daemon Listening) Run(args ...interface{}) interface{} {
 	if err := defaults.Set(&daemon); err != nil {
@@ -104,13 +94,6 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 		return false
 	}
 
-	for _, port := range daemon.Port {
-		// Check if the given port is within bounds
-		if (port < 1) || (port > 65535) {
-			logger.Error("The specified port [%d] is out of range [1-65535]", port)
-			return false
-		}
-	}
 
 	// Check if there is anything listening
 	return daemon.isListening()
@@ -118,7 +101,7 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 
 // parseDaemonJSON : parse a given json metric line into the expected schema
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
-	if len(line) == 0{
+	if len(line) == 0 {
 		logger.Trace("Skipping empty metric line...")
 		return err
 	}
@@ -142,104 +125,88 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	benchmarker.TimeItV(time.Nanosecond, validateUniqueKeys, line)
 	//validateUniqueKeys(line)
 
-	// Reject wrong data-types
-	if !validateDataTypes(x) {
-		return fmt.Errorf("")
-	}
+	// Container variable
+	var transformationContainer []interface{}
 
 	// Parse :: Port
-	port0, ok := x.PortRaw.(interface{})
-	if ok {
-		s, isString := port0.(string)
-		if isString {
+	if portEntry, ok := x.PortRaw.([]interface{}); ok {
+		transformationContainer = portEntry
+	} else if portEntry, ok := x.PortRaw.(interface{}); ok {
+		transformationContainer = []interface{}{portEntry}
+	}
+
+	for _, p := range transformationContainer {
+		if s, isString := p.(string); isString {
 			r, err := strconv.Atoi(s)
 			if err != nil {
 				return err
 			}
 			daemon.Port = append(daemon.Port , Port(r))
 		}
-		i, isFloat := port0.(float64)
-		if isFloat {
-			daemon.Port = []Port{Port(i)}
-		}
-	}
-	port1, ok := x.PortRaw.([]interface{})
-	if ok {
-		for _, p := range port1 {
-			s, isString := p.(string)
-			if isString {
-				r, err := strconv.Atoi(s)
-				if err != nil {
-					return err
-				}
-				daemon.Port = append(daemon.Port , Port(r))
-			}
-			i, isFloat := p.(float64)
-			if isFloat {
-				daemon.Port = append(daemon.Port , Port(i))
-			}
+		
+		if i, isFloat := p.(float64); isFloat {
+			daemon.Port = append(daemon.Port , Port(i))
 		}
 	}
 
 	// Parse :: Protocol
-	protocol0, ok := x.Protocol.(interface{})
-	if ok {
-		s, isString := protocol0.(string)
-		if isString {
-			daemon.Protocol = []Protocol{Protocol(s)}
-		}
+	if x.Protocol != nil {
+		daemon.Protocol = daemon.Protocol[:0]
 	}
-	protocol1, ok := x.Protocol.([]interface{})
-	if ok {
-		for _, p := range protocol1 {
-			s, isString := p.(string)
-			if isString {
-				daemon.Protocol = append(daemon.Protocol , Protocol(s))
-			}
+	if protocolEntry, ok := x.Protocol.([]interface{}); ok {
+		transformationContainer = protocolEntry
+	} else if protocolEntry, ok := x.Protocol.(interface{}); ok {
+		transformationContainer = []interface{}{protocolEntry}
+	}
+	for _, p := range transformationContainer {
+		s, isString := p.(string)
+		if isString {
+			daemon.Protocol = append(daemon.Protocol , Protocol(s))
 		}
 	}
 
-	// Parse :: IP version
-	ipV0, ok := x.IPVersion.(interface{})
+	// Clear default entries
 	if x.IPVersion != nil {
 		daemon.IPVersion = daemon.IPVersion[:0]
 	}
-	if ok {
-		s, isString := ipV0.(string)
-		if isString {
-			daemon.IPVersion = []IPVersion{IPVersion(s)}
-		}
+	// Parse :: IP version
+	if ipVersionEntry, ok := x.IPVersion.([]interface{}); ok {
+		transformationContainer = ipVersionEntry
+	} else if ipVersionEntry, ok := x.IPVersion.(interface{}); ok {
+		transformationContainer = []interface{}{ipVersionEntry}
 	}
-	ipV1, ok := x.IPVersion.([]interface{})
-	if ok {
-		for _, p := range ipV1 {
-			s, isString := p.(string)
-			if isString {
-				daemon.IPVersion = append(daemon.IPVersion , IPVersion(s))
+	for _, p := range transformationContainer {
+		s, isString := p.(string)
+		if isString {
+			if s == "ipv4" || s == "4" {
+				s = ""
+			} else if s == "ipv6" || s == "6" {
+				s = "6"
+			} else {
+				continue
 			}
+
+			daemon.IPVersion = append(daemon.IPVersion , IPVersion(s))
 		}
 	}
 
-	// Parse :: Host
-	host0, ok := x.Host.(interface{})
+
 	if x.Host != nil {
 		daemon.Host = daemon.Host[:0]
 	}
-	if ok {
-		s, isString := host0.(string)
+	// Parse :: Host
+	if hostEntry, ok := x.Host.([]interface{}); ok {
+		transformationContainer = hostEntry
+	} else if hostEntry, ok := x.Host.(interface{}); ok {
+		transformationContainer = []interface{}{hostEntry}
+	}
+	for _, p := range transformationContainer {
+		s, isString := p.(string)
 		if isString {
-			daemon.Host = []Host{Host(s)}
+			daemon.Host = append(daemon.Host , Host(s))
 		}
 	}
-	host1, ok := x.Host.([]interface{})
-	if ok {
-		for _, p := range host1 {
-			s, isString := p.(string)
-			if isString {
-				daemon.Host = append(daemon.Host , Host(s))
-			}
-		}
-	}
+
 	return err
 }
 
@@ -258,29 +225,6 @@ func validateUniqueKeys(line interface{}) {
 	}
 }
 
-// validateDataTypes : type-checks that the given data-types in JSON are supported
-func validateDataTypes(x *daemonJsonContainer) (b bool) {
-	// Protocol
-	_, wrongProtocolType := x.Protocol.(float64)
-	if wrongProtocolType {
-		logger.Warn("Wrong data-type given to the `protocol` key for the daemon check. Only <string> or <string_array> types are supported.")
-		return
-	}
-	// IP version
-	_, wrongIPVersionType := x.IPVersion.(float64)
-	if wrongIPVersionType {
-		logger.Warn("Wrong data-type given to the `ip` key for the daemon check. Only <string> or <string_array> types are supported.")
-		return
-	}
-	// Host
-	_, wrongHostType := x.Host.(float64)
-	if wrongHostType {
-		logger.Warn("Wrong data-type given to the `host` key for the daemon check. Only <string> or <string_array> types are supported.")
-		return
-	}
-	return true
-}
-
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *Listening) processDaemonMetric(metric string) error {
 	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
@@ -290,6 +234,14 @@ func (daemon *Listening) processDaemonMetric(metric string) error {
 	if err != nil {
 		logger.Error("Error when decoding metric [%s]. Error [%s]. Failing metric...", metric, err.Error())
 		return err
+	}
+
+	for _, port := range daemon.Port {
+		// Check if the given port is within bounds
+		if (port < 1) || (port > 65535) {
+			logger.Error("The specified port [%d] is out of range [1-65535]", port)
+			return fmt.Errorf("ignored")
+		}
 	}
 
 	logger.Trace("Finished processing metric file [%v]", daemon)
@@ -302,7 +254,7 @@ func (daemon *Listening) fetchAllLocalInterfaces() bool {
 	logger.Trace("Fetching all IPs from the local interfaces")
 
 	// Retrieve all interfaces on the machine by default
-	output, err := runner.RunCommand(`/usr/sbin/ifconfig`, true, true)
+	output, err := runner.RunCommand(`ifconfig`, true, true)
 	if err != nil {
 		logger.Error("Failed to fetch the interfaces from this machine. Error [%s]", err.Error())
 		return false
@@ -325,8 +277,12 @@ func (daemon *Listening) isListening() bool {
 	if len(daemon.Port) == 0 {
 		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`. Aborting check...")
 		return false
+	} else if len(daemon.Protocol) == 0 {
+		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported ["tcp", "udp"]`)
+		return false
+	} else if len(daemon.IPVersion) == 0 {
+		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported ["ipv4", "ipv6", "4", "6"]`)
 	}
-
 
 	// Run the cli
 	res, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
@@ -338,6 +294,34 @@ func (daemon *Listening) isListening() bool {
 	// Detect if the default struct values were changed
 	needAny := cmp.Equal(daemon.Host, defaultCheck.Host) || cmp.Equal(daemon.IPVersion, defaultCheck.IPVersion) || cmp.Equal(daemon.Protocol, defaultCheck.Protocol)
 	logger.Trace("Daemon check need any condition :: [%t]. Daemon entry [%v]", needAny, *daemon)
+
+	/*
+		V2
+
+	 */
+
+	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Port), " ", "|", -1), "[]")
+	protocols := interfaceJoin(daemon.Protocol, "|")
+	hosts := interfaceJoin(daemon.Host, "|")
+	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN)`, protocols, hosts, ports)
+
+	filteredRes := regexp.MustCompile(expression).FindAllString(res, -1)
+
+	if (needAny && len(filteredRes) >= 1) || (!needAny && len(filteredRes) == len(daemon.Port) * len(daemon.Protocol) * len(daemon.Host) * len(daemon.IPVersion)){
+		logger.Trace("Found daemon listening, matching lines [%d], [any] condition [%t] and expression [%s], with entry [%v]", len(filteredRes), needAny, expression, *daemon)
+		return true
+	} else {
+		logger.Trace("Unable to find daemon listening, [any] condition [%t], with entry [%v]", *daemon)
+		return false
+	}
+
+	/*
+	   V2
+
+	*/
+
+
+	/*
 
 	// If the any condition is required, then merge all expression into a single one
 	if needAny {
@@ -387,4 +371,5 @@ func (daemon *Listening) isListening() bool {
 	}
 	// All has passed
 	return true
+	*/
 }
