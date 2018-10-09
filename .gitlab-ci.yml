@@ -48,6 +48,7 @@ test-my-project:
    # [setup daemon checks environment]
     - yum -y install nmap-ncat
     - nc -l -p 22 &
+    - nc -l -u -p 22 &
    # [wait for netcat to start]
     - sleep 1
     - netstat -lunta
