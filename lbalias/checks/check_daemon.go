@@ -282,6 +282,7 @@ func (daemon *Listening) isListening() bool {
 		return false
 	} else if len(daemon.IPVersion) == 0 {
 		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported ["ipv4", "ipv6", "4", "6"]`)
+		return false
 	}
 
 	// Run the cli
