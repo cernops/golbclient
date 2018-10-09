@@ -304,7 +304,7 @@ func (daemon *Listening) isListening() bool {
 	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Port), " ", "|", -1), "[]")
 	protocols := interfaceJoin(daemon.Protocol, "|")
 	hosts := interfaceJoin(daemon.Host, "|")
-	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN)`, protocols, hosts, ports)
+	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN|[ ]+)`, protocols, hosts, ports)
 
 	filteredRes := regexp.MustCompile(expression).FindAllString(res, -1)
 
