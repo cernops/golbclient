@@ -102,7 +102,7 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 // parseDaemonJSON : parse a given json metric line into the expected schema
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	if len(line) == 0 {
-		logger.Trace("Skipping empty metric line...")
+		logger.Warn("Skipping empty metric line...")
 		return err
 	}
 
