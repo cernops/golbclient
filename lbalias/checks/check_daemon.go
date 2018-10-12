@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const daemonCheckCLI = "/bin/netstat"
+const daemonCheckCLI = "/bin/netstat -luntap"
 
 type Listening struct {
 	Port      []Port      `default:"[]"`
@@ -286,7 +286,7 @@ func (daemon *Listening) isListening() bool {
 	}
 
 	// Run the cli
-	res, err := runner.RunCommand(daemonCheckCLI, true, true, "-l", "-u", "-n", "-t", "-a", "-p")
+	res, err := runner.RunDirectCommand(daemonCheckCLI, true, true)
 	if err != nil {
 		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
 		return false
