@@ -15,10 +15,6 @@
 		{
 			"ImportPath": "github.com/Knetic/govaluate",
 			"Rev":"9aa49832a739dcd78a5542ff189fb82c3e423116"
-		},
-		{
-			"ImportPath": "github.com/google/go-cmp/cmp",
-			"Rev":"2006917edc5a27cd174dbc4baba31a137d6cb9ff"
 		}
 	]
 }
