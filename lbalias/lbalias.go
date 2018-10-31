@@ -34,14 +34,13 @@ type ExpressionCode struct {
 }
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
-// @TODO: test backwards compatibilty with SSHDAEMON, WEBDAEMON, FTPDAEMON, GRIDFTPDAEMON (implement struct code and choose it if none is given)
 var allLBExpressions = map[string] ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.Listening{Port: []checks.Port{22}, Protocol: []checks.Protocol{"tcp"}, IPVersion: []checks.IPVersion{"ipv4"}}},
-	"WEBDAEMON":     {code: 8, cli: checks.Listening{Port: []checks.Port{80}, Protocol: []checks.Protocol{"tcp"}, IPVersion: []checks.IPVersion{"ipv4"}}},
-	"FTPDAEMON":     {code: 9, cli: checks.Listening{Port: []checks.Port{21}, Protocol: []checks.Protocol{"tcp"}, IPVersion: []checks.IPVersion{"ipv4"}}},
-	"GRIDFTPDAEMON": {code: 11, cli: checks.Listening{Port: []checks.Port{2811}, Protocol: []checks.Protocol{"tcp"}, IPVersion: []checks.IPVersion{"ipv4"}}},
+	"SSHDAEMON":     {code: 7, cli: checks.Listening{Port: []int{22}, Protocol: []string{"tcp"}, IPVersion: []string{"ipv4"}}},
+	"WEBDAEMON":     {code: 8, cli: checks.Listening{Port: []int{80}, Protocol: []string{"tcp"}, IPVersion: []string{"ipv4"}}},
+	"FTPDAEMON":     {code: 9, cli: checks.Listening{Port: []int{21}, Protocol: []string{"tcp"}, IPVersion: []string{"ipv4"}}},
+	"GRIDFTPDAEMON": {code: 11, cli: checks.Listening{Port: []int{2811}, Protocol: []string{"tcp"}, IPVersion: []string{"ipv4"}}},
 	"DAEMON":		 {code: 7, cli: checks.Listening{}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
@@ -52,7 +51,6 @@ var allLBExpressions = map[string] ExpressionCode{
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
 	"XSESSIONS": {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPPING":  {code: 6, cli: checks.CheckAttribute{}},
-
 }
 
 // Evaluate : Evaluates a [lbalias] entry
