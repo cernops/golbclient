@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
@@ -18,11 +17,11 @@ import (
 const daemonCheckCLI = "/bin/netstat -luntap"
 
 type Listening struct {
-	Port      []Port
-	Protocol  []Protocol
-	IPVersion []IPVersion
+	Ports      []Port
+	Protocols  []Protocol
+	IPVersions []IPVersion
 	// The host array is fetched at runtime
-	Host      []Host
+	Hosts      []Host
 }
 
 
@@ -37,10 +36,8 @@ type daemonJsonContainer struct {
 
 // listening_default_values_map : map that is used to set the default values for
 // the ones not found in the metric line
-var listening_any_values_map = map[interface{}]interface{}{
-	Protocol: []string{"tcp", "udp"},
-	IPVersion: []string{"ipv4", "ipv6"},
-}
+var defaultProtocols = []Protocol{"tcp", "udp"}
+var defaultIPVersions = []string{"ipv4", "ipv6"}
 
 // port : int alias-type to represent a port number
 type Port = int
@@ -81,12 +78,13 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 	// Log
 	logger.Trace("Processing daemon check on metric line [%s]", metric)
 	// Process the daemon metric & abort if an error was detected
-	if daemon.processDaemonMetric(metric) != nil {
+	requiredLines, err := daemon.processDaemonMetric(metric)
+	if err != nil {
 		return false
 	}
 
 	// Check if there is anything listening
-	return daemon.isListening()
+	return daemon.isListening(requiredLines)
 }
 
 // parseDaemonJSON : parse a given json metric line into the expected schema
@@ -131,13 +129,13 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 			}
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(r)
-			daemon.Port = append(daemon.Port , Port(r))
+			daemon.Ports = append(daemon.Ports , Port(r))
 		}
 		
 		if i, isFloat := p.(float64); isFloat {
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(Port(i))
-			daemon.Port = append(daemon.Port , Port(i))
+			daemon.Ports = append(daemon.Ports , Port(i))
 		}
 	}
 
@@ -146,7 +144,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	for _, p := range transformationContainer {
 		s, isString := p.(string)
 		if isString {
-			daemon.Protocol = append(daemon.Protocol , Protocol(s))
+			daemon.Protocols = append(daemon.Protocols , Protocol(s))
 		}
 	}
 
@@ -163,7 +161,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 				continue
 			}
 
-			daemon.IPVersion = append(daemon.IPVersion , IPVersion(s))
+			daemon.IPVersions = append(daemon.IPVersions, IPVersion(s))
 		}
 	}
 
@@ -172,7 +170,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	for _, p := range transformationContainer {
 		s, isString := p.(string)
 		if isString {
-			daemon.Host = append(daemon.Host , Host(s))
+			daemon.Hosts = append(daemon.Hosts, Host(s))
 		}
 	}
 
@@ -199,7 +197,8 @@ func pipelineTransform(arg interface{}, container *[]interface{}){
 	}
 }
 
-// validateUniqueKeys : checks if more than one entry for the same key was detected. If so, present a warning message to the user
+// validateUniqueKeys : checks if more than one entry for the same key was detected. If so, present a warning message
+// 	to the user
 func validateUniqueKeys(line interface{}) {
 	foundKeys := regexp.MustCompile(`("\w+" *:)`).FindAllString(line.(string), -1)
 	foundKeyMap := make(map[string]bool, len(foundKeys))
@@ -207,7 +206,8 @@ func validateUniqueKeys(line interface{}) {
 		key := strings.Replace(key, " ", "", -1)
 		keyA := []rune(key)
 		if _, exists := foundKeyMap[key]; exists {
-			logger.Warn("The key [%s] was found multiple times. Note that only the last declared key-value pair will be used.", string(keyA[1:len(keyA)-2]))
+			logger.Warn("The key [%s] was found multiple times. Note that only the last declared key-value pair"+
+				"will be used.", string(keyA[1:len(keyA)-2]))
 		} else {
 			foundKeyMap[key] = true
 		}
@@ -224,14 +224,14 @@ func (daemon *Listening) processDaemonMetric(metric string) (int, error) {
 		return -1, err
 	}
 
-	// Apply default values for nil pointers
+	// Fetch the required metric's amount
+	requiredLines := daemon.getRequiredLines()
+
+	// Apply default values
 	err = daemon.applyDefaultValues()
 	if err != nil {
 		return -1, err
 	}
-
-	// Fetch the required metric's amount
-	requiredLines := daemon.getRequiredLines()
 
 	logger.Trace("Finished processing metric file [%v]", daemon)
 	return requiredLines, nil
@@ -251,26 +251,29 @@ func (daemon *Listening) fetchAllLocalInterfaces() error {
 	outputIPs := regexp.MustCompile(`inet[0-9]?[ ][\w.:]*`).FindAllString(output, -1)
 	logger.Trace("Found local addresses [%v]", outputIPs)
 	for _, ip := range outputIPs {
-		daemon.Host = append(daemon.Host, Host(regexp.MustCompile("inet([6])?[ ]").Split(ip, -1)[1]))
+		daemon.Hosts = append(daemon.Hosts, Host(regexp.MustCompile("inet([6])?[ ]").Split(ip, -1)[1]))
 	}
 
 	// Add the any interface static IP pattern
-	daemon.Host = append(daemon.Host, Host("0.0.0.0"))
+	daemon.Hosts = append(daemon.Hosts, Host("0.0.0.0"))
 
 	return nil
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
-func (daemon *Listening) isListening() bool {
+func (daemon *Listening) isListening(requiredLines int) bool {
 	// The port metric argument is mandatory
-	if len(daemon.Port) == 0 {
-		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`. Aborting check...")
+	if len(daemon.Ports) == 0 {
+		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`."+
+			"Aborting check...")
 		return false
-	} else if len(daemon.Protocol) == 0 {
-		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported ["tcp", "udp"]`)
+	} else if len(daemon.Protocols) == 0 {
+		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported`+
+			`["tcp", "udp"]`)
 		return false
-	} else if len(daemon.IPVersion) == 0 {
-		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported ["ipv4", "ipv6", "4", "6"]`)
+	} else if len(daemon.IPVersions) == 0 {
+		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported`+
+			`["ipv4", "ipv6", "4", "6"]`)
 		return false
 	}
 
@@ -281,39 +284,57 @@ func (daemon *Listening) isListening() bool {
 		return false
 	}
 
-	// Detect if the default struct values were changed
-	needAny := cmp.Equal(daemon.Host, defaultCheck.Host) || cmp.Equal(daemon.IPVersion, defaultCheck.IPVersion) || cmp.Equal(daemon.Protocol, defaultCheck.Protocol)
-	logger.Trace("Daemon check need any condition :: [%t]. Daemon entry [%v]", needAny, *daemon)
-
-	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Port), " ", "|", -1), "[]")
-	protocols := interfaceJoin(daemon.Protocol, "|")
-	hosts := interfaceJoin(daemon.Host, "|")
-	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN|[ ]+)`, protocols, hosts, ports)
+	// Prepare the regex expression
+	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Ports), " ", "|", -1), "[]")
+	protocols := interfaceJoin(daemon.Protocols, "|")
+	hosts := interfaceJoin(daemon.Hosts, "|")
+	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN|[ ]+)`,
+		protocols, hosts, ports)
 
 	filteredRes := regexp.MustCompile(expression).FindAllString(res, -1)
 
-	if (needAny && len(filteredRes) >= 1) || (!needAny && len(filteredRes) == len(daemon.Port) * len(daemon.Protocol) * len(daemon.Host) * len(daemon.IPVersion)){
-		logger.Trace("Found daemon listening, matching lines [%d], [any] condition [%t] and expression [%s], with entry [%v]", len(filteredRes), needAny, expression, *daemon)
+	if len(filteredRes) >= requiredLines {
+		logger.Trace("Found daemon listening, matching lines [%d]," +
+			" expression [%s], with entry [%v]", len(filteredRes), expression, *daemon)
 		return true
 	} else {
-		logger.Trace("Unable to find daemon listening, [any] condition [%t], with entry [%v]", *daemon)
+		logger.Trace("Unable to find daemon listening, expected [%d]" +
+			" lines but only got [%d], with entry [%v]", requiredLines, len(filteredRes), *daemon)
 		return false
 	}
 }
+
+// applyDefaultValues : function responsible for setting the default values of the Hosts, IPVersions & Protocols.
+// 	Will return an error if an issue was detected when attempting to retrieve Hosts
 func (daemon *Listening) applyDefaultValues() error {
-
-
-	// Fetch all listening interfaces
-	err := daemon.fetchAllLocalInterfaces()
-	if err != nil {
-		return err
+	// If no protocols were given
+	if len(daemon.Protocols) == 0 {
+		daemon.Protocols = defaultProtocols
 	}
+
+	// If no ip versions were given
+	if len(daemon.IPVersions) == 0 {
+		daemon.IPVersions = defaultIPVersions
+	}
+
+	// If no hosts were given
+	if len(daemon.Hosts) == 0 {
+		// Fetch all listening interfaces
+		err := daemon.fetchAllLocalInterfaces()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
+
+// getRequiredLines :
 func (daemon *Listening) getRequiredLines() (requiredLines int) {
-	countIfNotZero(len(daemon.Port), &requiredLines)
-	countIfNotZero(len(daemon.IPVersion), &requiredLines)
-	countIfNotZero(len(daemon.Host), &requiredLines)
-	countIfNotZero(len(daemon.Protocol), &requiredLines)
+	countIfNotZero(len(daemon.Ports), &requiredLines)
+	countIfNotZero(len(daemon.IPVersions), &requiredLines)
+	countIfNotZero(len(daemon.Hosts), &requiredLines)
+	countIfNotZero(len(daemon.Protocols), &requiredLines)
 	return
 }
 
