@@ -53,6 +53,10 @@ var allLBExpressions = map[string] ExpressionCode{
 	"SWAPPING":  {code: 6, cli: checks.CheckAttribute{}},
 }
 
+func (lbalias *LBalias) init(){
+	lbalias.ChecksDone = make(map[string]bool)
+}
+
 // Evaluate : Evaluates a [lbalias] entry
 func (lbalias *LBalias) Evaluate() error {
 	logger.Debug("Evaluating the alias [%s]", lbalias.Name)

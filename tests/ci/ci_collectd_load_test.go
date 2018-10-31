@@ -11,7 +11,6 @@ func TestCollectdLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	lba := lbalias.LBalias{Name: "collectd_load_functionality_test",
 		Syslog:     true,
-		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_collectd_load_single.conf"}
 	err := lba.Evaluate()
 	if err != nil {
@@ -29,7 +28,6 @@ func TestCollectdLoadConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	lba := lbalias.LBalias{Name: "collectd_load_comprehensive_test",
-		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_collectd_load.conf"}
 	err := lba.Evaluate()
 	if err != nil {
@@ -47,7 +45,6 @@ func TestCollectdLoadFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
 	lba := lbalias.LBalias{Name: "collectd_load_intended_fail_test",
-		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_collectd_load_fail.conf"}
 	err := lba.Evaluate()
 	if err != nil {
