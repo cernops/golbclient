@@ -115,11 +115,11 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	//validateUniqueKeys(line)
 
 	// Container variable
-	var transformationContainer []interface{}
+	var transformationContainer *[]interface{}
 
 	// Parse :: Port
 	pipelineTransform(&x.PortRaw, &transformationContainer)
-	for _, p := range transformationContainer {
+	for _, p := range *transformationContainer {
 		if s, isString := p.(string); isString {
 			r, err := strconv.Atoi(s)
 			if err != nil {
@@ -139,7 +139,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: Protocol
 	pipelineTransform(&x.Protocol, &transformationContainer)
-	for _, p := range transformationContainer {
+	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
 			daemon.Protocols = append(daemon.Protocols , Protocol(s))
@@ -148,7 +148,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: IP version
 	pipelineTransform(&x.IPVersion, &transformationContainer)
-	for _, p := range transformationContainer {
+	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
 			if s == "ipv4" || s == "4" {
@@ -165,7 +165,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Parse :: Host
 	pipelineTransform(&x.Host, &transformationContainer)
-	for _, p := range transformationContainer {
+	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
 			daemon.Hosts = append(daemon.Hosts, Host(s))
@@ -187,11 +187,11 @@ func validatePortRange(port int) {
 // Else if the interface is of non slice interface type, then the container is created with the
 //  interface value as its first element. This helps to abstract the handling of different
 //  schemas.
-func pipelineTransform(arg *interface{}, container *[]interface{}){
-	if valueArray, ok := (*arg).([]interface{}); ok {
-		*container = valueArray
-	} else if valueEntry, ok := (*arg).(interface{}); ok {
-		container = &[]interface{}{valueEntry}
+func pipelineTransform(arg interface{}, container **[]interface{}){
+	if valueArray, ok := arg.([]interface{}); ok {
+		*container = &valueArray
+	} else if valueEntry, ok := arg.(interface{}); ok {
+		*container = &[]interface{}{valueEntry}
 	}
 }
 
