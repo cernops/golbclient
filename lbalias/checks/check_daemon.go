@@ -218,10 +218,15 @@ func validateUniqueKeys(line interface{}) {
 func (daemon *Listening) processDaemonMetric(metric string) (int, error) {
 	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
 
-	// Parse json
-	err := daemon.parseDaemonJSON(metric)
-	if err != nil {
-		return -1, err
+	var err error
+	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
+	// 	For more information, see: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
+	if len(daemon.IPVersions) == 0 && len(daemon.Hosts) == 0 &&	len(daemon.Ports) == 0 && len(daemon.Protocols) == 0 {
+		// Parse json
+		err := daemon.parseDaemonJSON(metric)
+		if err != nil {
+			return -1, err
+		}
 	}
 
 	// Fetch the required metric's amount
