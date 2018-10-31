@@ -26,7 +26,6 @@ func TestDaemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.TRACE)
 	lba := lbalias.LBalias{Name: "daemon_functionality_test",
 		Syslog:     true,
-		ChecksDone: make(map[string]bool),
 		ConfigFile: fmt.Sprintf("%s/lbclient_daemon_check.conf", daemonTestsDir)}
 	err := lba.Evaluate()
 	if err != nil {
@@ -59,7 +58,6 @@ func TestDaemonFailedConfigurationFile(t *testing.T) {
 	// Run the tests on all files found
 	for _, file := range failTestFiles {
 		lba := lbalias.LBalias{Name: file,
-			ChecksDone: make(map[string]bool),
 			ConfigFile: file}
 		lba.Evaluate()
 
@@ -91,7 +89,6 @@ func TestDaemonWarningConfigurationFile(t *testing.T) {
 	// Run the tests on all files found
 	for _, file := range failTestFiles {
 		lba := lbalias.LBalias{Name: file,
-			ChecksDone: make(map[string]bool),
 			ConfigFile: file}
 		lba.Evaluate()
 

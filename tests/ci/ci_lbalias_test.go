@@ -57,7 +57,6 @@ func TestDoubleLBAliasFile(t *testing.T) {
 func TestMissingConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 	lba := lbalias.LBalias{Name: "myTest",
-		ChecksDone: make(map[string]bool),
 		Syslog:     true,
 		ConfigFile: "../test/lbtest.conf_does_not_exist"}
 

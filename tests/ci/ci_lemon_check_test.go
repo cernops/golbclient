@@ -29,7 +29,6 @@ func TestLemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	lba := lbalias.LBalias{Name: "myTest",
 		Syslog:     true,
-		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_lemon_check_single.conf"}
 	err := lba.Evaluate()
 	if err != nil {
@@ -47,7 +46,6 @@ func TestLemonConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	lba := lbalias.LBalias{Name: "lemonTest",
-		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_lemon_check.conf"}
 	err := lba.Evaluate()
 	if err != nil {
@@ -65,7 +63,6 @@ func TestLemonFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
 	lba := lbalias.LBalias{Name: "lemonFailTest",
-		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_lemon_check_fail.conf"}
 	err := lba.Evaluate()
 	if err != nil {
