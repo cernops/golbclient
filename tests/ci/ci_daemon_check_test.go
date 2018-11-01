@@ -43,7 +43,7 @@ func TestDaemonFunctionality(t *testing.T) {
 
 // TestDaemonFailedConfigurationFile : integration test for all the functionality supplied by the lemon-cli, fail tests
 func TestDaemonFailedConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.FATAL)
 
 	// Read all fail tests
 	failTestsFileNamePattern := "fail_part"
