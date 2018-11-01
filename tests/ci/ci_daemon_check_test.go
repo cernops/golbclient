@@ -25,11 +25,11 @@ func init() {
 // TestDaemonFunctionality : fundamental functionality test the daemon checks
 func TestDaemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.TRACE)
-	lba := lbalias.New()
-	lba.Name = "daemon_functionality_test"
-	lba.Syslog = true
-	lba.ConfigFile = fmt.Sprintf("%s/lbclient_daemon_check.conf", daemonTestsDir)
 
+	lba := lbalias.NewLbAlias(
+		"daemon_functionality_test",
+		true,
+		fmt.Sprintf("%s/lbclient_daemon_check.conf", daemonTestsDir))
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
@@ -60,8 +60,7 @@ func TestDaemonFailedConfigurationFile(t *testing.T) {
 
 	// Run the tests on all files found
 	for _, file := range failTestFiles {
-		lba := lbalias.LBalias{Name: file,
-			ConfigFile: file}
+		lba := lbalias.NewLbAlias(file, false, file)
 		lba.Evaluate()
 
 		if lba.Metric > 0 {
@@ -91,8 +90,7 @@ func TestDaemonWarningConfigurationFile(t *testing.T) {
 
 	// Run the tests on all files found
 	for _, file := range failTestFiles {
-		lba := lbalias.LBalias{Name: file,
-			ConfigFile: file}
+		lba := lbalias.NewLbAlias(file, false, file)
 		lba.Evaluate()
 
 		if lba.Metric < 0 {

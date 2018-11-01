@@ -54,9 +54,9 @@ var allLBExpressions = map[string]ExpressionCode{
 	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 }
 
-// New : Create a new instance of the struct [LBalias], ready to be used
-func New() *LBalias {
-	return &LBalias{ChecksDone: make(map[string]bool)}
+// NewLbAlias : simple constructor for the LBalias struct that abstract the initialization of the map
+func NewLbAlias(name string, syslog bool, configfile string) *LBalias {
+	return &LBalias{Name: name, Syslog: syslog, ConfigFile: configfile, ChecksDone: make(map[string]bool)}
 }
 
 // Evaluate : Evaluates a [lbalias] entry

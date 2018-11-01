@@ -1,10 +1,11 @@
 package ci
 
 import (
+	"testing"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/utils"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"testing"
 )
 
 var options utils.Options
@@ -56,9 +57,10 @@ func TestDoubleLBAliasFile(t *testing.T) {
 // TestMissingConfigurationFile : attempts to run the application with a non-existent configuration file
 func TestMissingConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
-	lba := lbalias.LBalias{Name: "myTest",
-		Syslog:     true,
-		ConfigFile: "../test/lbtest.conf_does_not_exist"}
+	lba := lbalias.NewLbAlias(
+		"myTest",
+		true,
+		"../test/lbtest.conf_does_not_exist")
 
 	err := lba.Evaluate()
 	if err == nil {

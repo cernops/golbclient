@@ -1,17 +1,19 @@
 package ci
 
 import (
+	"testing"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"testing"
 )
 
 // TestLemonLoadFunctionality : fundamental functionality test for the [lemon-cli], output value must be = 1
 func TestLemonLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	lba := lbalias.LBalias{Name: "myTest",
-		Syslog:     true,
-		ConfigFile: "../test/lbclient_lemon_load_single.conf"}
+	lba := lbalias.NewLbAlias(
+		"myTest",
+		true,
+		"../test/lbclient_lemon_load_single.conf")
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
@@ -27,8 +29,10 @@ func TestLemonLoadFunctionality(t *testing.T) {
 func TestLemonLoadConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	lba := lbalias.LBalias{Name: "lemonTest",
-		ConfigFile: "../test/lbclient_lemon_load.conf"}
+	lba := lbalias.NewLbAlias(
+		"lemonTest",
+		false,
+		"../test/lbclient_lemon_load.conf")
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())
@@ -44,8 +48,10 @@ func TestLemonLoadConfigurationFile(t *testing.T) {
 func TestLemonLoadFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	lba := lbalias.LBalias{Name: "lemonFailTest",
-		ConfigFile: "../test/lbclient_lemon_load_fail.conf"}
+	lba := lbalias.NewLbAlias(
+		"lemonFailTest",
+		false,
+		"../test/lbclient_lemon_load_fail.conf")
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())

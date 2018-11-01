@@ -1,13 +1,13 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"strings"
+	"testing"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"testing"
-	"strings"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
-
 
 // TestCILemonCLI : checks if the alternative [lemon-cli] used in the CI pipeline is OK
 func TestCILemonCLI(t *testing.T) {
@@ -27,9 +27,10 @@ func TestCILemonCLI(t *testing.T) {
 // TestLemonFunctionality : fundamental functionality test for the [lemon-cli], output value must not be negative
 func TestLemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	lba := lbalias.LBalias{Name: "myTest",
-		Syslog:     true,
-		ConfigFile: "../test/lbclient_lemon_check_single.conf"}
+	lba := lbalias.NewLbAlias(
+		"myTest",
+		true,
+		"../test/lbclient_lemon_check_single.conf")
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
@@ -45,8 +46,10 @@ func TestLemonFunctionality(t *testing.T) {
 func TestLemonConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	lba := lbalias.LBalias{Name: "lemonTest",
-		ConfigFile: "../test/lbclient_lemon_check.conf"}
+	lba := lbalias.NewLbAlias(
+		"lemonTest",
+		false,
+		"../test/lbclient_lemon_check.conf")
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())
@@ -62,8 +65,10 @@ func TestLemonConfigurationFile(t *testing.T) {
 func TestLemonFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	lba := lbalias.LBalias{Name: "lemonFailTest",
-		ConfigFile: "../test/lbclient_lemon_check_fail.conf"}
+	lba := lbalias.NewLbAlias(
+		"lemonFailTest",
+		false,
+		"../test/lbclient_lemon_check_fail.conf")
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())
