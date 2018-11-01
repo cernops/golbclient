@@ -24,7 +24,7 @@ func init() {
 
 // TestDaemonFunctionality : fundamental functionality test the daemon checks
 func TestDaemonFunctionality(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.ERROR)
 
 	lba := lbalias.NewLbAlias(
 		"daemon_functionality_test",
@@ -43,7 +43,7 @@ func TestDaemonFunctionality(t *testing.T) {
 
 // TestDaemonFailedConfigurationFile : integration test for all the functionality supplied by the lemon-cli, fail tests
 func TestDaemonFailedConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.FATAL)
+	logger.SetLevel(logger.TRACE)
 
 	// Read all fail tests
 	failTestsFileNamePattern := "fail_part"

@@ -4,7 +4,7 @@ package utils
 type Options struct {
 	// Example of verbosity with level
 	CheckOnly  bool   `short:"c" long:"checkonly" description:"Return code shows if lbclient.conf is correct"`
-	DebugLevel string `short:"d" long:"debuglevel" default:"INFO" description:"Debugger output level [TRACE, WARN, DEBUG, INFO, ERROR, FATAL]"`
+	DebugLevel string `short:"d" long:"debuglevel" default:"ERROR" description:"Debugger output level [TRACE, WARN, DEBUG, INFO, ERROR, FATAL]"`
 	Syslog     bool   `short:"s" long:"logsyslog" description:"Log to syslog rather than stdout"`
 	NoLogin    bool   `short:"f" long:"ignorenologin" description:"Ignore nologin files"`
 	// Configuration files

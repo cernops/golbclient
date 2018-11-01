@@ -77,6 +77,7 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 	// Process the daemon metric & abort if an error was detected
 	requiredLines, err := daemon.processDaemonMetric(metric)
 	if err != nil {
+		logger.Error(err.Error())
 		return false
 	}
 
@@ -86,7 +87,7 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 
 // parseDaemonJSON : parse a given json metric line into the expected schema
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
-	if len(line) == 0 {
+	if len(line) <= 2 {
 		logger.Warn("Skipping empty metric line...")
 		return err
 	}
@@ -97,7 +98,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 			if re, ok := r.(error); re != nil && ok {
 				err = re
 			} else {
-				err = fmt.Errorf("unexpected error when decoding metric [%s]", line)
+				err = fmt.Errorf("%v", r)
 			}
 			logger.Error("Error when decoding metric [%s]. Error [%s]. Failing metric...", line, err.Error())
 		}
@@ -114,7 +115,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	//validateUniqueKeys(line)
 
 	// Container variable
-	var transformationContainer *[]interface{}
+	transformationContainer := new([]interface{})
 
 	// Parse :: Port
 	pipelineTransform(&x.PortRaw, &transformationContainer)
@@ -131,6 +132,8 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(Port(i))
 			daemon.Ports = append(daemon.Ports, Port(i))
+		} else {
+			return fmt.Errorf("the `port` value [%v] is not supported", p)
 		}
 	}
 
@@ -139,7 +142,10 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
+			validateProtocol(Protocol(s))
 			daemon.Protocols = append(daemon.Protocols, Protocol(s))
+		} else {
+			return fmt.Errorf("the `protocol` value [%v] is not supported", p)
 		}
 	}
 
@@ -153,10 +159,11 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 			} else if s == "ipv6" || s == "6" {
 				s = "6"
 			} else {
-				continue
+				return fmt.Errorf("the `ip` value [%s] is not supported", s)
 			}
-
 			daemon.IPVersions = append(daemon.IPVersions, IPVersion(s))
+		} else {
+			return fmt.Errorf("the `ip` value [%v] is not supported", p)
 		}
 	}
 
@@ -166,6 +173,8 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 		s, isString := p.(string)
 		if isString {
 			daemon.Hosts = append(daemon.Hosts, Host(s))
+		} else {
+			return fmt.Errorf("the `host` value [%v] is not supported", p)
 		}
 	}
 
@@ -173,9 +182,16 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 }
 
 // validatePortRange : validates that the given port is within the accepted range
-func validatePortRange(port int) {
+func validatePortRange(port Port) {
 	if (port < 1) || (port > 65535) {
 		panic(fmt.Sprintf("The specified port [%d] is out of range [1-65535]", port))
+	}
+}
+
+// validateProtocol : validates that the given protocol is an accepted value
+func validateProtocol(protocol Protocol) {
+	if protocol != "tcp" && protocol != "udp" {
+		panic(fmt.Sprintf("The specified protocol [%s] is not supported", protocol))
 	}
 }
 
@@ -259,6 +275,7 @@ func (daemon *Listening) fetchAllLocalInterfaces() error {
 
 	// Add the any interface static IP pattern
 	daemon.Hosts = append(daemon.Hosts, Host("0.0.0.0"))
+	daemon.Hosts = append(daemon.Hosts, Host("::"))
 
 	return nil
 }
@@ -289,7 +306,7 @@ func (daemon *Listening) isListening(requiredLines int) bool {
 
 	// Prepare the regex expression
 	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Ports), " ", "|", -1), "[]")
-	protocols := interfaceJoin(daemon.Protocols, "|")
+	protocols := interfaceJoin(daemon.Protocols, "(6)?|")
 	hosts := interfaceJoin(daemon.Hosts, "|")
 	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN|[ ]+)`,
 		protocols, hosts, ports)
@@ -302,7 +319,7 @@ func (daemon *Listening) isListening(requiredLines int) bool {
 		return true
 	} else {
 		logger.Trace("Unable to find daemon listening, expected [%d]"+
-			" lines but only got [%d], with entry [%v]", requiredLines, len(filteredRes), *daemon)
+			" lines but only got [%d], with entry [%v], expression [%v]", requiredLines, len(filteredRes), *daemon, expression)
 		return false
 	}
 }
