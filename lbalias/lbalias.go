@@ -2,46 +2,47 @@ package lbalias
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 type LBalias struct {
-	Name           string
-	ConfigFile     string
+	Name       string
+	ConfigFile string
 	//NoLogin        bool
-	Syslog         bool
-	GData          []string
-	MData          []string
+	Syslog bool
+	GData  []string
+	MData  []string
 	//CheckXsessions int
 	//RogerState     string
-	Metric         int
+	Metric int
 	//CheckMetricList []MetricEntry
 	//LoadMetricList  []MetricEntry
-	Constant        float32
+	Constant float32
 	//CheckAttributes map[string]bool
-	ChecksDone      map[string]bool
+	ChecksDone map[string]bool
 }
 
 type ExpressionCode struct {
 	code int
-	cli CLI
+	cli  CLI
 }
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
-var allLBExpressions = map[string] ExpressionCode{
+var allLBExpressions = map[string]ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
 	"SSHDAEMON":     {code: 7, cli: checks.Listening{Ports: []int{22}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
 	"WEBDAEMON":     {code: 8, cli: checks.Listening{Ports: []int{80}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
 	"FTPDAEMON":     {code: 9, cli: checks.Listening{Ports: []int{21}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.Listening{Ports: []int{2811}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
-	"DAEMON":		 {code: 7, cli: checks.Listening{}},
+	"DAEMON":        {code: 7, cli: checks.Listening{}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
 	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
@@ -49,12 +50,13 @@ var allLBExpressions = map[string] ExpressionCode{
 	"COMMAND":       {code: 14, cli: checks.Command{}},
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
-	"XSESSIONS": {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":  {code: 6, cli: checks.CheckAttribute{}},
+	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 }
 
-func (lbalias *LBalias) init(){
-	lbalias.ChecksDone = make(map[string]bool)
+// New : Create a new instance of the struct [LBalias], ready to be used
+func New() *LBalias {
+	return &LBalias{ChecksDone: make(map[string]bool)}
 }
 
 // Evaluate : Evaluates a [lbalias] entry
@@ -72,7 +74,7 @@ func (lbalias *LBalias) Evaluate() error {
 	lines, err := filehandler.ReadAllLinesFromFile(lbalias.ConfigFile)
 	if err != nil {
 		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
-		return err		
+		return err
 	}
 
 	// Read the configuration file using the scanner API
@@ -163,7 +165,7 @@ func (lbalias *LBalias) defaultLoad() int {
 	}
 
 	f_sm, nb_processes, users := lbalias.sessionManager()
-	if lbalias.ChecksDone["xsessions"]  {
+	if lbalias.ChecksDone["xsessions"] {
 		logger.Debug("Result of X sessions formula = %f", f_sm)
 	} else {
 		f_sm = float32(0)
@@ -260,4 +262,3 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 	}
 	return float32(f_sm), float32(nb_processes), float32(len(users) - 1)
 }
-

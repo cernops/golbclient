@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 const daemonCheckCLI = "/bin/netstat -luntap"
@@ -21,14 +22,12 @@ type Listening struct {
 	Protocols  []Protocol
 	IPVersions []IPVersion
 	// The host array is fetched at runtime
-	Hosts      []Host
+	Hosts []Host
 }
-
-
 
 // Helper struct
 type daemonJsonContainer struct {
-	PortRaw interface{} `json:"port"`
+	PortRaw   interface{} `json:"port"`
 	Protocol  interface{} `json:"protocol"`
 	IPVersion interface{} `json:"ip"`
 	Host      interface{} `json:"host"`
@@ -55,18 +54,18 @@ type Host = string
 func interfaceJoin(iface interface{}, delim string) (_ string) {
 	var res bytes.Buffer
 
-		val := reflect.ValueOf(iface)
-		if val.Kind() == reflect.Slice {
-			for i := 0; i < val.Len(); i++ {
-				if i == val.Len() - 1 {
-					delim = ""
-				}
-				res.WriteString(fmt.Sprintf("%s%s", val.Index(i).Interface(), delim))
+	val := reflect.ValueOf(iface)
+	if val.Kind() == reflect.Slice {
+		for i := 0; i < val.Len(); i++ {
+			if i == val.Len()-1 {
+				delim = ""
 			}
-		} else {
-			logger.Error("Unable to join the given interface [%v]", iface)
-			return
+			res.WriteString(fmt.Sprintf("%s%s", val.Index(i).Interface(), delim))
 		}
+	} else {
+		logger.Error("Unable to join the given interface [%v]", iface)
+		return
+	}
 	return res.String()
 }
 
@@ -127,13 +126,11 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 			}
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(r)
-			daemon.Ports = append(daemon.Ports , Port(r))
-		}
-		
-		if i, isFloat := p.(float64); isFloat {
+			daemon.Ports = append(daemon.Ports, Port(r))
+		} else if i, isFloat := p.(float64); isFloat {
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(Port(i))
-			daemon.Ports = append(daemon.Ports , Port(i))
+			daemon.Ports = append(daemon.Ports, Port(i))
 		}
 	}
 
@@ -142,7 +139,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
-			daemon.Protocols = append(daemon.Protocols , Protocol(s))
+			daemon.Protocols = append(daemon.Protocols, Protocol(s))
 		}
 	}
 
@@ -187,11 +184,14 @@ func validatePortRange(port int) {
 // Else if the interface is of non slice interface type, then the container is created with the
 //  interface value as its first element. This helps to abstract the handling of different
 //  schemas.
-func pipelineTransform(arg interface{}, container **[]interface{}){
-	if valueArray, ok := arg.([]interface{}); ok {
-		*container = &valueArray
-	} else if valueEntry, ok := arg.(interface{}); ok {
-		*container = &[]interface{}{valueEntry}
+func pipelineTransform(arg *interface{}, container **[]interface{}) {
+	switch value := (*arg).(type) {
+	case []interface{}:
+		*container = &value
+	case interface{}:
+		*container = &[]interface{}{value}
+	default:
+		**container = nil
 	}
 }
 
@@ -219,7 +219,7 @@ func (daemon *Listening) processDaemonMetric(metric string) (int, error) {
 	var err error
 	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
 	// 	For more information, see: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
-	if len(daemon.IPVersions) == 0 && len(daemon.Hosts) == 0 &&	len(daemon.Ports) == 0 && len(daemon.Protocols) == 0 {
+	if len(daemon.IPVersions) == 0 && len(daemon.Hosts) == 0 && len(daemon.Ports) == 0 && len(daemon.Protocols) == 0 {
 		// Parse json
 		err := daemon.parseDaemonJSON(metric)
 		if err != nil {
@@ -267,15 +267,15 @@ func (daemon *Listening) fetchAllLocalInterfaces() error {
 func (daemon *Listening) isListening(requiredLines int) bool {
 	// The port metric argument is mandatory
 	if len(daemon.Ports) == 0 {
-		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`."+
+		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`." +
 			"Aborting check...")
 		return false
 	} else if len(daemon.Protocols) == 0 {
-		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported`+
+		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported` +
 			`["tcp", "udp"]`)
 		return false
 	} else if len(daemon.IPVersions) == 0 {
-		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported`+
+		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported` +
 			`["ipv4", "ipv6", "4", "6"]`)
 		return false
 	}
@@ -297,11 +297,11 @@ func (daemon *Listening) isListening(requiredLines int) bool {
 	filteredRes := regexp.MustCompile(expression).FindAllString(res, -1)
 
 	if len(filteredRes) >= requiredLines {
-		logger.Trace("Found daemon listening, matching lines [%d]," +
+		logger.Trace("Found daemon listening, matching lines [%d],"+
 			" expression [%s], with entry [%v]", len(filteredRes), expression, *daemon)
 		return true
 	} else {
-		logger.Trace("Unable to find daemon listening, expected [%d]" +
+		logger.Trace("Unable to find daemon listening, expected [%d]"+
 			" lines but only got [%d], with entry [%v]", requiredLines, len(filteredRes), *daemon)
 		return false
 	}
@@ -342,7 +342,7 @@ func (daemon *Listening) getRequiredLines() (requiredLines int) {
 }
 
 // countIfNotZero : helper function for the [getRequiredLines] function
-func countIfNotZero(value int, counter *int){
+func countIfNotZero(value int, counter *int) {
 	if value > 0 {
 		if *counter == 0 {
 			*counter += value

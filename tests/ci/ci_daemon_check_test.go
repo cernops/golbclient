@@ -2,12 +2,13 @@ package ci
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 // Parent directory for all daemon tests (fail & success)
@@ -16,7 +17,7 @@ var daemonTestsDir string
 // Get environment variable
 var loggerLevel logger.Level
 
-func init(){
+func init() {
 	daemonTestsDir = "../test/daemon"
 	loggerLevel = logger.GetLevelByString(os.Getenv("TESTS_LOGGING_LEVEL"))
 }
@@ -24,9 +25,11 @@ func init(){
 // TestDaemonFunctionality : fundamental functionality test the daemon checks
 func TestDaemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.TRACE)
-	lba := lbalias.LBalias{Name: "daemon_functionality_test",
-		Syslog:     true,
-		ConfigFile: fmt.Sprintf("%s/lbclient_daemon_check.conf", daemonTestsDir)}
+	lba := lbalias.New()
+	lba.Name = "daemon_functionality_test"
+	lba.Syslog = true
+	lba.ConfigFile = fmt.Sprintf("%s/lbclient_daemon_check.conf", daemonTestsDir)
+
 	err := lba.Evaluate()
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
@@ -51,7 +54,7 @@ func TestDaemonFailedConfigurationFile(t *testing.T) {
 		}
 		return nil
 	})
-	if  err != nil {
+	if err != nil {
 		logger.Fatal("Failed to read the test directory [%s]", daemonTestsDir)
 	}
 
@@ -82,7 +85,7 @@ func TestDaemonWarningConfigurationFile(t *testing.T) {
 		}
 		return nil
 	})
-	if  err != nil {
+	if err != nil {
 		logger.Fatal("Failed to read the test directory [%s]", daemonTestsDir)
 	}
 
