@@ -17,6 +17,7 @@ import (
 
 const daemonCheckCLI = "/bin/netstat -luntap"
 
+// Listening : struct responsible for all the daemon check slices
 type Listening struct {
 	Ports      []Port
 	Protocols  []Protocol
@@ -25,8 +26,8 @@ type Listening struct {
 	Hosts []Host
 }
 
-// Helper struct
-type daemonJsonContainer struct {
+// daemonJsonContainer : Helper struct
+type daemonJSONContainer struct {
 	PortRaw   interface{} `json:"port"`
 	Protocol  interface{} `json:"protocol"`
 	IPVersion interface{} `json:"ip"`
@@ -38,16 +39,16 @@ type daemonJsonContainer struct {
 var defaultProtocols = []Protocol{"tcp", "udp"}
 var defaultIPVersions = []string{"ipv4", "ipv6"}
 
-// port : int alias-type to represent a port number
+// Port : int alias-type to represent a port number
 type Port = int
 
-// protocol : string alias-type used to distinguish between different transport protocol types
+// Protocol : string alias-type used to distinguish between different transport protocol types
 type Protocol = string
 
-// ipLevel : int alias-type used to distinguish between different IP levels
+// IPVersion : int alias-type used to distinguish between different IP levels
 type IPVersion = string
 
-// host : string alias-type used to identify in which host the daemon should be listening on
+// Host : string alias-type used to identify in which host the daemon should be listening on
 type Host = string
 
 // interfaceJoin : joins all the given structs in a string separated with the chosen delimiter.
@@ -69,6 +70,8 @@ func interfaceJoin(iface interface{}, delim string) (_ string) {
 	return res.String()
 }
 
+// Run : expects that metric line (in string format) to be given in the first position of the
+//	arguments
 func (daemon Listening) Run(args ...interface{}) interface{} {
 	metric := args[0].(string)
 
@@ -105,7 +108,7 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 	}()
 
 	// Attempt to parse the JSON text
-	x := new(daemonJsonContainer)
+	x := new(daemonJSONContainer)
 	if err := json.NewDecoder(strings.NewReader(line)).Decode(x); err != nil {
 		return err
 	}
