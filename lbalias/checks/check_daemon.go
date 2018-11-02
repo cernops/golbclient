@@ -177,7 +177,6 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 			return fmt.Errorf("the `host` value [%v] is not supported", p)
 		}
 	}
-
 	return err
 }
 
