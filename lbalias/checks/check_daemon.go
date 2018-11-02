@@ -319,11 +319,11 @@ func (daemon *Listening) isListening(requiredLines int) bool {
 		logger.Trace("Found daemon listening, matching lines [%d],"+
 			" expression [%s], with entry [%v]", len(filteredRes), expression, *daemon)
 		return true
-	} else {
-		logger.Trace("Unable to find daemon listening, expected [%d]"+
-			" lines but only got [%d], with entry [%v], expression [%v]", requiredLines, len(filteredRes), *daemon, expression)
-		return false
 	}
+	logger.Trace("Unable to find daemon listening, expected [%d]"+
+		" lines but only got [%d], with entry [%v], expression [%v]",
+		requiredLines, len(filteredRes), *daemon, expression)
+	return false
 }
 
 // applyDefaultValues : function responsible for setting the default values of the Hosts, IPVersions & Protocols.
