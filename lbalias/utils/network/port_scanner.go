@@ -47,18 +47,45 @@ func (ps *portScanner) Start(timeout time.Duration) {
 }
 
 func scanPort(ip string, protocol string, ipVersion string, port int, timeout time.Duration) {
+	// Process protocol
+	if len(protocol) != 0 {
+		launchScan(ip, protocol, ipVersion, port, timeout)
+	} else {
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(2)
+		go func() {
+			defer waitGroup.Done()
+			launchScan(ip, "tcp", ipVersion, port, timeout)
+		}()
+		go func() {
+			defer waitGroup.Done()
+			launchScan(ip, "udp", ipVersion, port, timeout)
+		}()
+		waitGroup.Wait()
+	}
+}
+
+func launchScan(ip string, protocol string, ipVersion string, port int, timeout time.Duration) {
+	// Process IPVersion
+	if ipVersion == "ipv4" {
+		ipVersion = "4"
+	} else if ipVersion == "ipv6" {
+		ipVersion = "6"
+	}
+
 	target := fmt.Sprintf("%s:%d", ip, port)
 	protocolIPv := fmt.Sprintf("%s%s", protocol, ipVersion)
+
 	conn, err := net.DialTimeout(protocolIPv, target, timeout)
-	defer conn.Close()
 	if err != nil {
 		if strings.Contains(err.Error(), "too many open files") {
 			time.Sleep(timeout)
 			scanPort(ip, protocol, ipVersion, port, timeout)
 		} else {
-			logger.Trace("The port [%d], on the protocol [%s], is closed.", port, protocol)
+			logger.Info("The port [%d], on the protocol [%s] :: target [%s], is closed.", port, protocolIPv, target)
 		}
 		return
 	}
-	logger.Trace("The port [%d], on the protocol [%s], is open.", port, protocol)
+	conn.Close()
+	logger.Info("The port [%d], on the protocol [%s] :: target [%s], is open.", port, protocolIPv, target)
 }

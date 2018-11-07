@@ -2,12 +2,9 @@ package network
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
+	"syscall"
 	"time"
-
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 )
 
 type concurrentPortScanner struct {
@@ -23,12 +20,27 @@ type Params struct {
 	Ports      []int
 }
 
+func (p *Params) applyDefaultValues() {
+	enforceNonEmpty(&p.Hosts)
+	enforceNonEmpty(&p.Protocols)
+	enforceNonEmpty(&p.IPVersions)
+}
+
+func enforceNonEmpty(sarr *[]string) {
+	if len(*sarr) == 0 {
+		*sarr = []string{""}
+	}
+}
+
 // NewConcurrentPortScanner : create a new instance of the type *ConcurrentPortScanner based on the params @see Params
 //	given
 func NewConcurrentPortScanner(params Params) *concurrentPortScanner {
+	params.applyDefaultValues()
+
 	cpsInstance := new(concurrentPortScanner)
 	psInstances := make([]portScanner, len(params.Hosts))
-	ulimit := ulimit()/int64(len(params.Hosts)) - int64(len(params.Hosts))
+	ulimit := (ulimit() / int64(len(params.Hosts)) * int64(len(params.Protocols)) *
+		int64(len(params.IPVersions))) - int64(len(params.Hosts))
 
 	for _, host := range params.Hosts {
 		for _, protocol := range params.Protocols {
@@ -59,17 +71,12 @@ func (cps *concurrentPortScanner) Run(timeout time.Duration) {
 	waitGroup.Wait()
 }
 
-func ulimit() (maxOpenFiles int64) {
-	out, err := runner.RunCommand("ulimit", true, true, "-n")
+func ulimit() int64 {
+	var rLimit syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
 	if err != nil {
 		panic(fmt.Sprintf("An unexpected error ocurred when running [ulimit]. Error [%s]", err.Error()))
 	}
 
-	s := strings.TrimSpace(out)
-	maxOpenFiles, err = strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		panic(fmt.Sprintf("An unexpected error ocurred when parsing the [ulimt] output. Error [%s]", err.Error()))
-	}
-
-	return
+	return int64(rLimit.Cur)
 }
