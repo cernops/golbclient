@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
@@ -22,12 +23,12 @@ type Params struct {
 	Ports      []int
 }
 
-// NewConcurrentPortScanner : create a new instance of the type *concurrentPortScanner based on the params @see Params
+// NewConcurrentPortScanner : create a new instance of the type *ConcurrentPortScanner based on the params @see Params
 //	given
 func NewConcurrentPortScanner(params Params) *concurrentPortScanner {
 	cpsInstance := new(concurrentPortScanner)
 	psInstances := make([]portScanner, len(params.Hosts))
-	ulimit := ulimit() / int64(len(params.Hosts))
+	ulimit := ulimit()/int64(len(params.Hosts)) - int64(len(params.Hosts))
 
 	for _, host := range params.Hosts {
 		for _, protocol := range params.Protocols {
@@ -43,10 +44,19 @@ func NewConcurrentPortScanner(params Params) *concurrentPortScanner {
 	return cpsInstance
 }
 
-func (cps *concurrentPortScanner) Start(timeout time.Duration) {
+// Run : runs the ConcurrentPortScanner against the specified params @see newConcurrentPortScanner
+func (cps *concurrentPortScanner) Run(timeout time.Duration) {
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(len(*cps.instances))
+
 	for _, instance := range *cps.instances {
-		instance.start(timeout)
+		go func(i portScanner) {
+			defer waitGroup.Done()
+			i.Start(timeout)
+		}(instance)
 	}
+
+	waitGroup.Wait()
 }
 
 func ulimit() (maxOpenFiles int64) {

@@ -30,7 +30,7 @@ func newPortScanner(ports []int, hostIP string, protocol string, ipVersion strin
 	}
 }
 
-func (ps *portScanner) start(timeout time.Duration) {
+func (ps *portScanner) Start(timeout time.Duration) {
 	waitGroup := sync.WaitGroup{}
 	defer waitGroup.Wait()
 
