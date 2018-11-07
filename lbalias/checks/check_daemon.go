@@ -17,6 +17,15 @@ import (
 
 const daemonCheckCLI = "/bin/netstat -luntap"
 
+// Port : int alias-type to represent a port number
+type Port = int
+// Protocol : string alias-type used to distinguish between different transport protocol types
+type Protocol = string
+// IPVersion : int alias-type used to distinguish between different IP levels
+type IPVersion = string
+// Host : string alias-type used to identify in which host the daemon should be listening on
+type Host = string
+
 // Listening : struct responsible for all the daemon check slices
 type Listening struct {
 	Ports      []Port
@@ -24,6 +33,7 @@ type Listening struct {
 	IPVersions []IPVersion
 	// The host array is fetched at runtime
 	Hosts []Host
+	metric_default string
 }
 
 // daemonJsonContainer : Helper struct
@@ -37,19 +47,8 @@ type daemonJSONContainer struct {
 // listening_default_values_map : map that is used to set the default values for
 // the ones not found in the metric line
 var defaultProtocols = []Protocol{"tcp", "udp"}
-var defaultIPVersions = []string{"ipv4", "ipv6"}
+var defaultIPVersions = []IPVersion{"ipv4", "ipv6"}
 
-// Port : int alias-type to represent a port number
-type Port = int
-
-// Protocol : string alias-type used to distinguish between different transport protocol types
-type Protocol = string
-
-// IPVersion : int alias-type used to distinguish between different IP levels
-type IPVersion = string
-
-// Host : string alias-type used to identify in which host the daemon should be listening on
-type Host = string
 
 // interfaceJoin : joins all the given structs in a string separated with the chosen delimiter.
 func interfaceJoin(iface interface{}, delim string) (_ string) {
@@ -72,6 +71,8 @@ func interfaceJoin(iface interface{}, delim string) (_ string) {
 
 // Run : expects that metric line (in string format) to be given in the first position of the
 //	arguments
+
+// 
 func (daemon Listening) Run(args ...interface{}) interface{} {
 	metric := args[0].(string)
 
@@ -90,9 +91,10 @@ func (daemon Listening) Run(args ...interface{}) interface{} {
 
 // parseDaemonJSON : parse a given json metric line into the expected schema
 func (daemon *Listening) parseDaemonJSON(line string) (err error) {
-	if len(line) <= 2 {
-		logger.Warn("Skipping empty metric line...")
-		return err
+	if len(line) <= 2 { //TODO: does it make sense to check regex, i.e. '{   }' 
+		msg := "Empty metrics line detected. Aborting execution..."
+		logger.Error(msg)
+		return fmt.Errorf(msg)
 	}
 
 	// Account for parsing errors
@@ -109,13 +111,13 @@ func (daemon *Listening) parseDaemonJSON(line string) (err error) {
 
 	// Attempt to parse the JSON text
 	x := new(daemonJSONContainer)
-	if err := json.NewDecoder(strings.NewReader(line)).Decode(x); err != nil {
+	if err = json.NewDecoder(strings.NewReader(line)).Decode(x); err != nil {
 		return err
 	}
 
 	// Detect duplicated keys
-	benchmarker.TimeItV(time.Nanosecond, validateUniqueKeys, line)
-	//validateUniqueKeys(line)
+	//benchmarker.TimeItV(time.Nanosecond, validateUniqueKeys, line)
+	validateUniqueKeys(line)
 
 	// Container variable
 	transformationContainer := new([]interface{})
@@ -231,31 +233,47 @@ func validateUniqueKeys(line interface{}) {
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
-func (daemon *Listening) processDaemonMetric(metric string) (int, error) {
-	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
-
-	var err error
+//TODO: UPDATE DOC (and find new name(?))
+func (daemon *Listening) processDaemonMetric(metric string) (requiredLines int, err error) {
 	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
 	// 	For more information, see: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
+	
+	//TODO: THE PARSING IS NEEDED ALL THE TIME. THE FIELDS OF IPVERSION... WILL BE FILLED AT THIS POINT 
 	if len(daemon.IPVersions) == 0 && len(daemon.Hosts) == 0 && len(daemon.Ports) == 0 && len(daemon.Protocols) == 0 {
+		metric = regexp.MustCompile("{(.*?)}").FindString(metric)
 		// Parse json
-		err := daemon.parseDaemonJSON(metric)
+		err = daemon.parseDaemonJSON(metric)
 		if err != nil {
 			return -1, err
 		}
 	}
 
 	// Fetch the required metric's amount
-	requiredLines := daemon.getRequiredLines()
+	requiredLines = daemon.getRequiredLines()
 
 	// Apply default values
 	err = daemon.applyDefaultValues()
 	if err != nil {
 		return -1, err
 	}
+	// The port metric argument is mandatory
+	if len(daemon.Ports) == 0 {
+		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`." +
+			"Aborting check...")
+		//TODO: CHANGE FALSE BY ERROR
+		return false
+	} else if len(daemon.Protocols) == 0 {
+		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported` +
+			`["tcp", "udp"]`)
+		return false
+	} else if len(daemon.IPVersions) == 0 {
+		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported` +
+			`["ipv4", "ipv6", "4", "6"]`)
+		return false
+	}
 
 	logger.Trace("Finished processing metric file [%v]", daemon)
-	return requiredLines, nil
+	return
 }
 
 // fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of hosts to check
@@ -284,22 +302,9 @@ func (daemon *Listening) fetchAllLocalInterfaces() error {
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *Listening) isListening(requiredLines int) bool {
-	// The port metric argument is mandatory
-	if len(daemon.Ports) == 0 {
-		logger.Error("A port needs to be specified in a daemon check in the format `{port : <val>}`." +
-			"Aborting check...")
-		return false
-	} else if len(daemon.Protocols) == 0 {
-		logger.Error(`Failed to parse the given [protocol] entry. Only the following values are supported` +
-			`["tcp", "udp"]`)
-		return false
-	} else if len(daemon.IPVersions) == 0 {
-		logger.Error(`Failed to parse the given [ip] version entry. Only the following values are supported` +
-			`["ipv4", "ipv6", "4", "6"]`)
-		return false
-	}
-
 	// Run the cli
+	//TODO : pass netstat through awk,sort, uniq....
+	// DO WE STILL NEED THE applyDefaults??
 	res, err := runner.RunDirectCommand(daemonCheckCLI, true, true)
 	if err != nil {
 		logger.Error("An error was detected when attempting to run the daemon check cli. Error [%s]", err.Error())
@@ -307,15 +312,15 @@ func (daemon *Listening) isListening(requiredLines int) bool {
 	}
 
 	// Prepare the regex expression
-	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Ports), " ", "|", -1), "[]")
-	protocols := interfaceJoin(daemon.Protocols, "(6)?|")
-	hosts := interfaceJoin(daemon.Hosts, "|")
-	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN|[ ]+)`,
-		protocols, hosts, ports)
+//	ports := strings.Trim(strings.Replace(fmt.Sprint(daemon.Ports), " ", "|", -1), "[]")
+//	protocols := interfaceJoin(daemon.Protocols, "(6)?|")
+//	hosts := interfaceJoin(daemon.Hosts, "|")
+//	expression := fmt.Sprintf(`(?i)(%s(6)?)([ ]+[0-9]+[ ]+[0-9]+[ ]+(%s))([:](%s))(.*)(LISTEN|[ ]+)`,
+//		protocols, hosts, ports)
 
-	filteredRes := regexp.MustCompile(expression).FindAllString(res, -1)
+	//filteredRes := regexp.MustCompile(expression).FindAllString(res, -1)
 
-	if len(filteredRes) >= requiredLines {
+	if len(res) >= requiredLines {
 		logger.Trace("Found daemon listening, matching lines [%d],"+
 			" expression [%s], with entry [%v]", len(filteredRes), expression, *daemon)
 		return true
@@ -353,6 +358,7 @@ func (daemon *Listening) applyDefaultValues() error {
 
 // getRequiredLines :
 func (daemon *Listening) getRequiredLines() (requiredLines int) {
+	requiredLines = 1
 	countIfNotZero(len(daemon.Ports), &requiredLines)
 	countIfNotZero(len(daemon.IPVersions), &requiredLines)
 	countIfNotZero(len(daemon.Hosts), &requiredLines)
@@ -363,10 +369,6 @@ func (daemon *Listening) getRequiredLines() (requiredLines int) {
 // countIfNotZero : helper function for the [getRequiredLines] function
 func countIfNotZero(value int, counter *int) {
 	if value > 0 {
-		if *counter == 0 {
-			*counter += value
-		} else {
-			*counter *= value
-		}
+		*counter *= value
 	}
 }
