@@ -38,12 +38,10 @@ type ExpressionCode struct {
 var allLBExpressions = map[string]ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-//	"SSHDAEMON":     {code: 7, cli: checks.Listening{Ports: []int{22}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
-//TODO; WHAT ABOUT USING JSON HERE ALREADY
-	"SSHDAEMON":     {code: 7, cli: checks.Listening{'{port: 22, protocol: "tcp"}'} //Ports: []int{22}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
-	"WEBDAEMON":     {code: 8, cli: checks.Listening{Ports: []int{80}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
-	"FTPDAEMON":     {code: 9, cli: checks.Listening{Ports: []int{21}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
-	"GRIDFTPDAEMON": {code: 11, cli: checks.Listening{Ports: []int{2811}, Protocols: []string{"tcp"}, IPVersions: []string{"ipv4"}}},
+	"SSHDAEMON":     {code: 7, cli: checks.Listening{Metric: `{"port": 22, "protocol": "tcp", "ip":"ipv4"}`}},
+	"WEBDAEMON":     {code: 8, cli: checks.Listening{Metric: `{"port": 80, "protocol": "tcp", "ip":"ipv4"}`}},
+	"FTPDAEMON":     {code: 9, cli: checks.Listening{Metric: `{"port": 21, "protocol": "tcp", "ip":"ipv4"}`}},
+	"GRIDFTPDAEMON": {code: 11, cli: checks.Listening{Metric: `{"port": 2811, "protocol": "tcp", "ip":"ipv4"}`}},
 	"DAEMON":        {code: 7, cli: checks.Listening{}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
