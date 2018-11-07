@@ -11,7 +11,7 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
-const daemonCheckCLI = "/bin/netstat -luntap"
+const daemonCheckCLI = `/bin/netstat -luntp`
 
 // port : int alias-type to represent a port number
 type port = int
@@ -289,11 +289,10 @@ func (daemon *Listening) isListening(requiredLines int) bool {
 	}
 
 	if len(res) >= requiredLines {
-		logger.Trace("Found daemon listening, matching lines [%d]", len(res))
+		logger.Trace("Found daemon listening, expected [%d] and got [%d]", requiredLines, len(res))
 		return true
 	}
-	logger.Trace("Unable to find daemon listening, expected [%d]"+
-		" lines but only got [%d], with entry [%v]",
+	logger.Trace("Unable to find daemon listening, expected [%d] lines but only got [%d], with entry [%v]",
 		requiredLines, len(res), *daemon)
 	return false
 }
