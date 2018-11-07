@@ -29,13 +29,13 @@ type LBalias struct {
 	ChecksDone map[string]bool
 }
 
-type ExpressionCode struct {
+type expressionCode struct {
 	code int
 	cli  CLI
 }
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
-var allLBExpressions = map[string]ExpressionCode{
+var allLBExpressions = map[string]expressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
 	"SSHDAEMON":     {code: 7, cli: checks.Listening{Metric: `{"port": 22, "protocol": "tcp", "ip":"ipv4"}`}},
