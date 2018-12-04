@@ -65,7 +65,7 @@ before_script:
 build_rpm:
   stage: build_rpm
   script:
-    - export GO111MODULE=on
+    - go11 build ./... && go11 test -race ./tests/ci/...
     - go11 mod vendor
     - ls -R $PREFIX/lb-experts/golbclient
     - ls -R /go/src/gitlab.cern.ch/lb-experts/golbclient
