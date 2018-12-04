@@ -76,7 +76,20 @@ func launchScan(ip string, protocol string, ipVersion string, port int, timeout 
 	target := fmt.Sprintf("%s:%d", ip, port)
 	protocolIPv := fmt.Sprintf("%s%s", protocol, ipVersion)
 
-	conn, err := net.DialTimeout(protocolIPv, target, timeout)
+	var conn net.Conn
+	var err error
+
+	if protocol == "tcp" {
+		conn, err = net.DialTimeout(protocolIPv, target, timeout)
+	} else {
+		addr, err := net.ResolveUDPAddr("udp", target)
+		if err != nil {
+			logger.Error("ERROR :: [%s]", err.Error())
+			return
+		}
+		conn, err = net.DialUDP("udp", nil, addr)
+	}
+
 	if err != nil {
 		if strings.Contains(err.Error(), "too many open files") {
 			time.Sleep(timeout)

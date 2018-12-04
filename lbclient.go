@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"time"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/benchmarker"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/network"
 	"gitlab.cern.ch/lb-experts/golbclient/utils"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -20,51 +19,65 @@ var options utils.Options
 // Flags API
 var parser = flags.NewParser(&options, flags.Default)
 
+// func main() {
+// 	_, err := parser.Parse()
+// 	if err != nil {
+// 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+// 			os.Exit(0)
+// 		} else {
+// 			os.Exit(1)
+// 		}
+// 	}
+
+// 	// Set the application logger level
+// 	logger.SetLevelByString(options.DebugLevel)
+
+// 	//Arguments parsed. Let's open the configuration file
+// 	lbAliases, err := utils.ReadLBAliases(options)
+// 	if err != nil {
+// 		logger.Fatal("Error reading the configuration file. Error [%s]", err.Error())
+// 		os.Exit(1)
+// 	}
+// 	logger.Debug("The aliases from the configuration file are [%v]", lbAliases)
+
+// 	for i := range lbAliases {
+// 		logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
+// 		err = lbAliases[i].Evaluate()
+// 		if err != nil {
+// 			logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
+// 			os.Exit(1)
+// 		}
+// 	}
+
+// 	metricType := "integer"
+// 	metricValue := ""
+// 	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
+// 		metricValue = strconv.Itoa(lbAliases[0].Metric)
+// 	} else {
+// 		var keyvaluelist []string
+// 		for _, lbalias := range lbAliases {
+// 			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
+// 			// Log
+// 			logger.Trace("Metric list: [%v]", keyvaluelist)
+// 		}
+// 		metricValue = strings.Join(keyvaluelist, ",")
+// 		metricType = "string"
+// 	}
+// 	logger.Debug("metric = [%s]", metricValue)
+// 	// SNMP critical output
+// 	fmt.Printf("%s\n%s\n%s\n", OID, metricType, metricValue)
+// }
+
 func main() {
-	_, err := parser.Parse()
-	if err != nil {
-		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
-			os.Exit(0)
-		} else {
-			os.Exit(1)
-		}
+	params := network.Params{
+		//IPVersions: []string{"ipv6"},
+		Protocols: []string{"udp"},
+		Ports:     []int{55512},
+		Hosts:     []string{"127.0.0.1"},
 	}
 
-	// Set the application logger level
-	logger.SetLevelByString(options.DebugLevel)
+	timeout := 1000 * time.Millisecond
+	portScanner := network.NewConcurrentPortScanner(params)
 
-	//Arguments parsed. Let's open the configuration file
-	lbAliases, err := utils.ReadLBAliases(options)
-	if err != nil {
-		logger.Fatal("Error reading the configuration file. Error [%s]", err.Error())
-		os.Exit(1)
-	}
-	logger.Debug("The aliases from the configuration file are [%v]", lbAliases)
-
-	for i := range lbAliases {
-		logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
-		err = lbAliases[i].Evaluate()
-		if err != nil {
-			logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
-			os.Exit(1)
-		}
-	}
-
-	metricType := "integer"
-	metricValue := ""
-	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
-		metricValue = strconv.Itoa(lbAliases[0].Metric)
-	} else {
-		var keyvaluelist []string
-		for _, lbalias := range lbAliases {
-			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
-			// Log
-			logger.Trace("Metric list: [%v]", keyvaluelist)
-		}
-		metricValue = strings.Join(keyvaluelist, ",")
-		metricType = "string"
-	}
-	logger.Debug("metric = [%s]", metricValue)
-	// SNMP critical output
-	fmt.Printf("%s\n%s\n%s\n", OID, metricType, metricValue)
+	benchmarker.TimeItV(time.Millisecond, portScanner.Run, timeout)
 }
