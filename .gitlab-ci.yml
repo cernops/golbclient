@@ -48,16 +48,22 @@ build-go11:
   script:
     - go11 build ./...
 
-.test-my-project:
+test-go10:
   stage: test
   script:
-    - go test -v -cover ./tests/ci/...
-    - go test -race ./tests/ci/...
+    - go10 test -v -cover ./tests/ci/...
+    - go10 test -race ./tests/ci/...
 
-.build_rpm:
+test-go11:
+  stage: test
+  script:
+    - go11 test -v -cover ./tests/ci/...
+    - go11 test -race ./tests/ci/...
+
+build_rpm:
   stage: build_rpm
   script:
-    - go build ./...
+    - go10 build
     - mkdir SOURCES version
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
     - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
@@ -70,7 +76,7 @@ build-go11:
     expire_in: 1 week
 
 
-.kojicheck:
+kojicheck:
   stage: koji_scratch
   script:
     - echo "Checking if $PKG_REL exists"
