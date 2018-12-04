@@ -17,8 +17,8 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
  # Support both Go1.11 and Go1.10 >
   - mkdir /go11 /go10
-  - curl https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar -zxC go11
-  - curl https://dl.google.com/go/go1.10.5.linux-amd64.tar.gz | tar -zxC go10
+  - curl https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar -zxC /go11
+  - curl https://dl.google.com/go/go1.10.5.linux-amd64.tar.gz | tar -zxC /go10
   - ln -s go11/go/bin/go /usr/bin/go11
   - ln -s go10/go/bin/go /usr/bin/go10
  # />
