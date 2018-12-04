@@ -16,6 +16,7 @@ before_script:
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
  # Support both Go1.11 and Go1.10 >
+  - yum -y install git
   - mkdir /go11 /go10
   - curl https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar -zxC /go11
   - curl https://dl.google.com/go/go1.10.5.linux-amd64.tar.gz | tar -zxC /go10
