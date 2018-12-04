@@ -65,7 +65,7 @@ test-go11:
 build_rpm:
   stage: build_rpm
   script:
-    - go11 build ./...
+    - export GOPATH=/go && go11 build ./...
     - mkdir SOURCES version
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
     - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/pkg/mod/github.com/
