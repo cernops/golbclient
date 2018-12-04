@@ -38,6 +38,8 @@ before_script:
 build-go10:
   stage: build
   script:
+    - export GOPATH=/go
+    - go10 get ./...
     - go10 build -race
 
 build-go11:
