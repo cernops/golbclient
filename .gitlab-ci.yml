@@ -66,6 +66,8 @@ build_rpm:
   stage: build_rpm
   script:
     - go11 mod vendor
+    - ls -R $PREFIX/lb-experts/golbclient
+    - ls -R /go/src/gitlab.cern.ch/lb-experts/golbclient
     - mkdir SOURCES version
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
     - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  $PREFIX/lb-experts/golbclient/vendor/github.com/
