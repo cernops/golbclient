@@ -36,26 +36,26 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 
-build-go10:
+.build-go10:
   stage: build
   script:
     - export GOPATH=/go
     - go10 get ./...
     - go10 build -race
 
-build-go11:
+.build-go11:
   stage: build
   script:
     - go11 build -race ./...
 
-test-go10:
+.test-go10:
   stage: test
   script:
     - export GOPATH=/go && go10 get ./... && go10 build
     - go10 test -v -cover ./tests/ci/...
     - go10 test -race ./tests/ci/...
 
-test-go11:
+.test-go11:
   stage: test
   script:
     - go11 build ./...
@@ -65,6 +65,8 @@ test-go11:
 build_rpm:
   stage: build_rpm
   script:
+    - ls -R /go
+    - ls -R $PREFIX
     - go11 build ./...
     - mkdir SOURCES version
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
@@ -78,7 +80,7 @@ build_rpm:
     expire_in: 1 week
 
 
-kojicheck:
+.kojicheck:
   stage: koji_scratch
   script:
     - echo "Checking if $PKG_REL exists"
