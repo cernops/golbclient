@@ -36,26 +36,26 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 
-.build-go10:
+build-go10:
   stage: build
   script:
     - export GOPATH=/go
     - go10 get ./...
     - go10 build -race
 
-.build-go11:
+build-go11:
   stage: build
   script:
     - go11 build -race ./...
 
-.test-go10:
+test-go10:
   stage: test
   script:
     - export GOPATH=/go && go10 get ./... && go10 build
     - go10 test -v -cover ./tests/ci/...
     - go10 test -race ./tests/ci/...
 
-.test-go11:
+test-go11:
   stage: test
   script:
     - go11 build ./...
@@ -79,21 +79,21 @@ build_rpm:
     expire_in: 1 week
 
 
-.kojicheck:
+kojicheck:
   stage: koji_scratch
   script:
     - echo "Checking if $PKG_REL exists"
     - if koji --config=.koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
   allow_failure: true
 
-.kojiscratch:
+kojiscratch:
   stage: koji_scratch
   script:
     - export SRPM="SRPMS/${PKG_REL}.src.rpm"
     - echo "koji build --wait --scratch $KOJI_TARGET $SRPM"
     - koji --config=.koji build --wait --scratch $KOJI_TARGET $SRPM
 
-.koji:
+koji:
   stage: koji
   script:
     - export SRPM="SRPMS/${PKG_REL}.src.rpm"
@@ -102,7 +102,7 @@ build_rpm:
   only:
     - tags
 
-.tag_qa:
+tag_qa:
   stage: deploy_qa
   when: manual
   only:
@@ -111,7 +111,7 @@ build_rpm:
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL}
   allow_failure: false
 
-.tag_prod:
+tag_prod:
   stage: deploy_prod
   when: manual
   only:
