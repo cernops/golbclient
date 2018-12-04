@@ -15,7 +15,7 @@ before_script:
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
-
+ #  
   - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
@@ -32,7 +32,7 @@ before_script:
 build-my-project:
   stage: build
   script:
-    -  go build ./... -race
+    - go build ./... -race
 
 test-my-project:
   stage: test
