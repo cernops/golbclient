@@ -66,8 +66,7 @@ build_rpm:
   stage: build_rpm
   script:
     - go11 build ./...
-    - ls -R /go
-    - ls -R $PREFIX
+    - ls -R $HOME/go/src/mod
     - mkdir SOURCES version
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
     - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/mod/github.com/
