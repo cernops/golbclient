@@ -1,0 +1,6 @@
+github.com/Knetic/govaluate v0.0.0-20171022003610-9aa49832a739 h1:g5ROzGMXE/5BOW8kbvOZm+zH6Q+yVUaQBl3vwgLeUqY=
+github.com/Knetic/govaluate v0.0.0-20171022003610-9aa49832a739/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
+github.com/jcelliott/lumber v0.0.0-20160324203708-dd349441af25 h1:EFT6MH3igZK/dIVqgGbTqWVvkZ7wJ5iGN03SVtvvdd8=
+github.com/jcelliott/lumber v0.0.0-20160324203708-dd349441af25/go.mod h1:sWkGw/wsaHtRsT9zGQ/WyJCotGWG/Anow/9hsAcBWRw=
+github.com/jessevdk/go-flags v0.0.0-20170926144705-f88afde2fa19 h1:k9/LaykApavRKKlaWkunBd48Um+vMxnUNNsIjS7OJn8=
+github.com/jessevdk/go-flags v0.0.0-20170926144705-f88afde2fa19/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
