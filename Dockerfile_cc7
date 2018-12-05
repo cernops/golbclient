@@ -1,9 +1,12 @@
 # Builder
 FROM golang:latest as builder
-WORKDIR /
+WORKDIR /lbclient
 # LBclient
-COPY lbclient.go /
-COPY go.mod /
+COPY lbclient.go .
+COPY utils ./utils
+ADD lbalias ./lbalias
+COPY go.mod .
+RUN ls . 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o lbclient .
 # SNMP
 RUN apk update && apk --no-cache add net-snmp net-snmp-utils
