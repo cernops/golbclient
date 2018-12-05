@@ -10,7 +10,7 @@
 
 Name:		%{repo}
 Version:	0.0
-Release:	1
+Release:	2
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
@@ -78,8 +78,6 @@ GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
 if [ ! -d /var/spool/lemon-agent ] ; then
   mkdir -p /var/spool/lemon-agent
 fi
-
-semodule -i /usr/share/selinux/targeted/lbclient.pp > /dev/null
 
 #%systemd_post %{lbd}.service
 #if [ $1 -eq 1 ] ; then 

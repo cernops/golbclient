@@ -1,13 +1,31 @@
 # Builder
 FROM golang:latest as builder
 WORKDIR /
-ADD lbclient.go /
+# LBclient
+COPY ../lbclient.go /
 RUN CGO_ENABLED=0 GOOS=linux go build ./... -installsuffix cgo -o lbclient .
+# SNMP
+RUN apk update && apk --no-cache add net-snmp net-snmp-utils
+# SNMP :: Configuration
+COPY deployment/config/src/slc6-lbclient.te /deployment/lbclient.te
+# Test APP
 CMD ["/lbclient", "--help"]
 
 # Minified image
-FROM cern/cc7-base:latest
-COPY --from=builder /lbclient /
-RUN yum -y install net-snmp net-snmp-utils
-
+FROM cern/slc6-base:latest
+# LBclient
+ENV lbclient_conf_location=/usr/local/etc
+COPY deployment/config/default/lbaliases $lbclient_conf_location/
+COPY deployment/config/default/lbclient.conf $lbclient_conf_location/
+COPY --from=builder /lbclient /usr/local/sbin/lbclient
+# SNMP
+RUN yum -y install net-snmp net-snmp-utils checkpolicy policycoreutils-python
+ENV se-policy-location=/usr/share/selinux/targeted/lbclient.pp
+WORKDIR /deployment
+COPY --from=build deployment/lbclient.te .
+RUN checkmodule -M -m -o lbclient.mod lbclient.te
+RUN semodule_package -m lbclient.mod -o $se-policy-location 
+RUN semodule -i $se-policy-location > /dev/null
+# Test configuration
+RUN /usr/bin/snmpget -d -v 3 -u loadbalancing -l authNoPriv -a MD5 localhost .1.3.6.1.4.1.96.255.1 
 CMD ["/lbclient", "--help"]

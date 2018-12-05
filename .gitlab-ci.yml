@@ -26,7 +26,7 @@ before_script:
   - ln -s /go09/go/bin/go /usr/bin/go09
  # />
   - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
-  - export SPEC=$(ls *spec)
+  - export SPEC=$(ls deployment/*spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
