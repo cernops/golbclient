@@ -1,0 +1,13 @@
+# Builder
+FROM golang:latest as builder
+WORKDIR /
+ADD lbclient.go /
+RUN CGO_ENABLED=0 GOOS=linux go build ./... -installsuffix cgo -o lbclient .
+CMD ["/lbclient", "--help"]
+
+# Minified image
+FROM cern/cc7-base:latest
+COPY --from=builder /lbclient /
+RUN yum -y install net-snmp net-snmp-utils
+
+CMD ["/lbclient", "--help"]

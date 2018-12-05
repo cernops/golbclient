@@ -74,7 +74,13 @@ install -p -m0755 lbclient %{buildroot}%{_bindir}/lbclient
 %check
 GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
 
-#%post
+%post
+if [ ! -d /var/spool/lemon-agent ] ; then
+  mkdir -p /var/spool/lemon-agent
+fi
+
+semodule -i /usr/share/selinux/targeted/lbclient.pp > /dev/null
+
 #%systemd_post %{lbd}.service
 #if [ $1 -eq 1 ] ; then 
 #        # Initial installation 
