@@ -1,0 +1,30 @@
+policy_module(lbclient, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+attribute_role lbclient_roles;
+roleattribute system_r lbclient_roles;
+
+type lbclient_t;
+type lbclient_exec_t;
+application_domain(lbclient_t, lbclient_exec_t)
+role lbclient_roles types lbclient_t;
+
+permissive lbclient_t;
+
+########################################
+#
+# lbclient local policy
+#
+
+allow lbclient_t self:fifo_file manage_fifo_file_perms;
+allow lbclient_t self:unix_stream_socket create_stream_socket_perms;
+
+domain_use_interactive_fds(lbclient_t)
+
+files_read_etc_files(lbclient_t)
+
+miscfiles_read_localization(lbclient_t)

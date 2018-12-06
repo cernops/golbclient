@@ -1,0 +1,1 @@
+/eos/home-p/paaperei/go/src/gitlab.cern.ch/lb-experts/golbclient/deployment/selinux/lbclient		--	gen_context(system_u:object_r:lbclient_exec_t,s0)
