@@ -32,7 +32,7 @@ func TestSingleLBAliasFile(t *testing.T) {
 	}
 	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliases, options.LbAliasFile)
 	if len(lbAliases) != 1 {
-		logger.Error("Found [%d] instead of [1] lbalias entry definitions in the configuration.")
+		logger.Error("Found [%d] instead of [1] lbalias entry definitions in the configuration.", len(lbAliases))
 		t.Fail()
 	}
 }
@@ -48,7 +48,7 @@ func TestDoubleLBAliasFile(t *testing.T) {
 	}
 	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliases, options.LbAliasFile)
 	if len(lbAliases) != 2 {
-		logger.Error("Found [%d] instead of [2] lbalias entry definitions in the configuration.")
+		logger.Error("Found [%d] instead of [2] lbalias entry definitions in the configuration.", len(lbAliases))
 		t.Fail()
 	}
 }
