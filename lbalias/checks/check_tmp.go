@@ -1,7 +1,7 @@
 package checks
 
 import (
-	"lbalias/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"syscall"
 )
 
@@ -9,11 +9,6 @@ const ACCEPTABLE_BLOCK_RATE = 0.90
 const ACCEPTABLE_INODE_RATE = 0.95
 
 type TmpFull struct {
-	code int
-}
-
-func (tmpFull TmpFull) Code() int {
-	return tmpFull.code
 }
 
 func (tmpFull TmpFull) Run(...interface{}) interface{} {

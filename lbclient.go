@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	// This one supports long format and short format. Good for backward-compatibility
-	"github.com/jessevdk/go-flags"
-	"log"
+	"gitlab.cern.ch/lb-experts/golbclient/utils"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
 	"strconv"
 	"strings"
@@ -37,7 +35,12 @@ func main() {
 	logger.SetLevelByString(options.DebugLevel)
 
 	//Arguments parsed. Let's open the configuration file
-	lbAliases := utils.ReadLBAliases(options)
+	lbAliases, err := utils.ReadLBAliases(options)
+	if err != nil {
+		logger.Fatal("Error reading the configuration file. Error [%s]", err.Error())
+		os.Exit(1)
+	}
+
 	logger.Debug("The aliases from the configuration file are [%v]", lbAliases)
 
 	// Concurrent lbAliases access
@@ -48,7 +51,11 @@ func main() {
 		go func(i int) {
 			defer waitGroup.Done()
 			logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
-			lbAliases[i].Evaluate()
+			err = lbAliases[i].Evaluate()
+			if err != nil {
+				logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
+				os.Exit(1)
+			}
 		}(i)
 	}
 

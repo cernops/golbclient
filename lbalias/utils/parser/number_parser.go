@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"lbalias/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"math"
 	"strconv"
 	"strings"
@@ -140,7 +140,7 @@ func ParseInterfaceAsInteger(obj interface{}) int32 {
 		result = int32(f)
 	} else if s, ok := obj.(string); ok {
 		parsedBool, err := strconv.ParseBool(s)
-		if err == nil {
+		if err == nil && s != "0"{
 			if parsedBool {
 				result = 1
 			} else {
@@ -204,7 +204,7 @@ func ParseInterfaceAsFloat(obj interface{}) float32 {
 		result = float32(f)
 	} else if s, ok := obj.(string); ok {
 		parsedBool, err := strconv.ParseBool(s)
-		if err == nil {
+		if err == nil && s != "0" {
 			if parsedBool {
 				result = 1
 			} else {

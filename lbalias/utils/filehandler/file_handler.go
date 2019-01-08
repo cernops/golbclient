@@ -2,7 +2,7 @@ package filehandler
 
 import (
 	"bufio"
-	"lbalias/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
 )
 

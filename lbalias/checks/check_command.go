@@ -1,19 +1,15 @@
 package checks
 
 import (
-	"lbalias/utils/logger"
-	"lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"os/exec"
 	"regexp"
 	"strings"
 )
 
 type Command struct {
-	code int
-}
 
-func (command Command) Code() int {
-	return command.code
 }
 
 func (command Command) Run(a ...interface{}) interface{} {

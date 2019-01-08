@@ -2,9 +2,9 @@ package checks
 
 import (
 	"fmt"
-	"lbalias/utils/logger"
-	"lbalias/utils/parser"
-	"lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
 	"strings"
 )
@@ -23,9 +23,14 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 	// Remove square-brackets from metric
 	metric = regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
 	// Create the slices map
+	logger.Trace("Metric [%s]", metric)
 	slicesMap := map[int]sliceEntry{}
-	slices := regexp.MustCompile("[0-9]+[:][0-9]+").FindAllString(metric, -1)
+	slices := regexp.MustCompile("[0-9]{2,}[:][0-9]").FindAllString(metric, -1)
+	logger.Trace("Found slices [%v]", slices)
+
 	for i, slice := range slices {
+		slice = regexp.MustCompile("[ ]").ReplaceAllString(slice, "")
+		logger.Trace("Processing slice [%s]", slice)
 		ps := strings.Split(slice, ":")
 		slicesMap[i] = sliceEntry{fmt.Sprintf("[%s]", ps[0]), parser.ParseInterfaceAsInteger(ps[1]), slice}
 	}
@@ -34,12 +39,17 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 	// Remove the slice from the metric
 	metric = regexp.MustCompile("[:][0-9]+").ReplaceAllString(metric, "")
 	// Run the CLI with all the metrics found
-	logger.Debug("Running the [lemon] cli for the metrics [%s]", metric)
+	logger.Debug("Running the [lemon] cli path [%s] for the metrics [%s]", commandPath, metric)
 	// Add the [lemon-cli] arguments
 	output, err := runner.RunCommand(commandPath, true, true, "--script", "-m", metric)
 	if err != nil {
 		logger.Error("Failed to run the [lemon] cli with the error [%s]", err.Error())
 		// Fail the whole expression
+		return
+	}
+
+	// Abort if nothing is returned
+	if len(output) == 0 {
 		return
 	}
 
@@ -54,6 +64,8 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 		outputMap[fmt.Sprintf("[%s]", ps[1])] = ps[3:]
 	}
 
+	logger.Trace("Output map [%v]", outputMap)
+
 	// Assign sliced metrics
 	for _, slicedMetric := range slicesMap {
 		si := int(slicedMetric.slice)
@@ -61,18 +73,22 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 			// Fail the whole expression if the index is out-of-bounds
 			return
 		}
+		logger.Trace("Assigning sliced metric [%s] to value [%s]", slicedMetric.mname, outputMap[slicedMetric.name][slicedMetric.slice])
 		(*valueList)[slicedMetric.mname] = parser.ParseInterfaceAsFloat(outputMap[slicedMetric.name][slicedMetric.slice])
+		logger.Trace("Value list [%v]", *valueList)
 	}
 
 	// Assign non-slices metrics
 	for _, mname := range metrics {
-		if !strings.Contains(mname, ":") {
+		if !strings.Contains(mname, ":") && len(outputMap[mname]) != 0 {
+			logger.Trace("Assigning non-slices metric [%s]", mname)
 			runes := []rune(mname)
 			normName := string(runes[1 : len(runes)-1])
 			(*valueList)[normName] = parser.ParseInterfaceAsFloat(outputMap[mname][0])
+			logger.Trace("Value list [%v]", *valueList)
 		}
 	}
 
 	// Log
-	logger.Trace("Value map [%v]", (*valueList))
+	logger.Trace("Value map [%v]", *valueList)
 }

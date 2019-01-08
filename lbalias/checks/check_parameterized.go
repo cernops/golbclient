@@ -2,8 +2,8 @@ package checks
 
 import (
 	"fmt"
-	"lbalias/utils/logger"
-	"lbalias/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
 	"strings"
 
@@ -11,20 +11,7 @@ import (
 )
 
 type ParamCheck struct {
-	code    int
-	command string
-}
-
-func (g ParamCheck) Code() int {
-	return g.code
-}
-
-func (g ParamCheck) SetCode(ncode int) {
-	g.code = ncode
-}
-
-func (g ParamCheck) SetCommand(ncommand string) {
-	g.command = ncommand
+	Command string
 }
 
 func (g ParamCheck) Run(args ...interface{}) interface{} {
@@ -34,7 +21,7 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
 
 	// Log
-	logger.Debug("Adding [%s] metric [%s]", g.command, line)
+	logger.Debug("Adding [%s] metric [%s]", g.Command, line)
 
 	// Support unintentional errors => e.g., [loadcheck collectd], panics if the regex cannot be compiled
 	found := regexp.MustCompile("(?i)((check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
@@ -55,11 +42,12 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 		return rVal
 	}
 
-	// Backwards compatible (remove unecessary underscores from the expression)
+	// Backwards compatible (remove unnecessary underscores from the expression)
 	g.compatibilityProcess(&rawExpression)
 
 	// Discover all the metrics found in the expression
 	metrics := regexp.MustCompile(`\[([^\[\]]*)\]`).FindAllString(rawExpression, -1)
+	logger.Trace("Found metrics [%v], len [%d]", metrics, len(metrics))
 	parameters := make(map[string]interface{}, len(metrics))
 
 	// Run command with a list of all the metrics found and return a key/value map
@@ -115,8 +103,10 @@ func getCliPath(cli string) (_ string) {
 	switch strings.ToLower(cli) {
 	case "lemon":
 		return "/usr/sbin/lemon-cli"
+		//return "../../scripts/lemon-cli"
 	case "collectd":
 		return "/usr/bin/collectdctl"
+		//return "../../scripts/collectdctl"
 	default:
 		logger.Error("The Generic check does not support the cli type [%s]", cli)
 		return
@@ -126,7 +116,7 @@ func getCliPath(cli string) (_ string) {
 // runCommand : @TODO support both [collectdctl-OK] & [lemon-cli-@TODO]
 func (g ParamCheck) runCommand(metrics []string, valueList *map[string]interface{}) {
 	// Run CLI
-	lwCMD := strings.ToLower(g.command)
+	lwCMD := strings.ToLower(g.Command)
 	cmdPath := getCliPath(lwCMD)
 	switch lwCMD {
 	case "collectd":
@@ -140,14 +130,17 @@ func (g ParamCheck) runCommand(metrics []string, valueList *map[string]interface
 func (g ParamCheck) compatibilityProcess(metric *string) {
 	logger.LOGC(logger.TRACE, "Processing metric [%s]", *metric)
 
+
+	*metric = regexp.MustCompile(`([\]0-9][ ]*)[=]([ ]*[0-9\[])`).ReplaceAllString(*metric, "$1==$2")
+
 	// Trim all spaces
 	*metric = strings.Replace(*metric, " ", "", -1)
 
-	// Underscore backwards compatibility with lemon
+	// Underscore backwards compatibility with lemon (sliced metrics)
 	toProcess := regexp.MustCompile("_[0-9]+([:][0-9]+)?").FindAllStringIndex(*metric, -1)
 	for c, arrI := range toProcess {
 		*metric = fmt.Sprintf("%s[%s]%s", (*metric)[:arrI[0]+c], (*metric)[arrI[0]+c+1:arrI[1]+c], (*metric)[arrI[1]+c:])
 	}
 
-	logger.Trace("New  metric [%s]", *metric)
+	logger.Trace("Processed metric [%s]", *metric)
 }

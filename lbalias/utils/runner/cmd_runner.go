@@ -2,7 +2,7 @@ package runner
 
 import (
 	"bytes"
-	"lbalias/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os/exec"
 	"strings"
 	"time"
