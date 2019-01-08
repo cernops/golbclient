@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"golbclient/utils"
-	"lbalias/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	// This one supports long format and short format. Good for backward-compatibility
+	"github.com/jessevdk/go-flags"
+	"log"
 	"os"
 	"strconv"
 	"strings"
