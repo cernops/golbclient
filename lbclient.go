@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -39,16 +40,27 @@ func main() {
 		logger.Fatal("Error reading the configuration file. Error [%s]", err.Error())
 		os.Exit(1)
 	}
+
 	logger.Debug("The aliases from the configuration file are [%v]", lbAliases)
 
+	// Concurrent lbAliases access
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(len(lbAliases))
+
 	for i := range lbAliases {
-		logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
-		err = lbAliases[i].Evaluate()
-		if err != nil {
-			logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
-			os.Exit(1)
-		}
+		go func(i int) {
+			defer waitGroup.Done()
+			logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
+			err = lbAliases[i].Evaluate()
+			if err != nil {
+				logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
+				os.Exit(1)
+			}
+		}(i)
 	}
+
+	// Wait for concurrent loop to finish before proceeding
+	waitGroup.Wait()
 
 	metricType := "integer"
 	metricValue := ""
