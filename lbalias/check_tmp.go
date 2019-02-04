@@ -1,11 +1,12 @@
 package lbalias
 
-import ("syscall"
-"fmt")
+import (
+	"fmt"
+	"syscall"
+)
 
 const ACCEPTABLE_BLOCK_RATE = 0.90
 const ACCEPTABLE_INODE_RATE = 0.95
-
 
 func checkTmpFull(lbalias *LBalias, line string) bool {
 	var stat syscall.Statfs_t
