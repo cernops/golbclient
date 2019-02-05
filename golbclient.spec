@@ -18,6 +18,7 @@ URL:		https://%{import_path}
 # Source:		https://%{import_path}/archive/%{commit}/%{repo}-%{shortcommit}.tar.gz
 Source:		%{name}-%{version}.tgz
 BuildRequires:	golang >= 1.5
+BuildRequires:  checkpolicy 
 ExclusiveArch:	x86_64 
 
 %description
