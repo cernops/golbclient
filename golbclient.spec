@@ -2,13 +2,13 @@
 %global provider_tld	cern.ch
 %global project		lb-experts
 %global provider_full %{provider}.%{provider_tld}/%{project}
-%global repo		lbclient
+%global repo		golbclient
 
 %global import_path	%{provider_full}/%{repo}
 %global gopath		%{_datadir}/gocode
 %global debug_package	%{nil}
 
-Name:		%{repo}
+Name:		lbclient
 Version:	0.0
 Release:	2
 
