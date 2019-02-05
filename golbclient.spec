@@ -19,6 +19,7 @@ URL:		https://%{import_path}
 Source:		%{name}-%{version}.tgz
 BuildRequires:	golang >= 1.5
 BuildRequires:  checkpolicy 
+BuildRequires:  policycoreutils-python
 ExclusiveArch:	x86_64 
 
 %description
