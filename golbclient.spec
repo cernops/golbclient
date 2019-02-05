@@ -2,7 +2,7 @@
 %global provider_tld	cern.ch
 %global project		lb-experts
 %global provider_full %{provider}.%{provider_tld}/%{project}
-%global repo		golbclient
+%global repo		lbclient
 
 %global import_path	%{provider_full}/%{repo}
 %global gopath		%{_datadir}/gocode
@@ -10,7 +10,7 @@
 
 Name:		%{repo}
 Version:	0.0
-Release:	1
+Release:	2
 
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
@@ -45,8 +45,7 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %endif
 
 checkmodule -M -m -o config/lbclient.mod config/lbclient.te
-semodule_package -m config/lbclient.mod -o /usr/share/selinux/targeted/lbclient.pp
-semodule -i /usr/share/selinux/targeted/lbclient.pp
+semodule_package -m config/lbclient.mod -o config/lbclient.pp
 
 
 %build
@@ -55,22 +54,27 @@ ln -s ../../../ src/%{provider_full}/%{repo}
 GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 
 
-
 %install
 # main package binary
 install -d -p %{buildroot}%{_bindir}
 install -p -m0755 lbclient %{buildroot}%{_bindir}/lbclient
+install -d -p %{buildroot}/usr/share/selinux/targeted/
+install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
 
 
 %check
-GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
+GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}/tests/ci/...
 
+%post
+semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 %files
 %doc LICENSE COPYING README.md
 /usr/bin/lbclient
-
+/usr/share/selinux/targeted/lbclient.pp
 
 %changelog
+* Tue Feb 05 2019 Paulo Canilho <Paulo.Canilho@cern.ch>     - 0.0.2
+- Setting up the post install 
 * Fri Jun 15 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.0.1
 - First version of the rpm
