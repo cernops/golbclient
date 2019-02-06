@@ -65,7 +65,7 @@ install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.
 
 
 %check
-GOPATH=$(pwd)/:%{gopath} go test ./%{provider_full}/%{repo}/tests/ci/...
+GOPATH=$(pwd)/:%{gopath} go test ./tests/ci/...
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
