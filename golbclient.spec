@@ -9,8 +9,8 @@
 %global debug_package	%{nil}
 
 Name:		lbclient
-Version:	0.0
-Release:	2
+Version:	2.0
+Release:	1
 
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
@@ -21,6 +21,7 @@ BuildRequires:	golang >= 1.5
 BuildRequires:  checkpolicy 
 BuildRequires:  policycoreutils-python
 ExclusiveArch:	x86_64 
+Requires: net-snmp
 
 %description
 %{summary}
@@ -58,9 +59,8 @@ GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 
 %install
 # main package binary
-install -d -p %{buildroot}%{_bindir}
-install -p -m0755 lbclient %{buildroot}%{_bindir}/lbclient
-install -d -p %{buildroot}/usr/share/selinux/targeted/
+install -d -p %{buildroot}/usr/sbin/  %{buildroot}/usr/share/selinux/targeted/
+install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
 
 %post
