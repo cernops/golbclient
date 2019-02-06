@@ -63,10 +63,6 @@ install -p -m0755 lbclient %{buildroot}%{_bindir}/lbclient
 install -d -p %{buildroot}/usr/share/selinux/targeted/
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
 
-
-%check
-GOPATH=$(pwd)/:%{gopath} go test ./tests/ci/...
-
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
 
