@@ -8,17 +8,20 @@
 %global gopath		%{_datadir}/gocode
 %global debug_package	%{nil}
 
-Name:		%{repo}
-Version:	0.0
+Name:		lbclient
+Version:	2.0
 Release:	1
-#psaiz: Removing the dist from the release %{?dist}
+
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
 URL:		https://%{import_path}
 # Source:		https://%{import_path}/archive/%{commit}/%{repo}-%{shortcommit}.tar.gz
 Source:		%{name}-%{version}.tgz
 BuildRequires:	golang >= 1.5
+BuildRequires:  checkpolicy 
+BuildRequires:  policycoreutils-python
 ExclusiveArch:	x86_64 
+Requires: net-snmp
 
 %description
 %{summary}
@@ -37,65 +40,39 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 
 %prep
 %setup -n %{name}-%{version} -q
+%if 0%{?rhel} >= 7
+  cp -p config/cc7-lbclient.te config/lbclient.te
+%endif
+%if 0%{?rhel} == 6
+  cp -p config/slc6-lbclient.te config/lbclient.te
+%endif
+
+checkmodule -M -m -o config/lbclient.mod config/lbclient.te
+semodule_package -m config/lbclient.mod -o config/lbclient.pp
+
 
 %build
 mkdir -p src/%{provider_full}
 ln -s ../../../ src/%{provider_full}/%{repo}
-#ln -s src/gitlab.cern.ch . 
-#(cd src/; ln -s ../vendor/github.com  .)
-#ls -al src/github.com/reguero/go-snmplib
-#ls -lR vendor/github.com
-#echo "AND UNDER SRC"
-#ls -lR src/github.com
-
-which go
-#ls -lR src/github.com/
 GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
+
 
 %install
 # main package binary
-install -d -p %{buildroot}%{_bindir}
-install -p -m0755 lbclient %{buildroot}%{_bindir}/lbclient
+install -d -p %{buildroot}/usr/sbin/  %{buildroot}/usr/share/selinux/targeted/
+install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
+install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
 
-# install systemd/sysconfig/logrotate
-#install -d -m0755 %{buildroot}%{_sysconfdir}/sysconfig/
-#install -p -m0660 %{lbd}.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/%{lbd} 
-#install -d -m0755 %{buildroot}%{_unitdir}
-#install -p -m0644 %{lbd}.service %{buildroot}%{_unitdir}/%{lbd}.service
-#install -d -m0755 %{buildroot}%{_sysconfdir}/logrotate.d
-#install -p -m0640 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{lbd}
-
-# create some dirs for logs if needed
-#install -d -m0755  %{buildroot}/var/log/lb
-#install -d -m0755  %{buildroot}/var/log/lb/cluster
-##install -d -m0755  %{buildroot}/var/log/lb/old
-#install -d -m0755  %{buildroot}/var/log/lb/old/cluster
-
-%check
-GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
-
-#%post
-#%systemd_post %{lbd}.service
-#if [ $1 -eq 1 ] ; then 
-#        # Initial installation 
-#        systemctl start lbd.service >/dev/null 2>&1 || : 
-#fi
-#if [ $1 -eq 2 ] ; then 
-#        # Initial installation 
-#        systemctl try-restart lbd.service >/dev/null 2>&1 || : 
-#fi
-
-
-#%preun
-#%systemd_preun %{lbd}.service
-
-#%postun
-#%systemd_postun
+%post
+semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 %files
 %doc LICENSE COPYING README.md
-/usr/bin/lbclient
+/usr/sbin/lbclient
+/usr/share/selinux/targeted/lbclient.pp
 
 %changelog
+* Tue Feb 05 2019 Paulo Canilho <Paulo.Canilho@cern.ch>     - 0.0.2
+- Setting up the post install 
 * Fri Jun 15 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.0.1
 - First version of the rpm
