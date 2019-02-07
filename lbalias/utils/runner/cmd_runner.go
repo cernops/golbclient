@@ -33,6 +33,20 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 		return outBuff.String(), err
 	}
 
-	result := strings.TrimRight(string(outBuff.String()), "\r\n")
+	result := strings.TrimRight(outBuff.String(), "\r\n")
 	return result, err
+}
+// RunDirectCommand : runs a command expecting that all the arguments are supplied in the first function parameter
+func RunDirectCommand(commandAndArguments string, printErrors bool, printRuntime bool) (string, error) {
+	raw := strings.SplitN(commandAndArguments, " ", 2)
+	if len(raw) < 2 {
+		logger.Debug("No arguments were passed to the [RunDirectCommand]. In this case, please consider using [RunCommand] instead.")
+		return RunCommand(raw[0], printErrors, printRuntime)
+	}
+	return RunCommand(raw[0], printErrors, printRuntime, raw[1])
+}
+
+// RunPippedCommand : runs a command with pipes. Note that all the flags should be directly given to the commands.
+func RunPippedCommand(pippedCommand string, printErrors bool, printRuntime bool) (string, error) {
+	return RunCommand("bash", printErrors, printRuntime, "-c", pippedCommand)
 }
