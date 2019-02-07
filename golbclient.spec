@@ -68,7 +68,7 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 %files
 %doc LICENSE COPYING README.md
-/usr/bin/lbclient
+/usr/sbin/lbclient
 /usr/share/selinux/targeted/lbclient.pp
 
 %changelog
