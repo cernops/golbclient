@@ -1,21 +1,27 @@
-
-module lbclient 1.4;
+module lbclient 2.0;
 
 require {
-	type snmpd_t;
         type afs_t;
-	type var_spool_t;
-        type shadow_t;
+        type etc_t;
+        type initrc_t;
         type port_t;
-	type initrc_t;
-	class udp_socket write;
-	class file { read open getattr };
+        type shadow_t;
+        type snmpd_t;
+        type snmpd_t;
+        type var_run_t;
+        type var_spool_t;
+
+        class file { append read open getattr };
+        class sock_file write;
         class tcp_socket name_connect;
+        class udp_socket write;
 }
 
 #============= snmpd_t ==============
-allow snmpd_t initrc_t:udp_socket write;
-allow snmpd_t var_spool_t:file { read open getattr };
 allow snmpd_t afs_t:udp_socket write;
-allow snmpd_t shadow_t:file { read open getattr };
+allow snmpd_t etc_t:file append;
+allow snmpd_t initrc_t:udp_socket write;
 allow snmpd_t port_t:tcp_socket name_connect;
+allow snmpd_t shadow_t:file { read open getattr };
+allow snmpd_t var_run_t:sock_file write;
+allow snmpd_t var_spool_t:file { read open getattr };
