@@ -16,10 +16,10 @@ type Command struct {
 */
 
 func (command Command) Run(a ...interface{}) interface{} {
-	cmd, _ := regexp.Compile("(?i)(^CHECK[ ]+command)[ ]*([^ ]+)[ ]*(.*)")
+	cmd, _ := regexp.Compile("(?i)(^check[ ]+command)")
 
 	line := a[0].(string)
-	found := cmd.FindStringSubmatch(line)
+	found := cmd.Split(line, -1)
 
 	if len(found) > 0 {
 		var args []string
