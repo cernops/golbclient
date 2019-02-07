@@ -17,7 +17,7 @@ func (afs AFS) Run(args ...interface{}) interface{} {
 	_, err := ioutil.ReadDir(afsDir)
 	if err != nil {
 		logger.Error("The following error was detected when checking AFS [%s]", err.Error())
-		return true
+		return false
 	}
-	return false
+	return true
 }
