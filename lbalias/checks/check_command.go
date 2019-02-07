@@ -19,7 +19,8 @@ func (command Command) Run(a ...interface{}) interface{} {
 	line := a[0].(string)
 	found := cmd.Split(line, -1)
 
-	if len(found) > 0 {
+	if len(found) > 1 {
+		logger.Trace("Attempting to run command [%s]", found[1])
 		out, err := runner.RunDirectCommand(found[1], true, true)
 		if err != nil {
 			logger.Error("The following error was detected when running the [Command] CLI [%s]", err.Error())
