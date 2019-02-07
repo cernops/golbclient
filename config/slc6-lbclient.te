@@ -7,7 +7,6 @@ require {
         type port_t;
         type shadow_t;
         type snmpd_t;
-        type snmpd_t;
         type var_run_t;
         type var_spool_t;
 
