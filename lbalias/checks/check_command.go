@@ -28,8 +28,8 @@ func (command Command) Run(a ...interface{}) interface{} {
 			logger.Error("The following error was detected when running the [Command] CLI [%v]", err)
 			return false
 		}
-		logger.Debug("Output [%s]. Return code [0]", string(out))
 
+		logger.Debug("Output [%s]. Return code [0]", string(out))
 		return true
 	}
 	return false
