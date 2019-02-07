@@ -38,6 +38,7 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 }
 // RunDirectCommand : runs a command expecting that all the arguments are supplied in the first function parameter
 func RunDirectCommand(commandAndArguments string, printErrors bool, printRuntime bool) (string, error) {
+	logger.Trace("Attempting to run direct command [%s]...", commandAndArguments)
 	raw := strings.SplitN(commandAndArguments, " ", 2)
 	if len(raw) < 2 {
 		logger.Debug("No arguments were passed to the [RunDirectCommand]. In this case, please consider using [RunCommand] instead.")

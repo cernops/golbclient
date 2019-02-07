@@ -4,6 +4,7 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
+	"strings"
 )
 
 type Command struct {
@@ -20,10 +21,11 @@ func (command Command) Run(a ...interface{}) interface{} {
 	found := cmd.Split(line, -1)
 
 	if len(found) > 1 {
-		logger.Trace("Attempting to run command [%s]", found[1])
-		out, err := runner.RunDirectCommand(found[1], true, true)
+		usrCmd := strings.TrimSpace(found[1])
+		logger.Trace("Attempting to run command [%s]", usrCmd)
+		out, err := runner.RunCommand(usrCmd, true, true)
 		if err != nil {
-			logger.Error("The following error was detected when running the [Command] CLI [%s]", err.Error())
+			logger.Error("The following error was detected when running the [Command] CLI [%v]", err)
 			return false
 		}
 		logger.Debug("Output [%s]. Return code [0]", string(out))
