@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"bufio"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
@@ -34,6 +35,11 @@ func ReadLBAliases(options Options) (lbAliases []lbalias.LBalias, err error) {
 		logger.Fatal("[%v]", err)
 		return nil, err
 	}
+
+	if len(aliasNames) == 0 {
+		return nil, fmt.Errorf("no alias definition was found inside the [lbaliases] file")
+	}
+	
 	for i := range aliasNames {
 		//Check if the file exist
 		configFile := ""
