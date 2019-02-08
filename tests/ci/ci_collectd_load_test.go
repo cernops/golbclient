@@ -50,8 +50,8 @@ func TestCollectdLoadFailedConfigurationFile(t *testing.T) {
 		ChecksDone: make(map[string]bool),
 		ConfigFile: "../test/lbclient_collectd_load_fail.conf"}
 	err := lba.Evaluate()
-	if err != nil {
-		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())
+	if err == nil {
+		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", lba.ConfigFile)
 		t.Fail()
 	}
 	if lba.Metric >= 0 {
