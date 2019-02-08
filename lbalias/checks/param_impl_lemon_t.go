@@ -41,7 +41,8 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 	// Run the CLI with all the metrics found
 	logger.Debug("Running the [lemon] cli path [%s] for the metrics [%s]", commandPath, metric)
 	// Add the [lemon-cli] arguments
-	output, err := runner.RunCommand(commandPath, true, true, "--script", "-m", metric)
+	
+	output, err := runner.RunCommand(commandPath, true, "--script", "-m", metric)
 	if err != nil {
 		logger.Error("Failed to run the [lemon] cli with the error [%s]", err.Error())
 		// Fail the whole expression

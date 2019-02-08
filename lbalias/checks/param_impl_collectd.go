@@ -24,7 +24,7 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		}
 
 		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", commandPath, metricName)
-		rawOutput, err := runner.RunCommand(commandPath, true, true, "getval", metric)
+		rawOutput, err := runner.RunCommand(commandPath, true, "getval", metric)
 		logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
 		if err != nil {
 			logger.Error("Failed to run the [collectd] cli with the error [%s]", err.Error())

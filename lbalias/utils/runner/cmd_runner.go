@@ -9,7 +9,7 @@ import (
 )
 
 // RunCommand : runs a command with the given arguments if this is available. Returns a tuple of he output of the command in the desired format and an error
-func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...string) (string, error) {
+func RunCommand(pathToCommand string, printRuntime bool, v ...string) (string, error) {
 	var now int64
 	if printRuntime {
 		now = time.Now().UnixNano() / int64(time.Millisecond)
@@ -26,13 +26,24 @@ func RunCommand(pathToCommand string, printErrors bool, printRuntime bool, v ...
 	cmd.Stdout = &outBuff
 	err := cmd.Run()
 	if err != nil {
-		if printErrors {
-			errString := strings.TrimRight(errBuff.String(), "\r\n")
-			logger.Error("Execution failed with the following error [%s]", errString)
-		}
 		return outBuff.String(), err
 	}
 
-	result := strings.TrimRight(string(outBuff.String()), "\r\n")
+	result := strings.TrimRight(outBuff.String(), "\r\n")
 	return result, err
+}
+// RunDirectCommand : runs a command expecting that all the arguments are supplied in the first function parameter
+func RunDirectCommand(commandAndArguments string, printRuntime bool) (string, error) {
+	logger.Trace("Attempting to run direct command [%s]...", commandAndArguments)
+	raw := strings.SplitN(commandAndArguments, " ", 2)
+	if len(raw) < 2 {
+		logger.Debug("No arguments were passed to the [RunDirectCommand]. In this case, please consider using [RunCommand] instead.")
+		return RunCommand(raw[0], printRuntime)
+	}
+	return RunCommand(raw[0], printRuntime, raw[1])
+}
+
+// RunPippedCommand : runs a command with pipes. Note that all the flags should be directly given to the commands.
+func RunPippedCommand(pippedCommand string, printRuntime bool) (string, error) {
+	return RunCommand("bash", printRuntime, "-c", pippedCommand)
 }
