@@ -13,7 +13,7 @@ import (
 func TestCILemonCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	output, err := runner.RunCommand("/usr/sbin/lemon-cli",
-		true, true, "--script", "-m", "13163")
+		 true, "--script", "-m", "13163")
 	if err != nil {
 		logger.Error("An error was detected when running the CI [lemon-cli]")
 		t.FailNow()

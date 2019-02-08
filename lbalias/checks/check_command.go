@@ -23,7 +23,7 @@ func (command Command) Run(a ...interface{}) interface{} {
 	if len(found) > 1 {
 		usrCmd := strings.TrimSpace(found[1])
 		logger.Trace("Attempting to run command [%s]", usrCmd)
-		out, err := runner.RunCommand(usrCmd, true, true)
+		out, err := runner.RunPippedCommand(usrCmd, true)
 		if err != nil {
 			logger.Error("The following error was detected when running the [Command] CLI [%v]", err)
 			return false

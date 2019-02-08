@@ -12,7 +12,7 @@ import (
 func TestCICollectdCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	output, err := runner.RunCommand("/usr/bin/collectdctl",
-		true, true, "getval", "test")
+		 true, "getval", "test")
 	if err != nil {
 		logger.Error("An error was detected when running the CI [collectdctl]")
 		t.FailNow()

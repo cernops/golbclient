@@ -42,13 +42,13 @@ var allLBExpressions = map[string] ExpressionCode{
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
+	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
 	"ROGER":         {code: 13, cli: checks.RogerState{}},
 	"COMMAND":       {code: 14, cli: checks.Command{}},
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
-	//"COLLECTDLOAD":  ParamCheck{code: 16, command: "collectd"},
-	//"LEMONLOAD":     ParamCheck{code: 17, command: "lemon"},
-	"XSESSIONS": {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":  {code: 6, cli: checks.CheckAttribute{}},
+	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
+	"XSESSIONS": 	 {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":  	 {code: 6, cli: checks.CheckAttribute{}},
 }
 
 
@@ -60,10 +60,10 @@ var allLBExpressions = map[string] ExpressionCode{
 func (lbalias *LBalias) Evaluate() error {
 	logger.Debug("Evaluating the alias [%s]", lbalias.Name)
 
-	// Create a string array containing all the checks to be performed
-	var checks []string
+	// Create a string array containing all the checksToExecute to be performed
+	var checksToExecute []string
 	for key := range allLBExpressions {
-		checks = append(checks, fmt.Sprintf("(%s)", key))
+		checksToExecute = append(checksToExecute, fmt.Sprintf("(%s)", key))
 	}
 
 	// Attempt to read the configuration file
@@ -78,8 +78,8 @@ func (lbalias *LBalias) Evaluate() error {
 
 	// Detect all comments
 	comment, _ := regexp.Compile("^(#.*)?$")
-	// Detect all checks to be made
-	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checks, "|") + ")")
+	// Detect all checksToExecute to be made
+	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checksToExecute, "|") + ")")
 	// Detect all loads to be made
 	constant, _ := regexp.Compile("(?i)^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)")
 
@@ -88,16 +88,15 @@ func (lbalias *LBalias) Evaluate() error {
 		if comment.MatchString(line) {
 			continue
 		}
-		checks := actions.FindStringSubmatch(line)
-		if len(checks) > 0 {
+		runningChecks := actions.FindStringSubmatch(line)
+		if len(runningChecks) > 0 {
 			/********************************** CHECKS **********************************/
-			myAction := strings.ToUpper(checks[1])
+			myAction := strings.ToUpper(runningChecks[1])
 			if b, ok := allLBExpressions[myAction].cli.Run(line, lbalias.Name).(bool); !b || !ok {
 				lbalias.Metric = -allLBExpressions[myAction].code
-				logger.Error("The check of [%s] failed. Aborting with the code [%d]", myAction, lbalias.Metric)
-				return nil
+				return fmt.Errorf("the check of [%s] failed. Aborting with code [%d]", myAction, lbalias.Metric)
 			}
-			lbalias.ChecksDone[checks[1]] = true
+			lbalias.ChecksDone[runningChecks[1]] = true
 			continue
 		}
 		loads := constant.FindStringSubmatch(line)
@@ -108,14 +107,13 @@ func (lbalias *LBalias) Evaluate() error {
 			if cliName == "LEMON" || cliName == "COLLECTD" {
 				result = int(allLBExpressions[cliName].cli.Run(line, lbalias.Name).(int32))
 				if result == -1 {
-					logger.Error("[%s] metric returned a negative number [%d]", cliName, result)
 					lbalias.Metric = -allLBExpressions[cliName].code
-					return nil
+					return fmt.Errorf("[%s] metric returned a negative number [%d]", cliName, result)
 				}
 			} else {
 				if lbalias.addConstant(loads[4]) {
 					lbalias.Metric = -20
-					return nil
+					return fmt.Errorf("failed to load the constant value [%v]", loads[4])
 				}
 			}
 			// Added metric value to the total in case of no problems
