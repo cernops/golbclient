@@ -23,7 +23,7 @@ type LBalias struct {
 	Metric         int
 	//CheckMetricList []MetricEntry
 	//LoadMetricList  []MetricEntry
-	Constant        float32
+	//Constant        float32
 	//CheckAttributes map[string]bool
 	ChecksDone      map[string]bool
 }
@@ -71,7 +71,7 @@ func (lbalias *LBalias) Evaluate() error {
 	lines, err := filehandler.ReadAllLinesFromFile(lbalias.ConfigFile)
 	if err != nil {
 		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
-		return err		
+		return err
 	}
 	// Read the configuration file using the scanner API
 	logger.Debug("Successfully opened the alias configuration file")
@@ -101,23 +101,24 @@ func (lbalias *LBalias) Evaluate() error {
 		}
 		loads := constant.FindStringSubmatch(line)
 		if len(loads) > 0 {
-			var result int
 			/********************************** LOADS **********************************/
 			cliName := strings.ToUpper(loads[1])
 			if cliName == "LEMON" || cliName == "COLLECTD" {
-				result = int(allLBExpressions[cliName].cli.Run(line, lbalias.Name).(int32))
+				result := int(allLBExpressions[cliName].cli.Run(line, lbalias.Name).(int32))
 				if result == -1 {
+					logger.Error("[%s] metric returned a negative number [%d]", cliName, result)
 					lbalias.Metric = -allLBExpressions[cliName].code
 					return fmt.Errorf("[%s] metric returned a negative number [%d]", cliName, result)
 				}
+				lbalias.Metric += result
 			} else {
-				if lbalias.addConstant(loads[4]) {
-					lbalias.Metric = -20
-					return fmt.Errorf("failed to load the constant value [%v]", loads[4])
+				constant := strings.TrimSpace(regexp.MustCompile("(?i)(load constant)").Split(loads[0], -1)[1])
+				if !lbalias.addConstant(constant) {
+					return fmt.Errorf("failed to load the constant value [%v]", constant)
 				}
 			}
+
 			// Added metric value to the total in case of no problems
-			lbalias.Metric += result
 			continue
 		}
 
@@ -125,13 +126,15 @@ func (lbalias *LBalias) Evaluate() error {
 		logger.Error("Unable to parse the configuration file line [%s]", line)
 
 	}
-	// Log
-	logger.Trace("Final metric value [%d]", lbalias.Metric)
 
 	if lbalias.Metric == 0 {
 		logger.Info("No metric value was found. Defaulting to the generic load calculation")
 		lbalias.Metric = lbalias.defaultLoad()
 	}
+
+	// Log
+	logger.Trace("Final metric value [%d]", lbalias.Metric)
+
 	return nil
 }
 func (lbalias *LBalias) addConstant(exp string) bool {
@@ -140,12 +143,11 @@ func (lbalias *LBalias) addConstant(exp string) bool {
 	f, err := strconv.ParseFloat(exp, 32)
 	if err != nil {
 		logger.Error("Error parsing the floating point number from the value [%s]", exp)
-		return true
+		return false
 	}
 
-	logger.Debug("\tValue = [%d]", f)
-	lbalias.Constant += float32(f)
-	return false
+	lbalias.Metric += int(f)
+	return true
 }
 
 func (lbalias *LBalias) defaultLoad() int {
