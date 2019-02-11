@@ -1,0 +1,37 @@
+#!/bin/bash
+
+## Find given metric in array
+find_in_array() {
+        array=("${!2}")
+        find="${!1}"
+
+        for metric in "${array[*]}"
+	do
+		echo "$metric" | grep -w "$find"
+	done
+}
+
+
+## Get the supplied metrics
+# Static metrics
+db=(
+	"test 13163 1508249393 1 -2"
+	"test 13423 1508249393 0 23"
+	"test 13333 1508249393 9 4"
+	"test 12521 1508249393 0.12 -400"
+)
+while getopts ":m:" opt; do
+	case ${opt} in
+        	m) metrics="$OPTARG"
+	      	;;
+	esac
+done
+
+## Iterate over the supplied metrics and find a value if they exist 
+OIFS=$IFS
+for metric in ${metrics}
+do
+	IFS=$'\n'
+    find_in_array metric db[*]
+	IFS=${OIFS}
+done

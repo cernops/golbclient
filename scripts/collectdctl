@@ -1,0 +1,29 @@
+#!/bin/bash
+
+## Find given metric in array
+find_in_array() {
+        array=("${!2}")
+        find="${!1}"
+
+        for metric in "${array[*]}"
+	do
+		printf "$metric" | grep -w "$find" | awk '{print $2" "$3}'
+	done
+}
+
+## Get the supplied metrics
+# Static metrics
+db=(
+	"vmem/vmpage_number-writeback_temp value=0.000000e+00"
+	"cpu/percent-idle value=9.844851e+01"
+	"cpu/percent-system value=3.356831e+01"
+	"test in=1.960003e+00\ntest out=3.241338e+01"
+)
+
+metric=${2}
+
+## Iterate over the supplied metrics and find a value if they exist
+OIFS=$IFS
+IFS=$'\n'
+find_in_array metric db[*]
+IFS=${OIFS}
