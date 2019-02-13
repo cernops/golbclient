@@ -10,7 +10,7 @@
 
 Name:		lbclient
 Version:	2.0
-Release:	1
+Release:	2
 
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
@@ -18,9 +18,9 @@ URL:		https://%{import_path}
 # Source:		https://%{import_path}/archive/%{commit}/%{repo}-%{shortcommit}.tar.gz
 Source:		%{name}-%{version}.tgz
 BuildRequires:	golang >= 1.5
-BuildRequires:  checkpolicy 
+BuildRequires:  checkpolicy
 BuildRequires:  policycoreutils-python
-ExclusiveArch:	x86_64 
+ExclusiveArch:	x86_64
 Requires: net-snmp
 
 %description
@@ -65,6 +65,7 @@ install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
+[ -f /usr/local/etc/lbclient.conf.rpmsave ] && [ ! -f /usr/local/etc/lbclient.conf ] && cp /usr/local/etc/lbclient.conf.rpmsave /usr/local/etc/lbclient.conf
 
 %files
 %doc LICENSE COPYING README.md
@@ -72,7 +73,9 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 /usr/share/selinux/targeted/lbclient.pp
 
 %changelog
+* Wed Feb 13 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.0.2
+- Copying the old configuration file
 * Tue Feb 05 2019 Paulo Canilho <Paulo.Canilho@cern.ch>     - 0.0.2
-- Setting up the post install 
+- Setting up the post install
 * Fri Jun 15 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.0.1
 - First version of the rpm
