@@ -65,7 +65,11 @@ func main() {
 				}
 				metricsCache.Put(aliasCfg, lbAliases[i].Metric)
 			} else {
-				prevMetric := metricsCache.Get(aliasCfg)
+				prevMetric, err := metricsCache.Get(aliasCfg)
+				if err != nil {
+					logger.Fatal("A fatal error occurred when attempting to fetch a value from the metrics cache" +
+						". Error [%s]", err.Error())
+				}
 				logger.Debug("The alias [%s] configuration file [%s] has already been processed. " +
 					"Reusing the metric value [%d]", aliasName, aliasCfg, prevMetric)
 				lbAliases[i].Metric = prevMetric

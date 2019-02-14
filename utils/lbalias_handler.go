@@ -7,6 +7,7 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
 	"regexp"
+	"strings"
 )
 
 func ReadLBAliases(options Options) (lbAliases []lbalias.LBalias, err error) {
@@ -44,20 +45,24 @@ func ReadLBAliases(options Options) (lbAliases []lbalias.LBalias, err error) {
 		//Check if the file exist
 		configFile := ""
 		aliasName := aliasNames[i]
-		if _, err := os.Stat(options.LbMetricFile + "." + aliasNames[i]); !os.IsNotExist(err) {
-			// Log
-			logger.Debug("The specific configuration file exists for [%s]", aliasNames[i])
 
-			configFile = options.LbMetricFile + "." + aliasNames[i]
+		configFileName := strings.Split(options.LbMetricFile, ".conf")[0]
+		configFile = fmt.Sprintf("%s.%s.conf", configFileName, aliasName)
+
+		if _, err := os.Stat(configFile); !os.IsNotExist(err) {
+			logger.Debug("The specific configuration file exists for [%s]", aliasName)
 		} else {
 			// Log
-			logger.Debug("The config file does not exist for [%s]", aliasNames[i])
+			logger.Debug("The config file does not exist for [%s]. Defaulting to [%s]", aliasName,
+				options.LbMetricFile)
 			configFile = options.LbMetricFile
 		}
 		lbAliases = append(lbAliases, lbalias.LBalias{Name: aliasName,
 		    ChecksDone:     make(map[string]bool),
 			Syslog:         options.Syslog,
 			ConfigFile:     configFile})
+
+		logger.Debug("File [%s]", configFile)
 	}
 
 	return lbAliases, nil
