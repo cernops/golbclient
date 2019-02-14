@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/utils"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/metrics"
 	"os"
 	"strconv"
 	"strings"
@@ -43,6 +44,9 @@ func main() {
 
 	logger.Debug("The aliases from the configuration file are [%v]", lbAliases)
 
+	/* Caching the metric value */
+	metricsCache := metrics.NewMetricsCache()
+
 	// Concurrent lbAliases access
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(len(lbAliases))
@@ -50,34 +54,39 @@ func main() {
 	for i := range lbAliases {
 		go func(i int) {
 			defer waitGroup.Done()
-			logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
-			err = lbAliases[i].Evaluate()
-			if err != nil {
-				logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
-				os.Exit(1)
+			aliasName := lbAliases[i].Name
+			aliasCfg := lbAliases[i].ConfigFile
+			logger.Debug("Evaluating the alias [%s]", aliasName)
+			if !metricsCache.Contains(aliasCfg) {
+				err = lbAliases[i].Evaluate()
+				if err != nil {
+					logger.Fatal("The evaluation of the alias [%s] failed!", aliasName)
+					os.Exit(1)
+				}
+				metricsCache.Put(aliasCfg, lbAliases[i].Metric)
+			} else {
+				prevMetric := metricsCache.Get(aliasCfg)
+				logger.Debug("The alias [%s] configuration file [%s] has already been processed. " +
+					"Reusing the metric value [%d]", aliasName, aliasCfg, prevMetric)
+				lbAliases[i].Metric = prevMetric
 			}
 		}(i)
 	}
 
 	// Wait for concurrent loop to finish before proceeding
 	waitGroup.Wait()
-
-	metricType := "integer"
-	metricValue := ""
-	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
-		metricValue = strconv.Itoa(lbAliases[0].Metric)
-	} else {
-		var keyvaluelist []string
-		for _, lbalias := range lbAliases {
-			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
-			// Log
-			logger.Trace("Metric list: [%v]", keyvaluelist)
-		}
-		metricValue = strings.Join(keyvaluelist, ",")
-		metricType = "string"
+	var keyvaluelist []string
+	for _, lbalias := range lbAliases {
+		keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
+		// Log
+		logger.Trace("Metric list: [%v]", keyvaluelist)
 	}
+	metricValue := strings.Join(keyvaluelist, ",")
+	metricType := "string"
 
 	logger.Debug("metric = [%s]", metricValue)
 	// SNMP critical output
 	fmt.Printf("%s\n%s\n%s\n", OID, metricType, metricValue)
 }
+
+
