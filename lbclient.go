@@ -64,7 +64,7 @@ func main() {
 
 	metricType := "integer"
 	metricValue := ""
-	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
+	if len(lbAliases) == 1 {
 		metricValue = strconv.Itoa(lbAliases[0].Metric)
 	} else {
 		var keyvaluelist []string
