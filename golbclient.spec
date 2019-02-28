@@ -10,7 +10,7 @@
 
 Name:		lbclient
 Version:	#REPLACE_BY_VERSION#
-Release:	#REPLACE_BY_RELEASE#
+Release:	#REPLACE_BY_RELEASE#%{?dist}
 
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
