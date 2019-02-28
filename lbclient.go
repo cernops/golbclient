@@ -19,7 +19,7 @@ const (
 	// Version number
 	Version = "2.0"
 	// Release number
-	Release = "5"
+	Release = "6"
 )
 
 // Arguments
@@ -81,7 +81,7 @@ func main() {
 
 	metricType := "integer"
 	var metricValue string
-	if len(lbConfMappings) == 1 && len(lbConfMappings[0].AliasNames) == 1 {
+	if len(lbConfMappings) == 1 {
 		metricValue = fmt.Sprintf("%v", lbConfMappings[0].MetricValue)
 	} else {
 		metricType = "string"
