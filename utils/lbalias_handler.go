@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
@@ -75,6 +76,7 @@ func ReadLBConfigFiles(options Options) (confFiles []*ConfigurationMapping, err 
 			if info == nil || info.IsDir() || err != nil {
 				return nil
 			}
+			logger.Debug("Checking the file [%v]", path)
 			if strings.HasSuffix(path, options.LbMetricDefaultFileName) {
 				defaultMapping = NewConfiguration(path)
 				logger.Trace("Added the default")
@@ -131,4 +133,16 @@ func ReadLBConfigFiles(options Options) (confFiles []*ConfigurationMapping, err 
 	}
 
 	return confFiles, err
+}
+
+// GetReturnCode : checks if the return code should be a string or an integer
+func GetReturnCode(appOutput bytes.Buffer, lbConfMappings []*ConfigurationMapping) (metricType, metricValue string) {
+	if len(lbConfMappings) == 1 {
+		metricType = "integer"
+		metricValue = fmt.Sprintf("%v", lbConfMappings[0].MetricValue)
+	} else {
+		metricType = "string"
+		metricValue = strings.TrimRight(appOutput.String(), ",")
+	}
+	return
 }

@@ -1,6 +1,7 @@
 package ci
 
 import (
+	"bytes"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
@@ -50,4 +51,70 @@ func TestMissingConfigurationFile(t *testing.T) {
 		logger.Error("Expected an error when attempting to read the non-existent file [%s]", cfg.ConfigFilePath)
 		t.Fail()
 	}
+}
+
+func TestOneConfigFileMultipleAliases(t *testing.T) {
+	logger.SetLevel(logger.TRACE)
+	options.LbAliasFile = "../test/conf_returnValue/lbaliases.single"
+	options.LbMetricConfDir = "../test/conf_returnValue/"
+	options.LbMetricDefaultFileName = "lbclient.single.conf"
+	lbAliasesMappings, err := utils.ReadLBConfigFiles(options)
+	if err != nil {
+		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
+		t.Fail()
+	}
+
+	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliasesMappings, options.LbAliasFile)
+	if len(lbAliasesMappings) != 1 {
+		logger.Error("Found [%d] instead of [1] lbalias mapping entry definitions in the configuration.", len(lbAliasesMappings))
+		t.Fail()
+	}
+	var appOutput bytes.Buffer
+	err = lbalias.Evaluate(lbAliasesMappings[0])
+	appOutput.WriteString(lbAliasesMappings[0].String() + ",")
+	if err != nil {
+		logger.Error("We got an error evaluating the alias [%v]", err)
+		t.Fail()
+	}
+	metricType, metricValue := utils.GetReturnCode(appOutput, lbAliasesMappings)
+	logger.Info("The return code is [%v] [%v]", metricType, metricValue)
+	if metricType != "integer" {
+		logger.Error("We were expecting to have an integer, and we got [%v] with value [%v]", metricType, metricValue)
+		t.Fail()
+	}
+}
+
+func TestOneConfigFileMultipleAliasesString(t *testing.T) {
+	logger.SetLevel(logger.ERROR)
+	options.LbAliasFile = "../test/conf_returnString/lbaliases.single"
+	options.LbMetricConfDir = "../test/conf_returnString/"
+	options.LbMetricDefaultFileName = "lbclient.conf"
+	lbAliasesMappings, err := utils.ReadLBConfigFiles(options)
+	if err != nil {
+		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
+		t.Fail()
+	}
+
+	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliasesMappings, options.LbAliasFile)
+	if len(lbAliasesMappings) != 2 {
+		logger.Error("Found [%d] instead of [2] lbalias mapping entry definitions in the configuration.", len(lbAliasesMappings))
+		t.Fail()
+	}
+	var appOutput bytes.Buffer
+	for _, value := range lbAliasesMappings {
+		err = lbalias.Evaluate(value)
+		appOutput.WriteString(value.String() + ",")
+		if err != nil {
+			logger.Error("We got an error evaluating the alias [%v]", err)
+			t.Fail()
+		}
+	}
+	metricType, metricValue := utils.GetReturnCode(appOutput, lbAliasesMappings)
+	logger.Info("The return code is [%v] [%v]", metricType, metricValue)
+
+	if metricType != "string" {
+		logger.Error("We were expecting to have a string, and we got [%v] with value [%v]", metricType, metricValue)
+		t.Fail()
+	}
+
 }
