@@ -66,7 +66,6 @@ echo "" >  %{buildroot}/usr/local/etc/lbclient.conf
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
-[ -f /usr/local/etc/lbclient.conf.rpmsave ] && [ ! -f /usr/local/etc/lbclient.conf ] && cp /usr/local/etc/lbclient.conf.rpmsave /usr/local/etc/lbclient.conf
 
 %files
 %doc LICENSE COPYING README.md
