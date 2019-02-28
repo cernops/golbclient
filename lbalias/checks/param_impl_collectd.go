@@ -1,11 +1,12 @@
 package checks
 
 import (
+	"regexp"
+	"strings"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"regexp"
-	"strings"
 )
 
 // runCollectd : Runs the [collectdctl] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
@@ -14,12 +15,12 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 	for _, metric := range metrics {
 		// Remove square-brackets from metric
 		metric := regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
-		metricName := regexp.MustCompile("[a-zA-Z]*([/][a-zA-Z_-]*)?([:][0-9])?").FindAllString(metric, 1)[0]
+		metricName := regexp.MustCompile("[a-zA-Z-_0-9]*([/][a-zA-Z_-]*)?([:][0-9])?").FindAllString(metric, 1)[0]
 
 		// Extract slice from the metric
 		slice := 0
 		if strings.Contains(metric, ":") {
-			slice = int(parser.ParseInterfaceAsInteger(strings.Split(metric, ":")[1]))
+			slice = int(parser.ParseInterfaceAsInteger(strings.Split(metric, ":")[1])) - 1
 			metric = regexp.MustCompile("[:][0-9]+").ReplaceAllString(metric, "")
 		}
 
@@ -41,8 +42,12 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		}
 
 		// Prevent panics for out-of-bounds slices
-		slice = slice % len(rawValue)
 
+		if slice < 0 || slice >= len(rawValue) {
+			// Fail the whole expression if the index is out-of-bounds
+			logger.Error("Accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawValue))
+			return
+		}
 		// Get the desired slice
 		value, err := parser.ParseSciNumber(rawValue[slice], true)
 
@@ -51,6 +56,8 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 			return
 		}
 		// Assign the parameter key to the value fetched from the cli
+		logger.Trace("IS THIS THE BROKEN COMMAND??")
+		logger.Trace("%v and %v", metricName, value)
 		(*valueList)[metricName] = value
 		// Log
 		logger.Trace("Result of the collectd command: [%v]", (*valueList)[metricName])

@@ -140,7 +140,7 @@ func ParseInterfaceAsInteger(obj interface{}) int32 {
 		result = int32(f)
 	} else if s, ok := obj.(string); ok {
 		parsedBool, err := strconv.ParseBool(s)
-		if err == nil && s != "0"{
+		if err == nil && s != "0" {
 			if parsedBool {
 				result = 1
 			} else {

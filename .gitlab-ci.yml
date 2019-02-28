@@ -27,6 +27,10 @@ before_script:
  # />
   - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
   - export SPEC=$(ls *spec)
+  - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
+  - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
+  - cat $SPEC | sed "s/#REPLACE_BY_VERSION#/$VERSION/" > $SPEC.tmp
+  - cat $SPEC.tmp | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > $SPEC
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
@@ -84,8 +88,7 @@ build_rpm:
     - cd $PREFIX/lb-experts/golbclient
     - go11 mod vendor
     - mkdir SOURCES version
-    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
-    #- tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  $PREFIX/lb-experts/golbclient/vendor/github.com/ 
+    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
     - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
     - rm -rf SOURCES/$PKG.tg
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
@@ -108,6 +111,8 @@ kojiscratch:
     - export SRPM="SRPMS/${PKG_REL}.src.rpm"
     - echo "koji build --wait --scratch $KOJI_TARGET $SRPM"
     - koji --config=.koji build --wait --scratch $KOJI_TARGET $SRPM
+    - echo "Building on ai6"
+    -  koji --config=.koji build --wait --scratch ai6 $SRPM
 
 koji:
   stage: koji
@@ -115,6 +120,8 @@ koji:
     - export SRPM="SRPMS/${PKG_REL}.src.rpm"
     - echo "koji build --wait $KOJI_TARGET $SRPM"
     - koji --config=.koji build --wait $KOJI_TARGET $SRPM
+    - echo "Building also on slc6"
+    - koji --config=.koji build --wait ai6 $SRPM
   only:
     - tags
 

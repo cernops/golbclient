@@ -1,25 +1,24 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"testing"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/utils"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 // TestCollectdFunctionality : fundamental functionality test for the [collectd], output value must be = 9
 func TestCollectdLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	lba := lbalias.LBalias{Name: "collectd_load_functionality_test",
-		Syslog:     true,
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_collectd_load_single.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_load_single.conf", "collectd_load_functionality_test")
+	err := lbalias.Evaluate(cfg)
 	if err != nil {
-		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
+		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
 	}
-	if lba.Metric != 98 {
-		logger.Error("The expected metric value was [98] but got [%d] instead. Failing the test...", lba.Metric)
+	if cfg.MetricValue != 98 {
+		logger.Error("The expected metric value was [98] but got [%d] instead. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
@@ -28,16 +27,14 @@ func TestCollectdLoadFunctionality(t *testing.T) {
 func TestCollectdLoadConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	lba := lbalias.LBalias{Name: "collectd_load_comprehensive_test",
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_collectd_load.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_load.conf", "collectd_load_comprehensive_test")
+	err := lbalias.Evaluate(cfg)
 	if err != nil {
-		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())
+		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
 	}
-	if lba.Metric != 72 {
-		logger.Error("The expected metric value was [72] but got [%d] instead. Failing the test...", lba.Metric)
+	if cfg.MetricValue != 72 {
+		logger.Error("The expected metric value was [72] but got [%d] instead. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
@@ -46,16 +43,14 @@ func TestCollectdLoadConfigurationFile(t *testing.T) {
 func TestCollectdLoadFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	lba := lbalias.LBalias{Name: "collectd_load_intended_fail_test",
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_collectd_load_fail.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_load_fail.conf", "collectd_load_intended_fail_test")
+	err := lbalias.Evaluate(cfg)
 	if err == nil {
-		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", lba.ConfigFile)
+		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()
 	}
-	if lba.Metric >= 0 {
-		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", lba.Metric)
+	if cfg.MetricValue >= 0 {
+		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }

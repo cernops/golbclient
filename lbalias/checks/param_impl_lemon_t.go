@@ -2,11 +2,12 @@ package checks
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"regexp"
-	"strings"
 )
 
 // sliceEntry : Helper struct for the management of sliced metric entries
@@ -41,7 +42,7 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 	// Run the CLI with all the metrics found
 	logger.Debug("Running the [lemon] cli path [%s] for the metrics [%s]", commandPath, metric)
 	// Add the [lemon-cli] arguments
-	
+
 	output, err := runner.RunCommand(commandPath, true, "--script", "-m", metric)
 	if err != nil {
 		logger.Error("Failed to run the [lemon] cli with the error [%s]", err.Error())
@@ -69,13 +70,13 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 
 	// Assign sliced metrics
 	for _, slicedMetric := range slicesMap {
-		si := int(slicedMetric.slice)
+		si := int(slicedMetric.slice) - 1
 		if si < 0 || si >= len(outputMap[slicedMetric.name]) {
 			// Fail the whole expression if the index is out-of-bounds
 			return
 		}
-		logger.Trace("Assigning sliced metric [%s] to value [%s]", slicedMetric.mname, outputMap[slicedMetric.name][slicedMetric.slice])
-		(*valueList)[slicedMetric.mname] = parser.ParseInterfaceAsFloat(outputMap[slicedMetric.name][slicedMetric.slice])
+		logger.Trace("Assigning sliced metric [%s] to value [%s]", slicedMetric.mname, outputMap[slicedMetric.name][si])
+		(*valueList)[slicedMetric.mname] = parser.ParseInterfaceAsFloat(outputMap[slicedMetric.name][si])
 		logger.Trace("Value list [%v]", *valueList)
 	}
 
