@@ -76,7 +76,7 @@ func ReadLBConfigFiles(options Options) (confFiles []*ConfigurationMapping, err 
 			if info == nil || info.IsDir() || err != nil {
 				return nil
 			}
-			logger.Info("Checking the file [%v]", path)
+			logger.Debug("Checking the file [%v]", path)
 			if strings.HasSuffix(path, options.LbMetricDefaultFileName) {
 				defaultMapping = NewConfiguration(path)
 				logger.Trace("Added the default")
