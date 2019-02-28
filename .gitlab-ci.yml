@@ -91,7 +91,7 @@ build_rpm:
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
     - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
     - rm -rf SOURCES/$PKG.tg
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" $SPEC
   artifacts:
     paths:
       - SRPMS/
