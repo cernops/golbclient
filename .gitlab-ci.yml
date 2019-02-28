@@ -132,6 +132,7 @@ tag_qa:
     - tags
   script:
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL}
+    - koji --config=.koji tag-pkg ai6-qa ${PKG_REL}
   allow_failure: false
 
 tag_prod:
@@ -141,4 +142,5 @@ tag_prod:
     - tags
   script:
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL}
+    - koji --config=.koji tag-pkg ai6-stable ${PKG_REL}
 
