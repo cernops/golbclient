@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/jessevdk/go-flags"
@@ -46,7 +45,8 @@ func main() {
 	logger.SetLevelByString(options.DebugLevel)
 
 	// Arguments parsed. Let's open the configuration file
-	lbConfMappings, err := utils.ReadLBConfigFiles(options)
+	var lbConfMappings []*utils.ConfigurationMapping
+	lbConfMappings, err = utils.ReadLBConfigFiles(options)
 	if err != nil {
 		logger.Error("An error occurred when attempting to process the configuration & aliases. Error [%s]",
 			err.Error())
@@ -79,14 +79,7 @@ func main() {
 	// Wait for concurrent loop to finish before proceeding
 	waitGroup.Wait()
 
-	metricType := "integer"
-	var metricValue string
-	if len(lbConfMappings) == 1 {
-		metricValue = fmt.Sprintf("%v", lbConfMappings[0].MetricValue)
-	} else {
-		metricType = "string"
-		metricValue = strings.TrimRight(appOutput.String(), ",")
-	}
+	metricType, metricValue := utils.GetReturnCode(appOutput, lbConfMappings)
 
 	logger.Debug("metric = [%s]", metricValue)
 	// SNMP critical output
