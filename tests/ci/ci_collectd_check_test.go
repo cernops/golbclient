@@ -1,18 +1,20 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"testing"
 	"strings"
+	"testing"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/utils"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 // TestCICollectdCLI : checks if the alternative [collectd] used in the CI pipeline is OK
 func TestCICollectdCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	output, err := runner.RunCommand("/usr/bin/collectdctl",
-		 true, "getval", "test")
+		true, "getval", "test")
 	if err != nil {
 		logger.Error("An error was detected when running the CI [collectdctl]")
 		t.FailNow()
@@ -23,21 +25,17 @@ func TestCICollectdCLI(t *testing.T) {
 	logger.Trace("CI [collectdctl] output [%s]", output)
 }
 
-
 // TestCollectdFunctionality : fundamental functionality test for the [collectd], output value must not be negative
 func TestCollectdFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	lba := lbalias.LBalias{Name: "collectd_functionality_test",
-		Syslog:     true,
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_collectd_check_single.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_single.conf", "my-test-alias.cern.ch")
+	err := lbalias.Evaluate(cfg)
 	if err != nil {
-		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
+		logger.Error("Detected an error when attempting to evaluate the configuration file [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
 	}
-	if lba.Metric < 0 {
-		logger.Error("The metric output value returned negative [%d]. Failing the test...", lba.Metric)
+	if cfg.MetricValue < 0 {
+		logger.Error("The metric output value returned negative [%d]. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
@@ -46,17 +44,15 @@ func TestCollectdFunctionality(t *testing.T) {
 func TestCollectdConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	lba := lbalias.LBalias{Name: "collectd_comprehensive_test",
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_collectd_check.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_check.conf", "collectd_comprehensive_test")
+	err := lbalias.Evaluate(cfg)
 	if err != nil {
-		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile,
+		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath,
 			err.Error())
 		t.Fail()
 	}
-	if lba.Metric < 0 {
-		logger.Error("The metric output value returned negative [%d]. Failing the test...", lba.Metric)
+	if cfg.MetricValue < 0 {
+		logger.Error("The metric output value returned negative [%d]. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
@@ -65,16 +61,15 @@ func TestCollectdConfigurationFile(t *testing.T) {
 func TestCollectdFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	lba := lbalias.LBalias{Name: "collectd_intended_fail_test",
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_collectd_check_fail.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_fail.conf", "collectd_intended_fail_test")
+	err := lbalias.Evaluate(cfg)
 	if err == nil {
-		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", lba.ConfigFile)
+		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()
 	}
-	if lba.Metric >= 0 {
-		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", lba.Metric)
+	if cfg.MetricValue >= 0 {
+		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", cfg.MetricValue)
 		t.Fail()
+
 	}
 }

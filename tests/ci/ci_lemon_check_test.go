@@ -1,19 +1,20 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"strings"
+	"testing"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"testing"
-	"strings"
+	"gitlab.cern.ch/lb-experts/golbclient/utils"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
-
 
 // TestCILemonCLI : checks if the alternative [lemon-cli] used in the CI pipeline is OK
 func TestCILemonCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	output, err := runner.RunCommand("/usr/sbin/lemon-cli",
-		 true, "--script", "-m", "13163")
+		true, "--script", "-m", "13163")
 	if err != nil {
 		logger.Error("An error was detected when running the CI [lemon-cli]")
 		t.FailNow()
@@ -27,17 +28,15 @@ func TestCILemonCLI(t *testing.T) {
 // TestLemonFunctionality : fundamental functionality test for the [lemon-cli], output value must not be negative
 func TestLemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	lba := lbalias.LBalias{Name: "myTest",
-		Syslog:     true,
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_lemon_check_single.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_lemon_check_single.conf", "myTest")
+
+	err := lbalias.Evaluate(cfg)
 	if err != nil {
-		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", lba.Name, err.Error())
+		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
 	}
-	if lba.Metric < 0 {
-		logger.Error("The metric output value returned negative [%d]. Failing the test...", lba.Metric)
+	if cfg.MetricValue < 0 {
+		logger.Error("The metric output value returned negative [%d]. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
@@ -46,16 +45,14 @@ func TestLemonFunctionality(t *testing.T) {
 func TestLemonConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	lba := lbalias.LBalias{Name: "lemonTest",
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_lemon_check.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_lemon_check.conf", "lemonTest")
+	err := lbalias.Evaluate(cfg)
 	if err != nil {
-		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", lba.ConfigFile, err.Error())
+		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
 	}
-	if lba.Metric < 0 {
-		logger.Error("The metric output value returned negative [%d]. Failing the test...", lba.Metric)
+	if cfg.MetricValue < 0 {
+		logger.Error("The metric output value returned negative [%d]. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
@@ -64,16 +61,14 @@ func TestLemonConfigurationFile(t *testing.T) {
 func TestLemonFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	lba := lbalias.LBalias{Name: "lemonFailTest",
-		ChecksDone: make(map[string]bool),
-		ConfigFile: "../test/lbclient_lemon_check_fail.conf"}
-	err := lba.Evaluate()
+	cfg := utils.NewConfiguration("../test/lbclient_lemon_check_fail.conf", "lemonFailTest")
+	err := lbalias.Evaluate(cfg)
 	if err == nil {
-		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", lba.ConfigFile)
+		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()
 	}
-	if lba.Metric >= 0 {
-		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", lba.Metric)
+	if cfg.MetricValue >= 0 {
+		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", cfg.MetricValue)
 		t.Fail()
 	}
 }
