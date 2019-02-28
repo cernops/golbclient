@@ -9,13 +9,8 @@
 %global debug_package	%{nil}
 
 Name:		lbclient
-<<<<<<< HEAD
-Version:	2.0
-Release:	3
-=======
 Version:	#REPLACE_BY_VERSION#
 Release:	#REPLACE_BY_RELEASE#
->>>>>>> qa
 
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
