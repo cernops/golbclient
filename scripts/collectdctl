@@ -16,6 +16,7 @@ find_in_array() {
 db=(
 	"vmem/vmpage_number-writeback_temp value=0.000000e+00"
 	"cpu/percent-idle value=9.844851e+01"
+	"load/load-relative value=10.01e+01"
 	"cpu/percent-system value=3.356831e+01"
 	"test in=1.960003e+00\ntest out=3.241338e+01"
 )

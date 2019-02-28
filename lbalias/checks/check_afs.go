@@ -1,8 +1,8 @@
 package checks
 
 import (
-	"io/ioutil"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"io/ioutil"
 )
 
 const afsDir = "/afs/cern.ch/user/"
@@ -10,7 +10,6 @@ const afsDir = "/afs/cern.ch/user/"
 // AFS : struct that represent the AFS : CLI implementation
 type AFS struct {
 }
-
 
 // Run : Runs the AFS : CLI implementation function
 func (afs AFS) Run(args ...interface{}) interface{} {

@@ -9,18 +9,17 @@
 %global debug_package	%{nil}
 
 Name:		lbclient
-Version:	2.0
-Release:	1
+Version:	#REPLACE_BY_VERSION#
+Release:	#REPLACE_BY_RELEASE#
 
 Summary:	CERN DNS Load Balancer Client
 License:	ASL 2.0
 URL:		https://%{import_path}
-# Source:		https://%{import_path}/archive/%{commit}/%{repo}-%{shortcommit}.tar.gz
 Source:		%{name}-%{version}.tgz
 BuildRequires:	golang >= 1.5
-BuildRequires:  checkpolicy 
+BuildRequires:  checkpolicy
 BuildRequires:  policycoreutils-python
-ExclusiveArch:	x86_64 
+ExclusiveArch:	x86_64
 Requires: net-snmp
 
 %description
@@ -59,9 +58,11 @@ GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 
 %install
 # main package binary
-install -d -p %{buildroot}/usr/sbin/  %{buildroot}/usr/share/selinux/targeted/
+install -d -p %{buildroot}/usr/sbin/  %{buildroot}/usr/share/selinux/targeted/  %{buildroot}/usr/local/etc %{buildroot}/usr/local/sbin/
 install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
+cd %{buildroot}/usr/local/sbin && ln -s ../../sbin/lbclient
+echo "" >  %{buildroot}/usr/local/etc/lbclient.conf
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
@@ -69,10 +70,17 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 %files
 %doc LICENSE COPYING README.md
 /usr/sbin/lbclient
+/usr/local/sbin/lbclient
 /usr/share/selinux/targeted/lbclient.pp
+%config(noreplace) /usr/local/etc/lbclient.conf
+
 
 %changelog
+* Thu Feb 21 2019 Pablo Saiz <Pablo.Saiz@cern.ch>           - 2.0.3
+- Include the link in /usr/local/sbin/lbclient
+* Wed Feb 13 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.0.2
+- Copying the old configuration file
 * Tue Feb 05 2019 Paulo Canilho <Paulo.Canilho@cern.ch>     - 0.0.2
-- Setting up the post install 
+- Setting up the post install
 * Fri Jun 15 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.0.1
 - First version of the rpm

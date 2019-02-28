@@ -5,13 +5,11 @@ import (
 )
 
 type CheckAttribute struct {
-	
 }
-
 
 func (checkAttribute CheckAttribute) Run(args ...interface{}) interface{} {
 	// Log
-	logger.Debug("This will be used later on for the default load", )
+	logger.Debug("This will be used later on for the default load")
 
 	return true
 }

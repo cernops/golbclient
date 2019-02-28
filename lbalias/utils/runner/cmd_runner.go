@@ -32,6 +32,7 @@ func RunCommand(pathToCommand string, printRuntime bool, v ...string) (string, e
 	result := strings.TrimRight(outBuff.String(), "\r\n")
 	return result, err
 }
+
 // RunDirectCommand : runs a command expecting that all the arguments are supplied in the first function parameter
 func RunDirectCommand(commandAndArguments string, printRuntime bool) (string, error) {
 	logger.Trace("Attempting to run direct command [%s]...", commandAndArguments)

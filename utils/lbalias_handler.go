@@ -1,65 +1,134 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
-	"bufio"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
-func ReadLBAliases(options Options) (lbAliases []lbalias.LBalias, err error) {
+// ConfigurationMapping : object with the config
+type ConfigurationMapping struct {
+	ConfigFilePath string
+	AliasNames     []string
+	MetricValue    int
+	//ChecksDone     map[string]bool
+	Default bool
+}
 
-	filename := options.LbAliasFile
-	aliasNames := []string{}
-	f, err := os.Open(filename)
+// NewConfiguration : Creates a Configuration object
+func NewConfiguration(path string, aliasName ...string) *ConfigurationMapping {
+	var cm ConfigurationMapping
+	// cm.ChecksDone = make(map[string]bool)
+	cm.ConfigFilePath = path
+	if aliasName != nil && len(aliasName) > 0 {
+		cm.AliasNames = aliasName
+	} else {
+		cm.Default = true
+	}
+	cm.MetricValue = 0
+	return &cm
+}
+
+func (cm ConfigurationMapping) String() string {
+	out := bytes.Buffer{}
+	for i := 0; i < len(cm.AliasNames); i++ {
+		out.WriteString(fmt.Sprintf("%s=%d", cm.AliasNames[i], cm.MetricValue))
+		if i < len(cm.AliasNames)-1 {
+			out.WriteString(",")
+		}
+	}
+	return out.String()
+}
+func (cm *ConfigurationMapping) AddConstant(exp string) bool {
+	logger.Debug("Adding Constant [%s]", exp)
+	// @TODO: Replace with the parser.ParseInterfaceAsFloat (reflection?)
+	f, err := strconv.ParseFloat(exp, 32)
 	if err != nil {
-		return nil, err
+		logger.Error("Error parsing the floating point number from the value [%s]", exp)
+		return false
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	r, _ := regexp.Compile("^lbalias=([^\t\n\f\r ]+)$")
+	cm.MetricValue += int(f)
+	return true
+}
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		alias := r.FindStringSubmatch(line)
+func (cm *ConfigurationMapping) addAlias(alias string) {
+	cm.AliasNames = append(cm.AliasNames, alias)
+}
 
-		if len(alias) > 0 {
-			aliasNames = append(aliasNames, alias[1])
+// ReadLBConfigFiles : Returns all the configuration files to be evaluated
+func ReadLBConfigFiles(options Options) (confFiles []*ConfigurationMapping, err error) {
+
+	tmpConfMap := make(map[string]bool)
+	var defaultMapping *ConfigurationMapping
+
+	/* Read the configuration files */
+	err = filepath.Walk(options.LbMetricConfDir,
+		func(path string, info os.FileInfo, err error) error {
+			if info == nil || info.IsDir() || err != nil {
+				return nil
+			}
+			if strings.HasSuffix(path, options.LbMetricDefaultFileName) {
+				defaultMapping = NewConfiguration(path)
+				logger.Trace("Added the default")
+			} else if strings.HasSuffix(path, ".cern.ch") {
+				aliasName := strings.Split(path, "lbclient.conf.")[1]
+				logger.Trace("Added config for %v", aliasName)
+				confFiles = append(confFiles, NewConfiguration(path, aliasName))
+				tmpConfMap[aliasName] = true
+			}
+			return nil
+		})
+	/* Abort if no configuration files were found */
+	if len(confFiles) == 0 && defaultMapping == nil {
+		return nil, fmt.Errorf("no configuration files found in the supplied directory [%s]",
+			options.LbMetricConfDir)
+	}
+
+	/* Read the aliases */
+	lbAliasesFileContent, err := filehandler.ReadAllLinesFromFile(options.LbAliasFile)
+	if err != nil {
+		logger.Debug("There is no lbalias configuration file [%v]", options.LbAliasFile)
+		return
+	}
+
+	formatLbLine := regexp.MustCompile(`^\s*lbalias\s*=\s*(\S+)`)
+
+	for _, alias := range lbAliasesFileContent {
+		formatLbLine.Match([]byte(alias))
+		if !formatLbLine.Match([]byte(alias)) {
+			logger.Trace("Ignoring the line [%v]", alias)
+			continue
 		}
-	}
 
-	if err := scanner.Err(); err != nil {
-		logger.Fatal("[%v]", err)
-		return nil, err
-	}
+		/* Abort if a malformed alias is found */
+		aliasName := formatLbLine.FindStringSubmatch(alias)[1]
+		logger.Trace("Looking for alias [%s]...", aliasName)
 
-	if len(aliasNames) == 0 {
-		return nil, fmt.Errorf("no alias definition was found inside the [lbaliases] file")
-	}
-	
-	for i := range aliasNames {
-		//Check if the file exist
-		configFile := ""
-		aliasName := aliasNames[i]
-		if _, err := os.Stat(options.LbMetricFile + "." + aliasNames[i]); !os.IsNotExist(err) {
-			// Log
-			logger.Debug("The specific configuration file exists for [%s]", aliasNames[i])
-
-			configFile = options.LbMetricFile + "." + aliasNames[i]
-		} else {
-			// Log
-			logger.Debug("The config file does not exist for [%s]", aliasNames[i])
-			configFile = options.LbMetricFile
+		if _, found := tmpConfMap[aliasName]; found {
+			logger.Trace("Found configuration file... Skipping...")
+			continue
 		}
-		lbAliases = append(lbAliases, lbalias.LBalias{Name: aliasName,
-		    ChecksDone:     make(map[string]bool),
-			Syslog:         options.Syslog,
-			ConfigFile:     configFile})
+		logger.Trace("Failed to find a configuration file... Adding alias to the generic metric...")
+		/* Add the stranded alias to the default configuration file */
+		if defaultMapping == nil {
+			return nil, fmt.Errorf(" [%v/%v] file  not found, and the alias [%v]"+
+				" does not have a specific configuration",
+				options.LbMetricConfDir, options.LbMetricDefaultFileName, aliasName)
+		}
+		defaultMapping.addAlias(aliasName)
+	}
+	/* */
+	if defaultMapping != nil && len(defaultMapping.AliasNames) > 0 {
+		confFiles = append(confFiles, defaultMapping)
 	}
 
-	return lbAliases, nil
-
+	return confFiles, err
 }

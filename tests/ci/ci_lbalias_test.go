@@ -1,10 +1,11 @@
 package ci
 
 import (
+	"testing"
+
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
 	"gitlab.cern.ch/lb-experts/golbclient/utils"
 	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
-	"testing"
 )
 
 var options utils.Options
@@ -13,7 +14,7 @@ var options utils.Options
 func TestMissingLBClientFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	options.LbAliasFile = "..//path/to/nonexistent/file"
-	_, err := utils.ReadLBAliases(options)
+	_, err := utils.ReadLBConfigFiles(options)
 
 	if err == nil {
 		logger.Error("No error was detected when attempting to access a non-existent configuration file. Failing test...")
@@ -22,33 +23,19 @@ func TestMissingLBClientFile(t *testing.T) {
 }
 
 // TestSingleLBAliasFile : attempts to read a single lbalias definitions from a given configuration file
-func TestSingleLBAliasFile(t *testing.T) {
+func TestSingleLbAliasConfigFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	options.LbAliasFile = "../test/lbalias_single.conf"
-	lbAliases, err := utils.ReadLBAliases(options)
+	options.LbAliasFile = "../test/conf/lbaliases.single"
+	options.LbMetricConfDir = "../test/conf/"
+	options.LbMetricDefaultFileName = "lbclient.single.conf"
+	lbAliasesMappings, err := utils.ReadLBConfigFiles(options)
 	if err != nil {
 		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
 		t.Fail()
 	}
-	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliases, options.LbAliasFile)
-	if len(lbAliases) != 1 {
-		logger.Error("Found [%d] instead of [1] lbalias entry definitions in the configuration.", len(lbAliases))
-		t.Fail()
-	}
-}
-
-// TestDoubleLBAliasFile : attempts to read two lbalias entry definitions from a given configuration file
-func TestDoubleLBAliasFile(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
-	options.LbAliasFile = "../test/lbalias_double.conf"
-	lbAliases, err := utils.ReadLBAliases(options)
-	if err != nil {
-		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
-		t.Fail()
-	}
-	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliases, options.LbAliasFile)
-	if len(lbAliases) != 2 {
-		logger.Error("Found [%d] instead of [2] lbalias entry definitions in the configuration.", len(lbAliases))
+	logger.Debug("Read the aliases [%v] from the configuration file [%s]", lbAliasesMappings, options.LbAliasFile)
+	if len(lbAliasesMappings) != 1 {
+		logger.Error("Found [%d] instead of [1] lbalias mapping entry definitions in the configuration.", len(lbAliasesMappings))
 		t.Fail()
 	}
 }
@@ -56,26 +43,11 @@ func TestDoubleLBAliasFile(t *testing.T) {
 // TestMissingConfigurationFile : attempts to run the application with a non-existent configuration file
 func TestMissingConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
-	lba := lbalias.LBalias{Name: "myTest",
-		ChecksDone: make(map[string]bool),
-		Syslog:     true,
-		ConfigFile: "../test/lbtest.conf_does_not_exist"}
+	cfg := utils.NewConfiguration("../test/lbtest.conf_does_not_exist", "myTest")
 
-	err := lba.Evaluate()
+	err := lbalias.Evaluate(cfg)
 	if err == nil {
-		logger.Error("Expected an error when attempting to read the non-existent file [%s]", lba.ConfigFile)
+		logger.Error("Expected an error when attempting to read the non-existent file [%s]", cfg.ConfigFilePath)
 		t.Fail()
 	}
 }
-
-/*
-//Let's check that, given a constant load, we get that number
-func ExampleConstantLoad() {
-	lbalias := checks.LBalias{Name: "myTest",
-		ConfigFile: "test/lbclient_constant.conf"}
-
-	lbalias.Evaluate()
-	// Output: constant
-	// [add_constant] value= 249
-}
-*/

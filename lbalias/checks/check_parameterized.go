@@ -2,10 +2,11 @@ package checks
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"regexp"
 	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 
 	"github.com/Knetic/govaluate"
 )
@@ -129,7 +130,6 @@ func (g ParamCheck) runCommand(metrics []string, valueList *map[string]interface
 // compatibilityProcess : Processes the metric line so that all the metrics found (_metric) are ported to the new format ([metric])
 func (g ParamCheck) compatibilityProcess(metric *string) {
 	logger.LOGC(logger.TRACE, "Processing metric [%s]", *metric)
-
 
 	*metric = regexp.MustCompile(`([\]0-9][ ]*)[=]([ ]*[0-9\[])`).ReplaceAllString(*metric, "$1==$2")
 

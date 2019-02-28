@@ -2,38 +2,25 @@ package lbalias
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/utils"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
-type LBalias struct {
-	Name           string
-	ConfigFile     string
-	//NoLogin        bool
-	Syslog         bool
-	GData          []string
-	MData          []string
-	//CheckXsessions int
-	//RogerState     string
-	Metric         int
-	//CheckMetricList []MetricEntry
-	//LoadMetricList  []MetricEntry
-	//Constant        float32
-	//CheckAttributes map[string]bool
-	ChecksDone      map[string]bool
-}
+// ExpressionCode : return value for the CLI calls
 type ExpressionCode struct {
 	code int
-	cli CLI
+	cli  CLI
 }
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
-var allLBExpressions = map[string] ExpressionCode{
+var allLBExpressions = map[string]ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
 	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
@@ -47,18 +34,17 @@ var allLBExpressions = map[string] ExpressionCode{
 	"COMMAND":       {code: 14, cli: checks.Command{}},
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
-	"XSESSIONS": 	 {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":  	 {code: 6, cli: checks.CheckAttribute{}},
+	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 }
-
 
 /*
 	And here we add the methods of the class
 */
 
 // Evaluate : Evaluates a [lbalias] entry
-func (lbalias *LBalias) Evaluate() error {
-	logger.Debug("Evaluating the alias [%s]", lbalias.Name)
+func Evaluate(cm *utils.ConfigurationMapping) error {
+	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
 
 	// Create a string array containing all the checksToExecute to be performed
 	var checksToExecute []string
@@ -67,14 +53,14 @@ func (lbalias *LBalias) Evaluate() error {
 	}
 
 	// Attempt to read the configuration file
-	logger.Debug("Attempting to read the configuration file [%s]", lbalias.ConfigFile)
-	lines, err := filehandler.ReadAllLinesFromFile(lbalias.ConfigFile)
+
+	lines, err := filehandler.ReadAllLinesFromFile(cm.ConfigFilePath)
 	if err != nil {
 		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
 		return err
 	}
 	// Read the configuration file using the scanner API
-	logger.Debug("Successfully opened the alias configuration file")
+	logger.Debug("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
 
 	// Detect all comments
 	comment, _ := regexp.Compile("^(#.*)?$")
@@ -92,11 +78,11 @@ func (lbalias *LBalias) Evaluate() error {
 		if len(runningChecks) > 0 {
 			/********************************** CHECKS **********************************/
 			myAction := strings.ToUpper(runningChecks[1])
-			if b, ok := allLBExpressions[myAction].cli.Run(line, lbalias.Name).(bool); !b || !ok {
-				lbalias.Metric = -allLBExpressions[myAction].code
-				return fmt.Errorf("the check of [%s] failed. Aborting with code [%d]", myAction, lbalias.Metric)
+			if b, ok := allLBExpressions[myAction].cli.Run(line, cm.AliasNames, cm.Default).(bool); !b || !ok {
+				cm.MetricValue = -allLBExpressions[myAction].code
+				return fmt.Errorf("the check of [%s] failed. Aborting with code [%d]", myAction, cm.MetricValue)
 			}
-			lbalias.ChecksDone[runningChecks[1]] = true
+			//cm.ChecksDone[runningChecks[1]] = true
 			continue
 		}
 		loads := constant.FindStringSubmatch(line)
@@ -104,16 +90,16 @@ func (lbalias *LBalias) Evaluate() error {
 			/********************************** LOADS **********************************/
 			cliName := strings.ToUpper(loads[1])
 			if cliName == "LEMON" || cliName == "COLLECTD" {
-				result := int(allLBExpressions[cliName].cli.Run(line, lbalias.Name).(int32))
+				result := int(allLBExpressions[cliName].cli.Run(line).(int32))
 				if result == -1 {
 					logger.Error("[%s] metric returned a negative number [%d]", cliName, result)
-					lbalias.Metric = -allLBExpressions[cliName].code
+					cm.MetricValue = -allLBExpressions[cliName].code
 					return fmt.Errorf("[%s] metric returned a negative number [%d]", cliName, result)
 				}
-				lbalias.Metric += result
+				cm.MetricValue += result
 			} else {
 				constant := strings.TrimSpace(regexp.MustCompile("(?i)(load constant)").Split(loads[0], -1)[1])
-				if !lbalias.addConstant(constant) {
+				if !cm.AddConstant(constant) {
 					return fmt.Errorf("failed to load the constant value [%v]", constant)
 				}
 			}
@@ -127,58 +113,46 @@ func (lbalias *LBalias) Evaluate() error {
 
 	}
 
-	if lbalias.Metric == 0 {
+	if cm.MetricValue == 0 {
 		logger.Info("No metric value was found. Defaulting to the generic load calculation")
-		lbalias.Metric = lbalias.defaultLoad()
+		cm.MetricValue = defaultLoad()
 	}
 
 	// Log
-	logger.Trace("Final metric value [%d]", lbalias.Metric)
+	logger.Trace("Final metric value [%d]", cm.MetricValue)
 
 	return nil
 }
-func (lbalias *LBalias) addConstant(exp string) bool {
-	logger.Debug("Adding Constant [%s]", exp)
-	// @TODO: Replace with the parser.ParseInterfaceAsFloat (reflection?)
-	f, err := strconv.ParseFloat(exp, 32)
-	if err != nil {
-		logger.Error("Error parsing the floating point number from the value [%s]", exp)
-		return false
-	}
 
-	lbalias.Metric += int(f)
-	return true
-}
-
-func (lbalias *LBalias) defaultLoad() int {
-	swap := lbalias.swapFree()
+func defaultLoad() int {
+	swap := swapFree()
 	logger.Debug("Result of swap formula = %f", swap)
-	cpuload := lbalias.cpuLoad()
+	cpuload := cpuLoad()
 	logger.Debug("Result of cpu formula = %f", cpuload)
 	swaping := float32(0)
-	if lbalias.ChecksDone["swapping"] {
+	/*if lbalias.ChecksDone["swapping"] {
 		logger.Debug("Result of swapoing formula = %f", swaping)
-	}
+	}*/
 
-	f_sm, nb_processes, users := lbalias.sessionManager()
-	if lbalias.ChecksDone["xsessions"]  {
+	fSm, nbProcesses, users := sessionManager()
+	/*if lbalias.ChecksDone["xsessions"] {
 		logger.Debug("Result of X sessions formula = %f", f_sm)
 	} else {
 		f_sm = float32(0)
 	}
-
-	logger.Debug("Number of processes = %d", int(nb_processes))
+	*/
+	logger.Debug("Number of processes = %d", int(nbProcesses))
 	logger.Debug("Number of users logged in = %d ", int(users))
 
-	myLoad := (((swap + users/25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * f_sm)) / 6.
+	myLoad := (((swap + users/25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * fSm)) / 6.
 
 	//((swap + users / 25.) / 2.) + (2. * swaping * self.check_swaping) + (3. * cpuload) + (2. * f_sm * self.check_xsessions)) / 6.
-	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, f_sm)
+	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, fSm)
 	return int(myLoad * 1000)
 
 }
 
-func (lbalias *LBalias) swapFree() float32 {
+func swapFree() float32 {
 	lines, err := filehandler.ReadAllLinesFromFile("/proc/meminfo")
 	if err != nil {
 		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/meminfo", err.Error())
@@ -214,7 +188,7 @@ func (lbalias *LBalias) swapFree() float32 {
 	return (21 - (20. * float32(memoryMap["SwapFree"]) / float32(memoryMap["SwapTotal"]))) / 6.
 }
 
-func (lbalias *LBalias) cpuLoad() float32 {
+func cpuLoad() float32 {
 	line, err := filehandler.ReadFirstLineFromFile("/proc/loadavg")
 	if err != nil {
 		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/loadavg", err.Error())
@@ -225,7 +199,7 @@ func (lbalias *LBalias) cpuLoad() float32 {
 	return float32(cpuFloat / 10.)
 }
 
-func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
+func sessionManager() (float32, float32, float32) {
 
 	out, err := exec.Command("/bin/ps", "auxw").Output()
 
@@ -235,7 +209,7 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 	}
 
 	// Let's parse the output, and collect the number of processes
-	f_sm, nb_processes := 0.0, -1.0
+	fSm, nbProcesses := 0.0, -1.0
 	users := map[string]bool{}
 	// There are 3 processes per gnome sesion, and 4 for the fvm
 	gnome, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
@@ -243,12 +217,12 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 	user, _ := regexp.Compile("^([^ ]+)")
 
 	for _, line := range strings.Split(string(out), "\n") {
-		nb_processes++
+		nbProcesses++
 		if gnome.MatchString(line) {
-			f_sm += 1 / 3.
+			fSm += 1 / 3.
 		}
 		if fvm.MatchString(line) {
-			f_sm += 1 / 4.
+			fSm += 1 / 4.
 		}
 		a := user.FindStringSubmatch(line)
 		if len(a) > 0 {
@@ -256,5 +230,5 @@ func (lbalias *LBalias) sessionManager() (float32, float32, float32) {
 		}
 
 	}
-	return float32(f_sm), float32(nb_processes), float32(len(users) - 1)
+	return float32(fSm), float32(nbProcesses), float32(len(users) - 1)
 }

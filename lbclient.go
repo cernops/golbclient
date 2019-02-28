@@ -1,19 +1,26 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/utils"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/jessevdk/go-flags"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/utils"
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
-// OID : SNMP identifier
-const OID = ".1.3.6.1.4.1.96.255.1"
+const (
+	// OID : SNMP identifier
+	OID = ".1.3.6.1.4.1.96.255.1"
+	// Version number
+	Version = "2.0"
+	// Release number
+	Release = "5"
+)
 
 // Arguments
 var options utils.Options
@@ -30,51 +37,55 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	if options.Version {
+		fmt.Printf("lbclient version %s.%s\n", Version, Release)
+		os.Exit(0)
+	}
 
 	// Set the application logger level
 	logger.SetLevelByString(options.DebugLevel)
 
-	//Arguments parsed. Let's open the configuration file
-	lbAliases, err := utils.ReadLBAliases(options)
+	// Arguments parsed. Let's open the configuration file
+	lbConfMappings, err := utils.ReadLBConfigFiles(options)
 	if err != nil {
-		logger.Fatal("Error reading the configuration file. Error [%s]", err.Error())
-		os.Exit(1)
+		logger.Error("An error occurred when attempting to process the configuration & aliases. Error [%s]",
+			err.Error())
 	}
 
-	logger.Debug("The aliases from the configuration file are [%v]", lbAliases)
+	// Application output
+	var appOutput bytes.Buffer
 
-	// Concurrent lbAliases access
+	// Concurrent evaluation
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(len(lbAliases))
+	waitGroup.Add(len(lbConfMappings))
 
-	for i := range lbAliases {
-		go func(i int) {
+	// Evaluate for each of the configuration files found
+	for _, value := range lbConfMappings {
+
+		go func(confMapping *utils.ConfigurationMapping) {
 			defer waitGroup.Done()
-			logger.Debug("Evaluating the alias [%s]", lbAliases[i].Name)
-			err = lbAliases[i].Evaluate()
+			logger.Trace("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
+
+			err := lbalias.Evaluate(confMapping)
+
+			/* Abort if an error occurs */
 			if err != nil {
-				logger.Fatal("The evaluation of the alias [%s] failed!", lbAliases[i].Name)
-				os.Exit(1)
+				logger.Error("The evaluation of configuration file [%s] failed. Aborting execution...", confMapping.ConfigFilePath)
 			}
-		}(i)
+			appOutput.WriteString(confMapping.String() + ",")
+		}(value)
 	}
 
 	// Wait for concurrent loop to finish before proceeding
 	waitGroup.Wait()
 
 	metricType := "integer"
-	metricValue := ""
-	if len(lbAliases) == 1 && lbAliases[0].Name == "" {
-		metricValue = strconv.Itoa(lbAliases[0].Metric)
+	var metricValue string
+	if len(lbConfMappings) == 1 && len(lbConfMappings[0].AliasNames) == 1 {
+		metricValue = fmt.Sprintf("%v", lbConfMappings[0].MetricValue)
 	} else {
-		var keyvaluelist []string
-		for _, lbalias := range lbAliases {
-			keyvaluelist = append(keyvaluelist, lbalias.Name+"="+strconv.Itoa(lbalias.Metric))
-			// Log
-			logger.Trace("Metric list: [%v]", keyvaluelist)
-		}
-		metricValue = strings.Join(keyvaluelist, ",")
 		metricType = "string"
+		metricValue = strings.TrimRight(appOutput.String(), ",")
 	}
 
 	logger.Debug("metric = [%s]", metricValue)
