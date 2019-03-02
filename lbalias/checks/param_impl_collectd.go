@@ -26,13 +26,14 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		keyName := ""
 
 		if strings.Contains(metric, ":") {
-			secondPart := strings.Split(metric, ":")[1]
+			parts := strings.Split(metric, ":")
+			metric = parts[0]
+			secondPart := parts[1]
 			slice = int(parser.ParseInterfaceAsInteger(secondPart)) - 1
 			if slice == -2 {
 				slice = 0
 				keyName = regexp.MustCompile("^[a-zA-Z-_0-9]+").FindAllString(secondPart, 1)[0]
 			}
-			metric = strings.Split(metric, ":")[0]
 		}
 
 		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", commandPath, metricName)
