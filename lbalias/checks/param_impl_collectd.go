@@ -32,7 +32,7 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 				slice = 0
 				keyName = regexp.MustCompile("^[a-zA-Z-_0-9]+").FindAllString(secondPart, 1)[0]
 			}
-			metric = regexp.MustCompile("[:].+").ReplaceAllString(metric, "")
+			metric = strings.Split(metric, ":")[0]
 		}
 
 		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", commandPath, metricName)
