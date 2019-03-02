@@ -13,6 +13,7 @@ import (
 func runCollectd(commandPath string, metrics []string, valueList *map[string]interface{}) {
 	// Run the CLI for each metric found
 	for _, metric := range metrics {
+		logger.Trace("first metric [%v]", metric)
 		// Remove square-brackets from metric
 		metric := regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
 		metricName := regexp.MustCompile("[a-zA-Z-_0-9]*([/][a-zA-Z_-]*)?([:][a-zA-Z-_0-9]+)?").FindAllString(metric, 1)[0]
@@ -26,16 +27,12 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 
 		if strings.Contains(metric, ":") {
 			secondPart := strings.Split(metric, ":")[1]
-			logger.Trace("secondPart [%v]", secondPart)
 			slice = int(parser.ParseInterfaceAsInteger(secondPart)) - 1
-			logger.Trace("slice [%v]", slice)
 			if slice == -2 {
 				slice = 0
 				keyName = regexp.MustCompile("^[a-zA-Z-_0-9]+").FindAllString(secondPart, 1)[0]
-				logger.Trace("after first MustCompile")
 			}
 			metric = regexp.MustCompile("[:].+").ReplaceAllString(metric, "")
-			logger.Trace("after second MustCompile")
 		}
 
 		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", commandPath, metricName)
@@ -47,46 +44,45 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		}
 
 		// No errors when running the CLI
-		rawKeys := regexp.MustCompile("(?m)^([a-zA-Z-_0-9]+)(?:[=])").FindAllString(strings.TrimSpace(rawOutput), -1)
-		// Remove the '='
-		rawValues := regexp.MustCompile("(?m)[0-9]*[.]?[0-9]*[e][+-][0-9]*$").FindAllString(strings.TrimSpace(rawOutput), -1)
-		logger.Trace("Metrics received from [collectdctl] rawKey[%v]", rawKeys)
-		logger.Trace("Metrics received from [collectdctl] rawValue[%v]", rawValues)
+		rawKeyVals := regexp.MustCompile("(?m)^([a-zA-Z-_0-9]+)=([0-9]*[.]?[0-9]*[e][+-][0-9]*)").FindAllStringSubmatch(strings.TrimSpace(rawOutput), -1)
 
 		// Abort if nothing was found
-		if len(rawValues) == 0 {
+		if len(rawKeyVals) == 0 {
 			return
 		}
 
 		// Prevent panics for out-of-bounds slices
 
-		if slice < 0 || slice >= len(rawValues) {
+		if slice < 0 || slice >= len(rawKeyVals) {
 			// Fail the whole expression if the index is out-of-bounds
-			logger.Error("Accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawValues))
+			logger.Error("Accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawKeyVals))
 			return
 		}
 
 		if keyName == "" {
 			// Get the desired slice
-			value, err = parser.ParseSciNumber(rawValues[slice], true)
+			value, err = parser.ParseSciNumber(rawKeyVals[slice][2], true)
 			if err != nil {
 				logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
 				return
 			}
 		} else {
-			for index, rawK := range rawKeys {
-				rk := strings.Split(rawK, "=")[0]
-				if keyName == rk {
-					value, err = parser.ParseSciNumber(rawValues[index], true)
+			foundkey := false
+			for _, rawKV := range rawKeyVals {
+				if keyName == rawKV[1] {
+					value, err = parser.ParseSciNumber(rawKV[2], true)
+				        if err != nil {
+					        logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
+					        return
+				        }
+					foundkey = true
 					break
 				}
-				if err != nil {
-					logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
-					return
-				}
 			}
-			logger.Error("Failed to match the value of the [collectd] [%v] with the key [%s]", rawOutput, keyName)
-
+			if  ! foundkey {
+			        logger.Error("Failed to match the value of the [collectd] [%v] with the key [%s]", rawOutput, keyName)
+                                return
+		        }
 		}
 
 		// Assign the parameter key to the value fetched from the cli
