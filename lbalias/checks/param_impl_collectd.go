@@ -30,9 +30,10 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 			metric = parts[0]
 			secondPart := parts[1]
 			slice = int(parser.ParseInterfaceAsInteger(secondPart)) - 1
+			// if it does not parse as an integer
 			if slice == -2 {
 				slice = 0
-				keyName = regexp.MustCompile("^[a-zA-Z-_0-9]+").FindAllString(secondPart, 1)[0]
+				keyName = secondPart
 			}
 		}
 
@@ -45,49 +46,42 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		}
 
 		// No errors when running the CLI
-		rawKeyVals := regexp.MustCompile("(?m)^([a-zA-Z-_0-9]+)=([0-9]*[.]?[0-9]*[e][+-][0-9]*)").FindAllStringSubmatch(strings.TrimSpace(rawOutput), -1)
-
-		// Abort if nothing was found
-		if len(rawKeyVals) == 0 {
-			return
-		}
-
-		// Prevent panics for out-of-bounds slices
-
-		if slice < 0 || slice >= len(rawKeyVals) {
-			// Fail the whole expression if the index is out-of-bounds
-			logger.Error("Accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawKeyVals))
-			return
-		}
-
 		if keyName == "" {
-			// Get the desired slice
-			value, err = parser.ParseSciNumber(rawKeyVals[slice][2], true)
-			if err != nil {
-				logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
+			rawKeyVals := regexp.MustCompile("(?m)^[a-zA-Z-_0-9]+=([0-9]*[.]?[0-9]*[e][+-][0-9]*)").FindAllStringSubmatch(strings.TrimSpace(rawOutput), -1)
+
+			// Abort if nothing was found
+			if len(rawKeyVals) == 0 {
+				logger.Error("Failed to match the value of the [collectd] [%v]", rawOutput)
 				return
 			}
-		} else {
-			foundkey := false
-			for _, rawKV := range rawKeyVals {
-				if keyName == rawKV[1] {
-					value, err = parser.ParseSciNumber(rawKV[2], true)
-				        if err != nil {
-					        logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
-					        return
-				        }
-					foundkey = true
-					break
-				}
+
+			// Prevent panics for out-of-bounds slices
+			if slice < 0 || slice >= len(rawKeyVals) {
+				// Fail the whole expression if the index is out-of-bounds
+				logger.Error("Accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawKeyVals))
+				return
 			}
-			if  ! foundkey {
-			        logger.Error("Failed to match the value of the [collectd] [%v] with the key [%s]", rawOutput, keyName)
-                                return
-		        }
+
+			// Get the desired slice
+			value, err = parser.ParseSciNumber(rawKeyVals[slice][1], true)
+		} else {
+			rawKeyVals := regexp.MustCompile("(?m)^"+keyName+"=([0-9]*[.]?[0-9]*[e][+-][0-9]*)").FindAllStringSubmatch(strings.TrimSpace(rawOutput), -1)
+
+			// Abort if nothing was found
+			if len(rawKeyVals) == 0 {
+				logger.Error("Failed to match the value of the [collectd] [%v] with the key [%s]", rawOutput, keyName)
+				return
+			}
+
+			// We should have just one hit
+			value, err = parser.ParseSciNumber(rawKeyVals[0][1], true)
+		}
+		if err != nil {
+			logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
+			return
 		}
 
 		// Assign the parameter key to the value fetched from the cli
-		logger.Trace("IS THIS THE BROKEN COMMAND??")
 		logger.Trace("%v and %v", metricName, value)
 		(*valueList)[metricName] = value
 		// Log
