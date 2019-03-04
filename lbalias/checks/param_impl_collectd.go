@@ -32,8 +32,14 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 			slice = int(parser.ParseInterfaceAsInteger(secondPart)) - 1
 			// if it does not parse as an integer
 			if slice == -2 {
-				slice = 0
-				keyName = secondPart
+		                logger.Trace("secondPart not an integer [%v]", secondPart)
+			        if secondPart == "" {
+					logger.Error("Empty secondPart with metric [%v:]", metric)
+					return
+				}else {
+					slice = 0
+					keyName = secondPart
+			      	}
 			}
 		}
 
