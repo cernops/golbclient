@@ -52,13 +52,17 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 	parameters := make(map[string]interface{}, len(metrics))
 
 	// Run command with a list of all the metrics found and return a key/value map
-	g.runCommand(metrics, &parameters)
+	err := g.runCommand(metrics, &parameters)
+	if err != nil {
+		logger.Error("Error running the command [%s]", err.Error())
+		return preventPanic(isCheck, isLoad)
+	}
 
 	// Parse the expression
 	expression, err := govaluate.NewEvaluableExpression(rawExpression)
 
 	if err != nil {
-		logger.Error("Error when evaluating expression [%s]", err)
+		logger.Error("Error when evaluating expression [%s]", err.Error())
 		return preventPanic(isCheck, isLoad)
 	}
 
@@ -115,16 +119,17 @@ func getCliPath(cli string) (_ string) {
 }
 
 // runCommand : @TODO support both [collectdctl-OK] & [lemon-cli-@TODO]
-func (g ParamCheck) runCommand(metrics []string, valueList *map[string]interface{}) {
+func (g ParamCheck) runCommand(metrics []string, valueList *map[string]interface{}) error {
 	// Run CLI
 	lwCMD := strings.ToLower(g.Command)
 	cmdPath := getCliPath(lwCMD)
 	switch lwCMD {
 	case "collectd":
-		runCollectd(cmdPath, metrics, valueList)
+		return runCollectd(cmdPath, metrics, valueList)
 	case "lemon":
-		runLemon(cmdPath, metrics, valueList)
+		return runLemon(cmdPath, metrics, valueList)
 	}
+	return fmt.Errorf("error: the command [%v] does not exist", lwCMD)
 }
 
 // compatibilityProcess : Processes the metric line so that all the metrics found (_metric) are ported to the new format ([metric])

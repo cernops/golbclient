@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -10,15 +11,13 @@ import (
 )
 
 // runCollectd : Runs the [collectdctl] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
-func runCollectd(commandPath string, metrics []string, valueList *map[string]interface{}) {
+func runCollectd(commandPath string, metrics []string, valueList *map[string]interface{}) error {
 	// Run the CLI for each metric found
 	for _, metric := range metrics {
-		logger.Trace("first metric [%v]", metric)
+		logger.Trace("Looking for the collectd metric [%v]", metric)
 		// Remove square-brackets from metric
 		metric := regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
 		metricName := regexp.MustCompile("[a-zA-Z-_0-9]*([/][a-zA-Z_-]*)?([:][a-zA-Z-_0-9]+)?").FindAllString(metric, 1)[0]
-		logger.Trace("metric [%v]", metric)
-		logger.Trace("metricName [%v]", metricName)
 		// Extract slice from the metric
 		var value float64
 		var err error
@@ -32,14 +31,13 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 			slice = int(parser.ParseInterfaceAsInteger(secondPart)) - 1
 			// if it does not parse as an integer
 			if slice == -2 {
-		                logger.Trace("secondPart not an integer [%v]", secondPart)
-			        if secondPart == "" {
-					logger.Error("Empty secondPart with metric [%v:]", metric)
-					return
-				}else {
+				logger.Trace("The anchor is not an integer [%v]", secondPart)
+				if secondPart == "" {
+					return fmt.Errorf("empty anchor in the metric [%v:]", metric)
+				} else {
 					slice = 0
 					keyName = secondPart
-			      	}
+				}
 			}
 		}
 
@@ -47,8 +45,7 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		rawOutput, err := runner.RunCommand(commandPath, true, "getval", metric)
 		logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
 		if err != nil {
-			logger.Error("Failed to run the [collectd] cli with the error [%s]", err.Error())
-			return
+			return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
 		}
 
 		// No errors when running the CLI
@@ -57,34 +54,30 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 
 			// Abort if nothing was found
 			if len(rawKeyVals) == 0 {
-				logger.Error("Failed to match the value of the [collectd] [%v]", rawOutput)
-				return
+				return fmt.Errorf("failed to match the value of the [collectd] [%v]", rawOutput)
 			}
 
 			// Prevent panics for out-of-bounds slices
 			if slice < 0 || slice >= len(rawKeyVals) {
 				// Fail the whole expression if the index is out-of-bounds
-				logger.Error("Accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawKeyVals))
-				return
+				return fmt.Errorf("accessing the element [%d/%d] of collectd, which is out of bounds", slice, len(rawKeyVals))
 			}
 
 			// Get the desired slice
 			value, err = parser.ParseSciNumber(rawKeyVals[slice][1], true)
 		} else {
-			rawKeyVals := regexp.MustCompile("(?m)^"+keyName+"=([0-9]*[.]?[0-9]*[e][+-][0-9]*)").FindAllStringSubmatch(strings.TrimSpace(rawOutput), -1)
+			rawKeyVals := regexp.MustCompile(fmt.Sprintf("(?m)^%s=([0-9]*[.]?[0-9]*[e][+-][0-9]*)", keyName)).FindAllStringSubmatch(strings.TrimSpace(rawOutput), -1)
 
 			// Abort if nothing was found
 			if len(rawKeyVals) == 0 {
-				logger.Error("Failed to match the value of the [collectd] [%v] with the key [%s]", rawOutput, keyName)
-				return
+				return fmt.Errorf("failed to match the value of the [collectd] [%v] with the key [%s]", rawOutput, keyName)
 			}
 
 			// We should have just one hit
 			value, err = parser.ParseSciNumber(rawKeyVals[0][1], true)
 		}
 		if err != nil {
-			logger.Error("Failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
-			return
+			return fmt.Errorf("failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
 		}
 
 		// Assign the parameter key to the value fetched from the cli
@@ -93,4 +86,5 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 		// Log
 		logger.Trace("Result of the collectd command: [%v]", (*valueList)[metricName])
 	}
+	return nil
 }

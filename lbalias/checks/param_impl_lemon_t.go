@@ -18,7 +18,7 @@ type sliceEntry struct {
 }
 
 // runLemon : Runs the [lemon-cli] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
-func runLemon(commandPath string, metrics []string, valueList *map[string]interface{}) {
+func runLemon(commandPath string, metrics []string, valueList *map[string]interface{}) error {
 	// Join metrics in one string
 	metric := strings.Join(metrics, " ")
 	// Remove square-brackets from metric
@@ -45,18 +45,13 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 
 	output, err := runner.RunCommand(commandPath, true, "--script", "-m", metric)
 	if err != nil {
-		logger.Error("Failed to run the [lemon] cli with the error [%s]", err.Error())
-		// Fail the whole expression
-		return
+		return fmt.Errorf("failed to run the [lemon] cli with the error [%s]", err.Error())
 	}
 
 	// Abort if nothing is returned
 	if len(output) == 0 {
-		return
+		return fmt.Errorf("the lemon command returned an empty output")
 	}
-
-	// Log
-	logger.Trace("OUTPUT FROM LEMON [%v]", output)
 
 	// Create a map of the output
 	sepOutput := strings.Split(output, "\n")
@@ -73,7 +68,7 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 		si := int(slicedMetric.slice) - 1
 		if si < 0 || si >= len(outputMap[slicedMetric.name]) {
 			// Fail the whole expression if the index is out-of-bounds
-			return
+			return fmt.Errorf("the lemon slice is out of bounds")
 		}
 		logger.Trace("Assigning sliced metric [%s] to value [%s]", slicedMetric.mname, outputMap[slicedMetric.name][si])
 		(*valueList)[slicedMetric.mname] = parser.ParseInterfaceAsFloat(outputMap[slicedMetric.name][si])
@@ -93,4 +88,5 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 
 	// Log
 	logger.Trace("Value map [%v]", *valueList)
+	return nil
 }
