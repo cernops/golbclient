@@ -104,7 +104,7 @@ kojicheck:
   stage: koji_scratch
   script:
     - echo "Checking if $PKG_REL exists"
-    - if koji --config=.koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
+    - if koji --config=.koji search -r build $PKG | egrep  "$PKG_REL6|$PKG_REL7" ; then exit 1; fi
   allow_failure: true
 
 kojiscratch:

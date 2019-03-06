@@ -73,3 +73,54 @@ func TestCollectdFailedConfigurationFile(t *testing.T) {
 
 	}
 }
+
+// TestCollectdConfigurationFileWithKeys : integration test for all the functionality supplied by the collectdctl
+func TestCollectdConfigurationFileWithKeys(t *testing.T) {
+	logger.SetLevel(logger.ERROR)
+
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_with_keys.conf", "collectd_comprehensive_test_with_keys")
+	err := lbalias.Evaluate(cfg)
+	if err != nil {
+		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath,
+			err.Error())
+		t.Fail()
+	}
+	if cfg.MetricValue < 0 {
+		logger.Error("The metric output value returned negative [%d]. Failing the test...", cfg.MetricValue)
+		t.Fail()
+	}
+}
+
+// TestCollectdFailedConfigurationFileWithWrongKey : integration test for all the functionality supplied by the collectdctl with wrong key, fail test
+func TestCollectdFailedConfigurationFileWithWrongKey(t *testing.T) {
+	logger.SetLevel(logger.FATAL)
+
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_fail_with_wrong_key.conf", "collectd_intended_fail_test_with_wrong_key")
+	err := lbalias.Evaluate(cfg)
+	if err == nil {
+		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
+		t.Fail()
+	}
+	if cfg.MetricValue >= 0 {
+		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", cfg.MetricValue)
+		t.Fail()
+
+	}
+}
+
+// TestCollectdFailedConfigurationFileWithEmptyKey : integration test for all the functionality supplied by the collectdctl with empty, fail test
+func TestCollectdFailedConfigurationFileWithEmptyKey(t *testing.T) {
+	logger.SetLevel(logger.FATAL)
+
+	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_fail_with_empty_key.conf", "collectd_intended_fail_test_with_empty_key")
+	err := lbalias.Evaluate(cfg)
+	if err == nil {
+		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
+		t.Fail()
+	}
+	if cfg.MetricValue >= 0 {
+		logger.Error("The metric output value returned positive [%d] when expecting a negative output. Failing the test...", cfg.MetricValue)
+		t.Fail()
+
+	}
+}

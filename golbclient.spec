@@ -76,6 +76,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Tue Mar 05 2019 Ignacio reguero <Ignacio.reguero@cern.ch> - 2.0.7
+- In collectd, we can specify the name of the anchor
 * Thu Feb 28 2019 Pablo Saiz <Pablo.Saiz@cern.ch>           - 2.0.5
 - Collectd support
 * Thu Feb 21 2019 Pablo Saiz <Pablo.Saiz@cern.ch>           - 2.0.3
