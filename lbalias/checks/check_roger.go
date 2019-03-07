@@ -2,9 +2,10 @@ package checks
 
 import (
 	"bufio"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
 	"regexp"
+
+	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 const ROGER_CURRENT_FILE = "/etc/roger/current.yaml"
@@ -39,7 +40,7 @@ func (rogerState RogerState) Run(a ...interface{}) interface{} {
 		return true
 	}
 
-	logger.Debug("The Node will be decommissioned from the LB alias since the roger appstate is [%s] instead of [production]", myState)
+	logger.Info("The Node will be decommissioned from the LB alias since the roger appstate is [%s] instead of [production]", myState)
 
 	return false
 

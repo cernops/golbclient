@@ -70,7 +70,7 @@ func main() {
 
 			/* Abort if an error occurs */
 			if err != nil {
-				logger.Error("The evaluation of configuration file [%s] failed. Aborting execution...", confMapping.ConfigFilePath)
+				logger.Info("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)
 			}
 			appOutput.WriteString(confMapping.String() + ",")
 		}(value)
