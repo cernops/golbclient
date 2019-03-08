@@ -1,17 +1,29 @@
-package checks
+package param
 
 import (
 	"fmt"
 	"regexp"
 	"strings"
 
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
-// runCollectd : Runs the [collectdctl] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
-func runCollectd(commandPath string, metrics []string, valueList *map[string]interface{}) error {
+type CollectdImpl struct {
+	CommandPath string
+}
+
+func (ci CollectdImpl) Name() string {
+	return "collectd"
+}
+
+// Run : Runs the [collectdctl] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
+func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) error {
+	if len(ci.CommandPath) == 0 {
+		ci.CommandPath = "/usr/bin/collectdctl"
+	}
+
 	// Run the CLI for each metric found
 	for _, metric := range metrics {
 		logger.Trace("Looking for the collectd metric [%v]", metric)
@@ -41,8 +53,8 @@ func runCollectd(commandPath string, metrics []string, valueList *map[string]int
 			}
 		}
 
-		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", commandPath, metricName)
-		rawOutput, err := runner.RunCommand(commandPath, true, "getval", metric)
+		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", ci.CommandPath, metricName)
+		rawOutput, err := runner.RunCommand(ci.CommandPath, true, "getval", metric)
 		logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
 		if err != nil {
 			return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())

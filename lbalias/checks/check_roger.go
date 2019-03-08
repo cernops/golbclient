@@ -5,26 +5,26 @@ import (
 	"os"
 	"regexp"
 
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
-const ROGER_CURRENT_FILE = "/etc/roger/current.yaml"
+const rogerCurrentFile = "/etc/roger/current.yaml"
 
 type RogerState struct {
 }
 
 func (rogerState RogerState) Run(a ...interface{}) interface{} {
 
-	f, err := os.Open(ROGER_CURRENT_FILE)
+	f, err := os.Open(rogerCurrentFile)
 	if err != nil {
-		logger.Error("Can't read file "+ROGER_CURRENT_FILE, err)
+		logger.Error("An error occurred when attempting to read the file [%s]. Error [%s]", rogerCurrentFile, err)
 		return false
 	}
-	defer f.Close()
+	defer func() { err = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	myState := ""
-	logger.Trace("Checking the roger facts")
+	logger.Trace("Checking the roger facts...")
 	state, _ := regexp.Compile("^appstate: *([^ \t\n]+)")
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -40,7 +40,7 @@ func (rogerState RogerState) Run(a ...interface{}) interface{} {
 		return true
 	}
 
-	logger.Info("The Node will be decommissioned from the LB alias since the roger appstate is [%s] instead of [production]", myState)
+	logger.Info("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
 
 	return false
 

@@ -2,7 +2,7 @@ package checks
 
 import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"regexp"
 	"strings"
 )
@@ -29,7 +29,7 @@ func (command Command) Run(a ...interface{}) interface{} {
 			return false
 		}
 
-		logger.Debug("Output [%s]. Return code [0]", string(out))
+		logger.Debug("Command output [%s]", out)
 		return true
 	}
 	return false
