@@ -1,7 +1,7 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 type CheckAttribute struct {

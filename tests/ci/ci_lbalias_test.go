@@ -2,20 +2,21 @@ package ci
 
 import (
 	"bytes"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/mapping"
 	"testing"
 
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/utils"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
-var options utils.Options
+var options appSettings.Options
 
 // TestMissingLBClientFile : test if an error is given when a non-existent configuration file is given
 func TestMissingLBClientFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	options.LbAliasFile = "..//path/to/nonexistent/file"
-	_, err := utils.ReadLBConfigFiles(options)
+	_, err := mapping.ReadLBConfigFiles(options)
 
 	if err == nil {
 		logger.Error("No error was detected when attempting to access a non-existent configuration file. Failing test...")
@@ -29,7 +30,7 @@ func TestSingleLbAliasConfigFile(t *testing.T) {
 	options.LbAliasFile = "../test/conf/lbaliases.single"
 	options.LbMetricConfDir = "../test/conf/"
 	options.LbMetricDefaultFileName = "lbclient.single.conf"
-	lbAliasesMappings, err := utils.ReadLBConfigFiles(options)
+	lbAliasesMappings, err := mapping.ReadLBConfigFiles(options)
 	if err != nil {
 		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
 		t.Fail()
@@ -44,7 +45,7 @@ func TestSingleLbAliasConfigFile(t *testing.T) {
 // TestMissingConfigurationFile : attempts to run the application with a non-existent configuration file
 func TestMissingConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
-	cfg := utils.NewConfiguration("../test/lbtest.conf_does_not_exist", "myTest")
+	cfg := mapping.NewConfiguration("../test/lbtest.conf_does_not_exist", "myTest")
 
 	err := lbalias.Evaluate(cfg)
 	if err == nil {
@@ -54,11 +55,11 @@ func TestMissingConfigurationFile(t *testing.T) {
 }
 
 func TestOneConfigFileMultipleAliases(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.ERROR)
 	options.LbAliasFile = "../test/conf_returnValue/lbaliases.single"
 	options.LbMetricConfDir = "../test/conf_returnValue/"
 	options.LbMetricDefaultFileName = "lbclient.single.conf"
-	lbAliasesMappings, err := utils.ReadLBConfigFiles(options)
+	lbAliasesMappings, err := mapping.ReadLBConfigFiles(options)
 	if err != nil {
 		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
 		t.Fail()
@@ -76,7 +77,7 @@ func TestOneConfigFileMultipleAliases(t *testing.T) {
 		logger.Error("We got an error evaluating the alias [%v]", err)
 		t.Fail()
 	}
-	metricType, metricValue := utils.GetReturnCode(appOutput, lbAliasesMappings)
+	metricType, metricValue := mapping.GetReturnCode(appOutput, lbAliasesMappings)
 	logger.Info("The return code is [%v] [%v]", metricType, metricValue)
 	if metricType != "integer" {
 		logger.Error("We were expecting to have an integer, and we got [%v] with value [%v]", metricType, metricValue)
@@ -89,7 +90,7 @@ func TestOneConfigFileMultipleAliasesString(t *testing.T) {
 	options.LbAliasFile = "../test/conf_returnString/lbaliases.single"
 	options.LbMetricConfDir = "../test/conf_returnString/"
 	options.LbMetricDefaultFileName = "lbclient.conf"
-	lbAliasesMappings, err := utils.ReadLBConfigFiles(options)
+	lbAliasesMappings, err := mapping.ReadLBConfigFiles(options)
 	if err != nil {
 		logger.Error("Failed to access the configuration file [%s]", options.LbAliasFile)
 		t.Fail()
@@ -109,7 +110,7 @@ func TestOneConfigFileMultipleAliasesString(t *testing.T) {
 			t.Fail()
 		}
 	}
-	metricType, metricValue := utils.GetReturnCode(appOutput, lbAliasesMappings)
+	metricType, metricValue := mapping.GetReturnCode(appOutput, lbAliasesMappings)
 	logger.Info("The return code is [%v] [%v]", metricType, metricValue)
 
 	if metricType != "string" {

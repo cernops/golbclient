@@ -2,15 +2,15 @@ package lbalias
 
 import (
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks/parameterized"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/utils"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 // ExpressionCode : return value for the CLI calls
@@ -28,12 +28,12 @@ var allLBExpressions = map[string]ExpressionCode{
 	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
-	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
-	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
+	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
+	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
 	"ROGER":         {code: 13, cli: checks.RogerState{}},
 	"COMMAND":       {code: 14, cli: checks.Command{}},
-	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
-	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
+	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
+	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 }
@@ -43,7 +43,7 @@ var allLBExpressions = map[string]ExpressionCode{
 */
 
 // Evaluate : Evaluates a [lbalias] entry
-func Evaluate(cm *utils.ConfigurationMapping) error {
+func Evaluate(cm *mapping.ConfigurationMapping) error {
 	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
 
 	// Create a string array containing all the checksToExecute to be performed
@@ -127,27 +127,15 @@ func Evaluate(cm *utils.ConfigurationMapping) error {
 func defaultLoad() int {
 	swap := swapFree()
 	logger.Debug("Result of swap formula = %f", swap)
-	cpuload := cpuLoad()
-	logger.Debug("Result of cpu formula = %f", cpuload)
-	swaping := float32(0)
-	/*if lbalias.ChecksDone["swapping"] {
-		logger.Debug("Result of swapoing formula = %f", swaping)
-	}*/
-
+	cpuLoad := cpuLoad()
+	logger.Debug("Result of cpu formula = %f", cpuLoad)
+	swapping := float32(0)
 	fSm, nbProcesses, users := sessionManager()
-	/*if lbalias.ChecksDone["xsessions"] {
-		logger.Debug("Result of X sessions formula = %f", f_sm)
-	} else {
-		f_sm = float32(0)
-	}
-	*/
 	logger.Debug("Number of processes = %d", int(nbProcesses))
 	logger.Debug("Number of users logged in = %d ", int(users))
-
-	myLoad := (((swap + users/25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * fSm)) / 6.
-
-	//((swap + users / 25.) / 2.) + (2. * swaping * self.check_swaping) + (3. * cpuload) + (2. * f_sm * self.check_xsessions)) / 6.
-	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, fSm)
+	myLoad := (((swap + users/25.) / 2.) + (2. * swapping) + (3. * cpuLoad) + (2. * fSm)) / 6.
+	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, " +
+		"cpuLoad = %.3f, f_sm = %.3f", myLoad, swap, users, swapping, cpuLoad, fSm)
 	return int(myLoad * 1000)
 
 }
@@ -159,8 +147,7 @@ func swapFree() float32 {
 		return -2
 	}
 	memoryMap := map[string]int{}
-	//fmt.Println("Looking for ", portHex)
-	memory, _ := regexp.Compile("^((MemTotal)|(MemFree)|(SwapTotal)|(SwapFree)|(CommitLimit)|(Committed_AS)): +([0-9]+)")
+	memory := regexp.MustCompile("^((MemTotal)|(MemFree)|(SwapTotal)|(SwapFree)|(CommitLimit)|(Committed_AS)): +([0-9]+)")
 	for _, line := range lines {
 		match := memory.FindStringSubmatch(line)
 		if len(match) > 0 {
@@ -174,7 +161,6 @@ func swapFree() float32 {
 	if memoryMap["SwapTotal"] == 0 {
 		memoryMap["SwapTotal"], memoryMap["SwapFree"] = memoryMap["MemTotal"], memoryMap["MemFree"]
 	}
-	// recalculate swap numbers in Gbytes
 	memoryMap["SwapTotal"] = memoryMap["SwapTotal"] / (1024 * 1024)
 	memoryMap["SwapFree"] = memoryMap["SwapFree"] / (1024 * 1024)
 
@@ -200,9 +186,7 @@ func cpuLoad() float32 {
 }
 
 func sessionManager() (float32, float32, float32) {
-
 	out, err := exec.Command("/bin/ps", "auxw").Output()
-
 	if err != nil {
 		logger.Error("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
 		return -10, -10, -10
@@ -212,9 +196,9 @@ func sessionManager() (float32, float32, float32) {
 	fSm, nbProcesses := 0.0, -1.0
 	users := map[string]bool{}
 	// There are 3 processes per gnome sesion, and 4 for the fvm
-	gnome, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
-	fvm, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*fvwm")
-	user, _ := regexp.Compile("^([^ ]+)")
+	gnome  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
+	fvm  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*fvwm")
+	user	:= regexp.MustCompile("^([^ ]+)")
 
 	for _, line := range strings.Split(string(out), "\n") {
 		nbProcesses++

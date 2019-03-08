@@ -1,22 +1,29 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"syscall"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
-const ACCEPTABLE_BLOCK_RATE = 0.90
-const ACCEPTABLE_INODE_RATE = 0.95
+const (
+	acceptableBlockRate = 0.90
+	acceptableINodeRate = 0.95
+)
 
 type TmpFull struct {
 }
 
 func (tmpFull TmpFull) Run(...interface{}) interface{} {
 	var stat syscall.Statfs_t
-	syscall.Statfs("/tmp", &stat)
+	err := syscall.Statfs("/tmp", &stat)
+	if err != nil {
+		logger.Error("The [/tmp] directory is not accessible. Error [%s]", err.Error())
+		return false
+	}
 	blockLevel := 1 - (float64(stat.Bavail) / float64(stat.Blocks))
-	inodeLevel := 1 - (float64(stat.Ffree) / float64(stat.Files))
+	iNodeLevel := 1 - (float64(stat.Ffree) / float64(stat.Files))
 
-	logger.Debug("Blocks occupancy: %.2f%% inodes occupancy: %.2f%%", blockLevel*100, inodeLevel*100)
-	return ((blockLevel < ACCEPTABLE_BLOCK_RATE) && (inodeLevel < ACCEPTABLE_INODE_RATE))
+	logger.Debug("Blocks occupancy [%.2f%%], inodes occupancy [%.2f%%]", blockLevel*100, iNodeLevel*100)
+	return (blockLevel < acceptableBlockRate) && (iNodeLevel < acceptableINodeRate)
 }

@@ -1,7 +1,7 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"io/ioutil"
 )
 
@@ -15,7 +15,7 @@ type AFS struct {
 func (afs AFS) Run(args ...interface{}) interface{} {
 	_, err := ioutil.ReadDir(afsDir)
 	if err != nil {
-		logger.Error("The following error was detected when checking AFS [%s]", err.Error())
+		logger.Info("The AFS directory is not accessible. Error [%s]", err.Error())
 		return false
 	}
 	return true

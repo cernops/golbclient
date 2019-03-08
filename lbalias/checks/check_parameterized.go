@@ -2,27 +2,40 @@ package checks
 
 import (
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks/parameterized"
 	"regexp"
 	"strings"
 
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 
 	"github.com/Knetic/govaluate"
 )
 
+type ParamCheckType = string
+
 type ParamCheck struct {
-	Command string
+	Type param.Parameterized
 }
 
 func (g ParamCheck) Run(args ...interface{}) interface{} {
 	var rVal interface{}
 	line := args[0].(string)
 	isCheck := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "check")
-	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
 
+	// Abort if no Type was given during the instancing of the ParamCheck struct
+	if g.Type == nil {
+		logger.Error("Expected a Type of check to be given, please see the contract [Parameterized]")
+		if isCheck {
+			return false
+		} else {
+			return -1
+		}
+	}
+
+	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
 	// Log
-	logger.Debug("Adding [%s] metric [%s]", g.Command, line)
+	logger.Debug("Adding [%s] metric [%s]", g.Type.Name(), line)
 
 	// Support unintentional errors => e.g., [loadcheck collectd], panics if the regex cannot be compiled
 	found := regexp.MustCompile("(?i)((check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
@@ -47,12 +60,12 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 	g.compatibilityProcess(&rawExpression)
 
 	// Discover all the metrics found in the expression
-	metrics := regexp.MustCompile(`\[([^\[\]]*)\]`).FindAllString(rawExpression, -1)
+	metrics := regexp.MustCompile(`\[([^\[\]]*)]`).FindAllString(rawExpression, -1)
 	logger.Trace("Found metrics [%v], len [%d]", metrics, len(metrics))
 	parameters := make(map[string]interface{}, len(metrics))
 
 	// Run command with a list of all the metrics found and return a key/value map
-	err := g.runCommand(metrics, &parameters)
+	err := g.Type.Run(metrics, &parameters)
 	if err != nil {
 		logger.Error("Error running the command [%s]", err.Error())
 		return preventPanic(isCheck, isLoad)
@@ -79,15 +92,15 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 	if isCheck {
 		/******************************** CHECK ************************************/
 		rVal = parser.ParseInterfaceAsBool(result)
-		logger.Trace("Detected a [check] type metric, returning as boolean [%t]", rVal)
+		logger.Debug("Detected a [check] type metric, returning as boolean [%t]", rVal)
 		return rVal
 	} else if isLoad {
 		/********************************* LOAD ************************************/
 		rVal = parser.ParseInterfaceAsInteger(result)
-		logger.Trace("Detected a [load] type metric, returning as integer [%d]", rVal)
+		logger.Debug("Detected a [load] type metric, returning as integer [%d]", rVal)
 		return rVal
 	} else {
-		logger.Error("Failed to parse the result of the collectd expression [%v]", result)
+		logger.Error("Failed to parse the result of the expression [%v]", result)
 		return false
 	}
 }
@@ -103,40 +116,12 @@ func preventPanic(isCheck bool, isLoad bool) interface{} {
 	}
 }
 
-// getCliPath : returns the path to the desired cli
-func getCliPath(cli string) (_ string) {
-	switch strings.ToLower(cli) {
-	case "lemon":
-		return "/usr/sbin/lemon-cli"
-		//return "../../scripts/lemon-cli"
-	case "collectd":
-		return "/usr/bin/collectdctl"
-		//return "../../scripts/collectdctl"
-	default:
-		logger.Error("The Generic check does not support the cli type [%s]", cli)
-		return
-	}
-}
-
-// runCommand : @TODO support both [collectdctl-OK] & [lemon-cli-@TODO]
-func (g ParamCheck) runCommand(metrics []string, valueList *map[string]interface{}) error {
-	// Run CLI
-	lwCMD := strings.ToLower(g.Command)
-	cmdPath := getCliPath(lwCMD)
-	switch lwCMD {
-	case "collectd":
-		return runCollectd(cmdPath, metrics, valueList)
-	case "lemon":
-		return runLemon(cmdPath, metrics, valueList)
-	}
-	return fmt.Errorf("error: the command [%v] does not exist", lwCMD)
-}
 
 // compatibilityProcess : Processes the metric line so that all the metrics found (_metric) are ported to the new format ([metric])
 func (g ParamCheck) compatibilityProcess(metric *string) {
-	logger.LOGC(logger.TRACE, "Processing metric [%s]", *metric)
+	logger.Trace("Processing metric [%s]", *metric)
 
-	*metric = regexp.MustCompile(`([\]0-9][ ]*)[=]([ ]*[0-9\[])`).ReplaceAllString(*metric, "$1==$2")
+	*metric = regexp.MustCompile(`([]0-9][ ]*)[=]([ ]*[0-9\[])`).ReplaceAllString(*metric, "$1==$2")
 
 	// Trim all spaces
 	*metric = strings.Replace(*metric, " ", "", -1)

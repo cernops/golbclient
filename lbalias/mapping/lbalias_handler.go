@@ -1,8 +1,9 @@
-package utils
+package mapping
 
 import (
 	"bytes"
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,7 +12,7 @@ import (
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
 
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 // ConfigurationMapping : object with the config
@@ -65,7 +66,7 @@ func (cm *ConfigurationMapping) addAlias(alias string) {
 }
 
 // ReadLBConfigFiles : Returns all the configuration files to be evaluated
-func ReadLBConfigFiles(options Options) (confFiles []*ConfigurationMapping, err error) {
+func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationMapping, err error) {
 
 	tmpConfMap := make(map[string]bool)
 	var defaultMapping *ConfigurationMapping
