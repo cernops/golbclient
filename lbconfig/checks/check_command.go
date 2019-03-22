@@ -1,7 +1,7 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"regexp"
 	"strings"

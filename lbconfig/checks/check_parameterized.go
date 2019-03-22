@@ -2,12 +2,12 @@ package checks
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks/parameterized"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 	"regexp"
 	"strings"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 
 	"github.com/Knetic/govaluate"
 )

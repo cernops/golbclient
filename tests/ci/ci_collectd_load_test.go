@@ -1,18 +1,18 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
 )
 
 // TestCollectdFunctionality : fundamental functionality test for the [collectd], output value must be = 9
 func TestCollectdLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	cfg := mapping.NewConfiguration("../test/lbclient_collectd_load_single.conf", "collectd_load_functionality_test")
-	err := lbalias.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -28,7 +28,7 @@ func TestCollectdLoadConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_collectd_load.conf", "collectd_load_comprehensive_test")
-	err := lbalias.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg)
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -44,7 +44,7 @@ func TestCollectdLoadFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_collectd_load_fail.conf", "collectd_load_intended_fail_test")
-	err := lbalias.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg)
 	if err == nil {
 		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()

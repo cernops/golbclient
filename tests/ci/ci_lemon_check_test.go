@@ -1,13 +1,13 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 	"strings"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
 // TestCILemonCLI : checks if the alternative [lemon-cli] used in the CI pipeline is OK
@@ -30,7 +30,7 @@ func TestLemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_check_single.conf", "myTest")
 
-	err := lbalias.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -46,7 +46,7 @@ func TestLemonConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_check.conf", "lemonTest")
-	err := lbalias.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg)
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -62,7 +62,7 @@ func TestLemonFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_check_fail.conf", "lemonFailTest")
-	err := lbalias.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg)
 	if err == nil {
 		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()

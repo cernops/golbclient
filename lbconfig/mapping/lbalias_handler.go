@@ -10,18 +10,18 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 // ConfigurationMapping : object with the config
 type ConfigurationMapping struct {
-	ConfigFilePath string
-	AliasNames     []string
-	MetricValue    int
+	ConfigFilePath 	string
+	AliasNames     	[]string
+	MetricValue    	int
 	//ChecksDone     map[string]bool
-	Default bool
+	Default			bool
 }
 
 // NewConfiguration : Creates a Configuration object
@@ -37,6 +37,8 @@ func NewConfiguration(path string, aliasName ...string) *ConfigurationMapping {
 	cm.MetricValue = 0
 	return &cm
 }
+
+
 
 func (cm ConfigurationMapping) String() string {
 	out := bytes.Buffer{}
