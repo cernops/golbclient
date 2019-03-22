@@ -12,7 +12,7 @@ import (
 func TestConstantLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	cfg := mapping.NewConfiguration("../test/lbclient_constant.conf", "constant_load_functionality_test")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()

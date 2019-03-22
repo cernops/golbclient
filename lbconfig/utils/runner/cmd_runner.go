@@ -2,29 +2,39 @@ package runner
 
 import (
 	"bytes"
+	"context"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"os/exec"
 	"strings"
 	"time"
 )
 
-// RunCommand : runs a command with the given arguments if this is available. Returns a tuple of he output of the command in the desired format and an error
-func RunCommand(pathToCommand string, printRuntime bool, v ...string) (string, error) {
+// Run : runs a command with the given arguments if this is available. Returns a tuple of he output of the command in the desired format and an error
+func Run(pathToCommand string, printRuntime bool, timeout time.Duration, v ...string) (output string, err error) {
 	var now int64
 	if printRuntime {
 		now = time.Now().UnixNano() / int64(time.Millisecond)
 		defer func() {
 			newNow := time.Now().UnixNano() / int64(time.Millisecond)
-			logger.Debug("\t Runtime: %dms", newNow-now)
+			logger.Debug("Runtime: %dms", newNow-now)
 		}()
 	}
 
-	cmd := exec.Command(pathToCommand, v...)
+	// Timeout implementation
+	cmdContext := context.Background()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		cmdContext, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+	}
+
+	cmd := exec.CommandContext(cmdContext, pathToCommand, v...)
 	var errBuff bytes.Buffer
 	var outBuff bytes.Buffer
 	cmd.Stderr = &errBuff
 	cmd.Stdout = &outBuff
-	err := cmd.Run()
+
+	err = cmd.Run()
 	if err != nil {
 		return outBuff.String(), err
 	}
@@ -33,18 +43,7 @@ func RunCommand(pathToCommand string, printRuntime bool, v ...string) (string, e
 	return result, err
 }
 
-// RunDirectCommand : runs a command expecting that all the arguments are supplied in the first function parameter
-func RunDirectCommand(commandAndArguments string, printRuntime bool) (string, error) {
-	logger.Trace("Attempting to run direct command [%s]...", commandAndArguments)
-	raw := strings.SplitN(commandAndArguments, " ", 2)
-	if len(raw) < 2 {
-		logger.Debug("No arguments were passed to the [RunDirectCommand]. In this case, please consider using [RunCommand] instead.")
-		return RunCommand(raw[0], printRuntime)
-	}
-	return RunCommand(raw[0], printRuntime, raw[1])
-}
-
-// RunPippedCommand : runs a command with pipes. Note that all the flags should be directly given to the commands.
-func RunPippedCommand(pippedCommand string, printRuntime bool) (string, error) {
-	return RunCommand("bash", printRuntime, "-c", pippedCommand)
+// RunCommand : runs a command with pipes. Note that all the flags should be directly given to the commands.
+func RunCommand(pippedCommand string, printRuntime bool, timeout time.Duration) (string, error) {
+	return Run("bash", printRuntime, timeout,"-c", pippedCommand)
 }

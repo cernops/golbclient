@@ -76,9 +76,7 @@ func (l *AppLauncher) Run() error {
 		go func(confMapping *mapping.ConfigurationMapping) {
 			defer waitGroup.Done()
 			logger.Trace("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
-
-			err := Evaluate(confMapping)
-
+			err := Evaluate(confMapping, l.AppOptions.ExecutionConfiguration.MetricTimeout)
 			/* Abort if an error occurs */
 			if err != nil {
 				logger.Warn("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)

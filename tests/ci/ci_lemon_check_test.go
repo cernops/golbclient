@@ -13,8 +13,8 @@ import (
 // TestCILemonCLI : checks if the alternative [lemon-cli] used in the CI pipeline is OK
 func TestCILemonCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	output, err := runner.RunCommand("/usr/sbin/lemon-cli",
-		true, "--script", "-m", "13163")
+	output, err := runner.Run("/usr/sbin/lemon-cli",
+		true , defaultTimeout, "--script", "-m", "13163")
 	if err != nil {
 		logger.Error("An error was detected when running the CI [lemon-cli]")
 		t.FailNow()
@@ -30,7 +30,7 @@ func TestLemonFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_check_single.conf", "myTest")
 
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -46,7 +46,7 @@ func TestLemonConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_check.conf", "lemonTest")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -59,10 +59,10 @@ func TestLemonConfigurationFile(t *testing.T) {
 
 // TestLemonFailedConfigurationFile : integration test for all the functionality supplied by the lemon-cli, fail test
 func TestLemonFailedConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.FATAL)
+	logger.SetLevel(logger.ERROR)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_check_fail.conf", "lemonFailTest")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
 		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()

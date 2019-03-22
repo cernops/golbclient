@@ -13,12 +13,11 @@ const rogerCurrentFile = "/etc/roger/current.yaml"
 type RogerState struct {
 }
 
-func (rogerState RogerState) Run(a ...interface{}) interface{} {
+func (rogerState RogerState) Run(a ...interface{}) (interface{}, error) {
 
 	f, err := os.Open(rogerCurrentFile)
 	if err != nil {
-		logger.Error("An error occurred when attempting to read the file [%s]. Error [%s]", rogerCurrentFile, err)
-		return false
+		return false, err
 	}
 	defer func() { err = f.Close() }()
 
@@ -37,11 +36,10 @@ func (rogerState RogerState) Run(a ...interface{}) interface{} {
 	logger.Trace("Roger appstate [%s]", myState)
 
 	if myState == "production" || myState == "ignore_roger" {
-		return true
+		return true, nil
 	}
 
 	logger.Info("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
-
-	return false
+	return false, nil
 
 }

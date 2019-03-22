@@ -12,7 +12,7 @@ import (
 func TestLemonLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_load_single.conf", "myTest")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -28,7 +28,7 @@ func TestLemonLoadConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_load.conf", "lemonTest")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -44,7 +44,7 @@ func TestLemonLoadFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_load_fail.conf", "lemonFailTest")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
 		logger.Error("Expected an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()

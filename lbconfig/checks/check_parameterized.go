@@ -18,18 +18,17 @@ type ParamCheck struct {
 	Type param.Parameterized
 }
 
-func (g ParamCheck) Run(args ...interface{}) interface{} {
+func (g ParamCheck) Run(args ...interface{}) (interface{}, error) {
 	var rVal interface{}
 	line := args[0].(string)
 	isCheck := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "check")
 
 	// Abort if no Type was given during the instancing of the ParamCheck struct
 	if g.Type == nil {
-		logger.Error("Expected a Type of check to be given, please see the contract [Parameterized]")
 		if isCheck {
-			return false
+			return false, fmt.Errorf("expected a Type of check to be given, please see the contract [Parameterized]")
 		} else {
-			return -1
+			return -1, fmt.Errorf("expected a Type of check to be given, please see the contract [Parameterized]")
 		}
 	}
 
@@ -42,18 +41,16 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 
 	// Found the correct syntax
 	if len(found) != 2 || (!isCheck && !isLoad) {
-		logger.Error("Incorrect syntax specified at [%s]. Please use (`load` or `check` `<cli>`)", line)
-		return preventPanic(isCheck, isLoad)
+		return preventPanic(isCheck, isLoad), fmt.Errorf("incorrect syntax specified at [%s]. Please use (`load` or `check` `<cli>`)", line)
 	}
+
 	rawExpression := found[1]
 	// Log
 	logger.Trace("Found expression [%s]", rawExpression)
 
 	// If no expression was given, fail the whole expression
 	if len(strings.TrimSpace(rawExpression)) == 0 {
-		rVal = preventPanic(isCheck, isLoad)
-		logger.Debug("Detected a (check|load) without metrics. Returning [%v]", rVal)
-		return rVal
+		return preventPanic(isCheck, isLoad), fmt.Errorf("detected a (check|load) without metrics. Returning [%v]", rVal)
 	}
 
 	// Backwards compatible (remove unnecessary underscores from the expression)
@@ -67,24 +64,20 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 	// Run command with a list of all the metrics found and return a key/value map
 	err := g.Type.Run(metrics, &parameters)
 	if err != nil {
-		logger.Error("Error running the command [%s]", err.Error())
-		return preventPanic(isCheck, isLoad)
+		return preventPanic(isCheck, isLoad), err
 	}
 
 	// Parse the expression
 	expression, err := govaluate.NewEvaluableExpression(rawExpression)
 
 	if err != nil {
-		logger.Error("Error when evaluating expression [%s]", err.Error())
-		return preventPanic(isCheck, isLoad)
+		return preventPanic(isCheck, isLoad), err
 	}
 
 	// Evaluate the expression
 	result, err2 := expression.Evaluate(parameters)
 	if err2 != nil {
-		rVal := preventPanic(isCheck, isLoad)
-		logger.Error("Error when evaluating the parameters of the expression [%s]. Error [%s]. Returning [%v]", rawExpression, err2, rVal)
-		return rVal
+		return preventPanic(isCheck, isLoad), err2
 	}
 
 	// Debug
@@ -93,15 +86,15 @@ func (g ParamCheck) Run(args ...interface{}) interface{} {
 		/******************************** CHECK ************************************/
 		rVal = parser.ParseInterfaceAsBool(result)
 		logger.Debug("Detected a [check] type metric, returning as boolean [%t]", rVal)
-		return rVal
+		return rVal, nil
 	} else if isLoad {
 		/********************************* LOAD ************************************/
 		rVal = parser.ParseInterfaceAsInteger(result)
 		logger.Debug("Detected a [load] type metric, returning as integer [%d]", rVal)
-		return rVal
+		return rVal, nil
 	} else {
 		logger.Error("Failed to parse the result of the expression [%v]", result)
-		return false
+		return false, nil
 	}
 }
 

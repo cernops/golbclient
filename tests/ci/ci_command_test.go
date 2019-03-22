@@ -12,7 +12,7 @@ import (
 func TestCommandFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 	cfg := mapping.NewConfiguration("../test/lbclient_command.conf", "command_load_functionality_test")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the configuration file [%s], Error [%s]", cfg.ConfigFilePath,
 			err.Error())
@@ -28,7 +28,7 @@ func TestCommandFunctionality(t *testing.T) {
 func TestCommandFailFunctionality(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 	cfg := mapping.NewConfiguration("../test/lbclient_failed_command.conf", "command_load_functionality_test")
-	err := lbconfig.Evaluate(cfg)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
 		logger.Error("An error was expected when attempting to evaluate the configuration file [%s]. Failing the test...", cfg.ConfigFilePath)
 		t.Fail()
