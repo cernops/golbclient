@@ -1,12 +1,12 @@
-package lbalias
+package lbconfig
 
 import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks/parameterized"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/mapping"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 	"os/exec"
 	"regexp"
 	"strconv"

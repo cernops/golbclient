@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 
 	"github.com/jcelliott/lumber"
 )

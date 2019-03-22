@@ -1,17 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"sync"
-
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/mapping"
-
 	"github.com/jessevdk/go-flags"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
+	"os"
 )
 
 const (
@@ -23,95 +17,44 @@ const (
 	Release = "8"
 )
 
-// Flags API
-var options appSettings.Options
-var parser = flags.NewParser(&options, flags.Default)
+func main() {
+	// Create a new instance of the launcher that will be responsible for the runtime
+	launcher := lbconfig.NewAppLauncher()
 
-// init : function responsible for the parsing of the application arguments
-func init() {
-	_, err := parser.Parse()
+	// Parse the application arguments
+	err := launcher.ParseApplicationArguments(os.Args[1:])
 	if err != nil {
+		// Check if the help flag [--help || -h] was detected
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
+			logger.Fatal("A fatal error occurred when attempting to parse the application arguments. Error [%s]",
+				err.Error())
 			os.Exit(1)
 		}
 	}
-	if options.Version {
+
+	// Check if the version flag was detected
+	if launcher.AppOptions.Version {
 		fmt.Printf("lbclient version %s.%s\n", Version, Release)
 		os.Exit(0)
 	}
 
-	// Logger settings
-	if err := applyLoggerSettings(); err != nil {
-		logger.Fatal("A fatal error occurred when attempting to apply the given settings to the logger. "+
-			"Error [%s]", err.Error())
+	// Apply the logger settings
+	err = launcher.ApplyLoggerSettings()
+	if err != nil {
+		logger.Fatal("A fatal error occurred when attempting to apply the logger settings. Error [%s]",
+			err.Error())
 		os.Exit(1)
 	}
 
-}
-
-func main() {
-	// Arguments parsed. Let's open the configuration file
-	var lbConfMappings []*mapping.ConfigurationMapping
-	lbConfMappings, err := mapping.ReadLBConfigFiles(options)
+	// Run the launcher
+	err = launcher.Run()
 	if err != nil {
-		logger.Error("An error occurred when attempting to process the configuration & aliases. Error [%s]",
-			err.Error())
+		logger.Fatal("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
+		os.Exit(1)
 	}
 
-	// Application output
-	var appOutput bytes.Buffer
-
-	// Concurrent evaluation
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(len(lbConfMappings))
-
-	// Evaluate for each of the configuration files found
-	for _, value := range lbConfMappings {
-
-		go func(confMapping *mapping.ConfigurationMapping) {
-			defer waitGroup.Done()
-			logger.Trace("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
-
-			err := lbalias.Evaluate(confMapping)
-
-			/* Abort if an error occurs */
-			if err != nil {
-				logger.Info("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)
-			}
-			appOutput.WriteString(confMapping.String() + ",")
-		}(value)
-	}
-
-	// Wait for concurrent loop to finish before proceeding
-	waitGroup.Wait()
-
-	metricType, metricValue := mapping.GetReturnCode(appOutput, lbConfMappings)
-
-	logger.Debug("metric = [%s]", metricValue)
-	// SNMP critical output
-	fmt.Printf("%s\n%s\n%s\n", OID, metricType, metricValue)
-}
-
-// applyLoggerSettings : apply the parsed application settings to the logger instance
-// 		If the console debug level cannot be parsed, the default value of INFO will be used instead
-//		If the file debug level cannot be parsed, the default value of TRACE will be used instead
-func applyLoggerSettings() error {
-	if err := logger.SetupConsoleLogger(options.ConsoleDebugLevel); err != nil {
-		logger.Error("An error occurred when attempting to parse the given console debug level - defaulting to"+
-			" [FATAL]. Error [%s]", err.Error())
-		_ = logger.SetupConsoleLogger("FATAL")
-	}
-	if err := logger.SetupFileLogger(options.LogFileLocation, options.FileDebugLevel,
-		options.LogAutoFileRotation); err != nil {
-		logger.Error("An error occurred when attempting to parse the given console debug level - defaulting to"+
-			" [TRACE]. Error [%s]", err.Error())
-		err = logger.SetupFileLogger(options.LogFileLocation, "TRACE", options.LogAutoFileRotation)
-		// If with a valid logger level the FileLogger cannot be created, return the generated error
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	// Print the output
+	launcher.PrintOutput(OID)
 }

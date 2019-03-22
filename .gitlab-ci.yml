@@ -3,6 +3,7 @@ image: gitlab-registry.cern.ch/linuxsupport/cc7-base
 stages:
   - build
   - test
+  - benchmark
   - build_rpm
   - koji_scratch
   - koji
@@ -65,23 +66,42 @@ build-go11:
 test-go09:
   stage: test
   script:
-    - export GOPATH=/go && go09 get ./... && go09 build
+    - export GOPATH=/go && go09 get ./...
     - go09 test -v -cover ./tests/ci/...
     - go09 test -race ./tests/ci/...
 
 test-go10:
   stage: test
   script:
-    - export GOPATH=/go && go10 get ./... && go10 build
+    - export GOPATH=/go && go10 get ./...
     - go10 test -v -cover ./tests/ci/...
     - go10 test -race ./tests/ci/...
 
 test-go11:
   stage: test
   script:
-    - go11 build ./...
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
+
+bench-go09:
+  stage: benchmark
+  script:
+    - export GOPATH=/go && go09 get ./...
+    - go09 test ./tests/benchmarking/... -bench=. -benchmem
+    - go09 test ./tests/benchmarking/... -bench=. -benchmem -race
+
+bench-go10:
+  stage: benchmark
+  script:
+    - export GOPATH=/go && go10 get ./...
+    - go10 test ./tests/benchmarking/... -bench=. -benchmem
+    - go10 test ./tests/benchmarking/... -bench=. -benchmem -race
+
+bench-go11:
+  stage: benchmark
+  script:
+    - go11 test ./tests/benchmarking/... -bench=. -benchmem
+    - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
 
 build_rpm:
   stage: build_rpm
