@@ -7,10 +7,12 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/timer"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ExpressionCode : return value for the CLI calls
@@ -43,7 +45,7 @@ var allLBExpressions = map[string]ExpressionCode{
 */
 
 // Evaluate : Evaluates a [lbalias] entry
-func Evaluate(cm *mapping.ConfigurationMapping) error {
+func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
 
 	// Create a string array containing all the checksToExecute to be performed
@@ -77,40 +79,41 @@ func Evaluate(cm *mapping.ConfigurationMapping) error {
 		runningChecks := actions.FindStringSubmatch(line)
 		if len(runningChecks) > 0 {
 			/********************************** CHECKS **********************************/
-			myAction := strings.ToUpper(runningChecks[1])
-			if b, ok := allLBExpressions[myAction].cli.Run(line, cm.AliasNames, cm.Default).(bool); !b || !ok {
-				cm.MetricValue = -allLBExpressions[myAction].code
-				return fmt.Errorf("the check of [%s] failed. Aborting with code [%d]", myAction, cm.MetricValue)
+			myAction 	:= strings.ToUpper(runningChecks[1])
+			negRet		:= -allLBExpressions[myAction].code
+			ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default)
+			if err != nil || ret == false {
+				cm.MetricValue = negRet
+				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
+					myAction, cm.MetricValue)
 			}
-			//cm.ChecksDone[runningChecks[1]] = true
 			continue
 		}
 		loads := constant.FindStringSubmatch(line)
 		if len(loads) > 0 {
 			/********************************** LOADS **********************************/
 			cliName := strings.ToUpper(loads[1])
+			negRet 	:= -allLBExpressions[cliName].code
 			if cliName == "LEMON" || cliName == "COLLECTD" {
-				result := int(allLBExpressions[cliName].cli.Run(line).(int32))
-				if result == -1 {
-					logger.Error("[%s] metric returned a negative number [%d]", cliName, result)
-					cm.MetricValue = -allLBExpressions[cliName].code
-					return fmt.Errorf("[%s] metric returned a negative number [%d]", cliName, result)
+				ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[cliName].cli.Run, line)
+				if err != nil && len(ret.([]interface{})) != 0 {
+					cm.MetricValue = negRet
+					return fmt.Errorf("metric [%s] returned a negative number [%v]", cliName, ret)
 				}
-				cm.MetricValue += result
+
+				retVal := ret.([]interface{})[0].(int32)
+				cm.MetricValue += int(retVal)
 			} else {
 				constant := strings.TrimSpace(regexp.MustCompile("(?i)(load constant)").Split(loads[0], -1)[1])
 				if !cm.AddConstant(constant) {
 					return fmt.Errorf("failed to load the constant value [%v]", constant)
 				}
 			}
-
 			// Added metric value to the total in case of no problems
 			continue
 		}
-
 		// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
 		logger.Error("Unable to parse the configuration file line [%s]", line)
-
 	}
 
 	if cm.MetricValue == 0 {

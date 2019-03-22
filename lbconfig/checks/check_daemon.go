@@ -37,10 +37,10 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 	return false
 }
 
-func (daemon DaemonListening) Run(args ...interface{}) interface{} {
+func (daemon DaemonListening) Run(args ...interface{}) (interface{}, error) {
 	rVal := false
 	if (daemon.Port < 1) || (daemon.Port > 65535) {
-		return false
+		return false, fmt.Errorf("the daemon port is out of range. Must be within the limit [1-65535]")
 	}
 	var listen []string
 	if daemon.daemonListen("/proc/net/tcp") {
@@ -61,5 +61,5 @@ func (daemon DaemonListening) Run(args ...interface{}) interface{} {
 			logger.Debug("Daemon is not listening in port [%d]", daemon.Port)
 		}
 	}
-	return rVal
+	return rVal, nil
 }

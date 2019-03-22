@@ -10,26 +10,23 @@ import (
 type NoLogin struct {
 }
 
-func (nl NoLogin) Run(a ...interface{}) interface{} {
+func (nl NoLogin) Run(args ...interface{}) (interface{}, error) {
 	// Abort execution if the caller does not fulfill the contract
-	if a == nil || len(a) < 2 {
-		logger.Error("Wrong number or arguments supplied. Please supply an alias name [string] and " +
+	if args == nil || len(args) < 2 {
+		return false, fmt.Errorf("wrong number or arguments supplied. Please supply an alias name [string] and " +
 			"default value [boolean]")
-		return false
 	}
 
-	lbaliasNames, ok := a[1].([]string)
-	logger.Trace("Supplied alias [%v], default value [%v]", lbaliasNames, a[2])
+	lbaliasNames, ok := args[1].([]string)
+	logger.Trace("Supplied alias [%v], default value [%v]", lbaliasNames, args[2])
 	if !ok {
-		logger.Error("Wrong type given as the alias name, please use the [string] type")
-		return false
+		return false, fmt.Errorf("wrong type given as the alias name, please use the [string] type")
 	}
 
 	noLogin := [2]string{"/etc/noLogin", "/etc/iss.noLogin"}
-	isDefault, ok := a[2].(bool)
+	isDefault, ok := args[2].(bool)
 	if !ok {
-		logger.Error("Wrong type given as the default value, please use the [boolean] type")
-		return false
+		return false, fmt.Errorf("wrong type given as the default value, please use the [boolean] type")
 	}
 
 	if !isDefault {
@@ -41,10 +38,10 @@ func (nl NoLogin) Run(a ...interface{}) interface{} {
 
 		if err == nil {
 			logger.Debug("File [%s] is present", file)
-			return false
+			return false, nil
 		}
 	}
 
 	logger.Debug("Users are allowed to log in")
-	return true
+	return true, nil
 }

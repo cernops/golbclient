@@ -2,12 +2,11 @@ package param
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
-
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
+	"regexp"
+	"strings"
 )
 
 type CollectdImpl struct {
@@ -54,7 +53,7 @@ func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) 
 		}
 
 		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", ci.CommandPath, metricName)
-		rawOutput, err := runner.RunCommand(ci.CommandPath, true, "getval", metric)
+		rawOutput, err := runner.Run(ci.CommandPath, true, 0, "getval", metric)
 		logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
 		if err != nil {
 			return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
@@ -92,8 +91,6 @@ func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) 
 			return fmt.Errorf("failed to parse the value of the [collectd] [%v] with the error [%s]", rawOutput, err.Error())
 		}
 
-		// Assign the parameter key to the value fetched from the cli
-		logger.Trace("%v and %v", metricName, value)
 		(*valueList)[metricName] = value
 		// Log
 		logger.Trace("Result of the collectd command: [%v]", (*valueList)[metricName])
