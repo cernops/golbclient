@@ -76,6 +76,9 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Fri Mar 08 2019 Paulo Canilho <paulo.canilho@cern.ch>     - 2.0.8
+- File logger
+- Generilized the parameterized checks
 * Tue Mar 05 2019 Ignacio reguero <Ignacio.reguero@cern.ch> - 2.0.7
 - In collectd, we can specify the name of the anchor
 * Thu Feb 28 2019 Pablo Saiz <Pablo.Saiz@cern.ch>           - 2.0.5

@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"math"
 	"strconv"
 	"strings"
@@ -102,8 +102,7 @@ func ParseInterfaceArrayAsBool(obj ...interface{}) bool {
 			return false
 		}
 	}
-
-	return true && obj != nil
+	return obj != nil
 }
 
 // ParseInterfaceAsInteger : returns an integer value from a given interface object
@@ -299,7 +298,7 @@ func ParseInterfaceAsType(obj interface{}, t func(interface{}) interface{}) (int
 	} else {
 		// Return the same value if it could not be parsed
 		logger.Error("Failed to parse the interface of type [%T] from the value [%v]", t, obj)
-		err = fmt.Errorf("Failed to parse the interface of type [%T] from the value [%v]", t, obj)
+		err = fmt.Errorf("failed to parse the interface of type [%T] from the value [%v]", t, obj)
 		result = obj
 	}
 	return result, err

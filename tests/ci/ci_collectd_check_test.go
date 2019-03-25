@@ -1,20 +1,19 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"strings"
 	"testing"
-
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"gitlab.cern.ch/lb-experts/golbclient/utils"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
 
 // TestCICollectdCLI : checks if the alternative [collectd] used in the CI pipeline is OK
 func TestCICollectdCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	output, err := runner.RunCommand("/usr/bin/collectdctl",
-		true, "getval", "test")
+	output, err := runner.Run("/usr/bin/collectdctl",
+		true, defaultTimeout, "getval", "test")
 	if err != nil {
 		logger.Error("An error was detected when running the CI [collectdctl]")
 		t.FailNow()
@@ -28,8 +27,8 @@ func TestCICollectdCLI(t *testing.T) {
 // TestCollectdFunctionality : fundamental functionality test for the [collectd], output value must not be negative
 func TestCollectdFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_single.conf", "my-test-alias.cern.ch")
-	err := lbalias.Evaluate(cfg)
+	cfg := mapping.NewConfiguration("../test/lbclient_collectd_check_single.conf", "my-test-alias.cern.ch")
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Detected an error when attempting to evaluate the configuration file [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
 		t.Fail()
@@ -44,8 +43,8 @@ func TestCollectdFunctionality(t *testing.T) {
 func TestCollectdConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	cfg := utils.NewConfiguration("../test/lbclient_collectd_check.conf", "collectd_comprehensive_test")
-	err := lbalias.Evaluate(cfg)
+	cfg := mapping.NewConfiguration("../test/lbclient_collectd_check.conf", "collectd_comprehensive_test")
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath,
 			err.Error())
@@ -61,8 +60,8 @@ func TestCollectdConfigurationFile(t *testing.T) {
 func TestCollectdFailedConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_fail.conf", "collectd_intended_fail_test")
-	err := lbalias.Evaluate(cfg)
+	cfg := mapping.NewConfiguration("../test/lbclient_collectd_check_fail.conf", "collectd_intended_fail_test")
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
 		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()
@@ -78,8 +77,8 @@ func TestCollectdFailedConfigurationFile(t *testing.T) {
 func TestCollectdConfigurationFileWithKeys(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_with_keys.conf", "collectd_comprehensive_test_with_keys")
-	err := lbalias.Evaluate(cfg)
+	cfg := mapping.NewConfiguration("../test/lbclient_collectd_check_with_keys.conf", "collectd_comprehensive_test_with_keys")
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err != nil {
 		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath,
 			err.Error())
@@ -95,8 +94,8 @@ func TestCollectdConfigurationFileWithKeys(t *testing.T) {
 func TestCollectdFailedConfigurationFileWithWrongKey(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_fail_with_wrong_key.conf", "collectd_intended_fail_test_with_wrong_key")
-	err := lbalias.Evaluate(cfg)
+	cfg := mapping.NewConfiguration("../test/lbclient_collectd_check_fail_with_wrong_key.conf", "collectd_intended_fail_test_with_wrong_key")
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
 		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()
@@ -112,8 +111,8 @@ func TestCollectdFailedConfigurationFileWithWrongKey(t *testing.T) {
 func TestCollectdFailedConfigurationFileWithEmptyKey(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	cfg := utils.NewConfiguration("../test/lbclient_collectd_check_fail_with_empty_key.conf", "collectd_intended_fail_test_with_empty_key")
-	err := lbalias.Evaluate(cfg)
+	cfg := mapping.NewConfiguration("../test/lbclient_collectd_check_fail_with_empty_key.conf", "collectd_intended_fail_test_with_empty_key")
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
 		logger.Error("Expecting an error for the given configuration file [%s]. Failing test...", cfg.ConfigFilePath)
 		t.Fail()

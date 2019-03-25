@@ -1,14 +1,17 @@
-package checks
+package param
 
 import (
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"regexp"
 	"strings"
-
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/parser"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/runner"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 )
+
+type LemonImpl struct {
+	CommandPath string
+}
 
 // sliceEntry : Helper struct for the management of sliced metric entries
 type sliceEntry struct {
@@ -17,8 +20,16 @@ type sliceEntry struct {
 	mname string
 }
 
-// runLemon : Runs the [lemon-cli] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
-func runLemon(commandPath string, metrics []string, valueList *map[string]interface{}) error {
+func (li LemonImpl) Name() string {
+	return "lemon"
+}
+
+// Run : Runs the [lemon-cli] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
+func (li LemonImpl) Run(metrics []string, valueList *map[string]interface{}) error {
+	if len(li.CommandPath) == 0 {
+		li.CommandPath = "/usr/sbin/lemon-cli"
+	}
+
 	// Join metrics in one string
 	metric := strings.Join(metrics, " ")
 	// Remove square-brackets from metric
@@ -40,10 +51,10 @@ func runLemon(commandPath string, metrics []string, valueList *map[string]interf
 	// Remove the slice from the metric
 	metric = regexp.MustCompile("[:][0-9]+").ReplaceAllString(metric, "")
 	// Run the CLI with all the metrics found
-	logger.Debug("Running the [lemon] cli path [%s] for the metrics [%s]", commandPath, metric)
+	logger.Debug("Running the [lemon] cli path [%s] for the metrics [%s]", li.CommandPath, metric)
 	// Add the [lemon-cli] arguments
 
-	output, err := runner.RunCommand(commandPath, true, "--script", "-m", metric)
+	output, err := runner.Run(li.CommandPath, true, 0, "--script", "-m", metric)
 	if err != nil {
 		return fmt.Errorf("failed to run the [lemon] cli with the error [%s]", err.Error())
 	}

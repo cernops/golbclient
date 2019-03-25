@@ -1,26 +1,27 @@
-package utils
+package mapping
 
 import (
 	"bytes"
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 // ConfigurationMapping : object with the config
 type ConfigurationMapping struct {
-	ConfigFilePath string
-	AliasNames     []string
-	MetricValue    int
+	ConfigFilePath 	string
+	AliasNames     	[]string
+	MetricValue    	int
 	//ChecksDone     map[string]bool
-	Default bool
+	Default			bool
 }
 
 // NewConfiguration : Creates a Configuration object
@@ -36,6 +37,8 @@ func NewConfiguration(path string, aliasName ...string) *ConfigurationMapping {
 	cm.MetricValue = 0
 	return &cm
 }
+
+
 
 func (cm ConfigurationMapping) String() string {
 	out := bytes.Buffer{}
@@ -65,7 +68,7 @@ func (cm *ConfigurationMapping) addAlias(alias string) {
 }
 
 // ReadLBConfigFiles : Returns all the configuration files to be evaluated
-func ReadLBConfigFiles(options Options) (confFiles []*ConfigurationMapping, err error) {
+func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationMapping, err error) {
 
 	tmpConfMap := make(map[string]bool)
 	var defaultMapping *ConfigurationMapping

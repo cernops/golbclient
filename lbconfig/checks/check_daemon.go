@@ -3,7 +3,7 @@ package checks
 import (
 	"bufio"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"os"
 	"regexp"
 )
@@ -18,7 +18,7 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 		logger.Error("Error opening [%s]", proc)
 		return false
 	}
-	defer file.Close()
+	defer func() {err = file.Close()}()
 
 	scanner := bufio.NewScanner(file)
 	// The format of the file is 'sl  local_address rem_address   st'
@@ -30,19 +30,19 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 	for scanner.Scan() {
 		line := scanner.Text()
 		if portOpen.MatchString(line) {
-			logger.Trace("Found an open port number [%s] open in [%v]", portHex, line)
+			logger.Debug("Found an open port number [%s] open in [%v]", portHex, line)
 			return true
 		}
 	}
 	return false
 }
 
-func (daemon DaemonListening) Run(args ...interface{}) interface{} {
+func (daemon DaemonListening) Run(args ...interface{}) (interface{}, error) {
 	rVal := false
 	if (daemon.Port < 1) || (daemon.Port > 65535) {
-		return false
+		return false, fmt.Errorf("the daemon port is out of range. Must be within the limit [1-65535]")
 	}
-	listen := []string{}
+	var listen []string
 	if daemon.daemonListen("/proc/net/tcp") {
 		listen = append(listen, "ipv4")
 		rVal = true
@@ -61,5 +61,5 @@ func (daemon DaemonListening) Run(args ...interface{}) interface{} {
 			logger.Debug("Daemon is not listening in port [%d]", daemon.Port)
 		}
 	}
-	return rVal
+	return rVal, nil
 }

@@ -1,16 +1,18 @@
-package lbalias
+package lbconfig
 
 import (
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/timer"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/checks"
-	"gitlab.cern.ch/lb-experts/golbclient/lbalias/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/utils"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
+	"time"
 )
 
 // ExpressionCode : return value for the CLI calls
@@ -28,12 +30,12 @@ var allLBExpressions = map[string]ExpressionCode{
 	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
-	"LEMON":         {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
-	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Command: "lemon"}},
+	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
+	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
 	"ROGER":         {code: 13, cli: checks.RogerState{}},
 	"COMMAND":       {code: 14, cli: checks.Command{}},
-	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
-	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Command: "collectd"}},
+	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
+	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 }
@@ -43,7 +45,7 @@ var allLBExpressions = map[string]ExpressionCode{
 */
 
 // Evaluate : Evaluates a [lbalias] entry
-func Evaluate(cm *utils.ConfigurationMapping) error {
+func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
 
 	// Create a string array containing all the checksToExecute to be performed
@@ -77,40 +79,41 @@ func Evaluate(cm *utils.ConfigurationMapping) error {
 		runningChecks := actions.FindStringSubmatch(line)
 		if len(runningChecks) > 0 {
 			/********************************** CHECKS **********************************/
-			myAction := strings.ToUpper(runningChecks[1])
-			if b, ok := allLBExpressions[myAction].cli.Run(line, cm.AliasNames, cm.Default).(bool); !b || !ok {
-				cm.MetricValue = -allLBExpressions[myAction].code
-				return fmt.Errorf("the check of [%s] failed. Aborting with code [%d]", myAction, cm.MetricValue)
+			myAction 	:= strings.ToUpper(runningChecks[1])
+			negRet		:= -allLBExpressions[myAction].code
+			ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default)
+			if err != nil || ret == false {
+				cm.MetricValue = negRet
+				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
+					myAction, cm.MetricValue)
 			}
-			//cm.ChecksDone[runningChecks[1]] = true
 			continue
 		}
 		loads := constant.FindStringSubmatch(line)
 		if len(loads) > 0 {
 			/********************************** LOADS **********************************/
 			cliName := strings.ToUpper(loads[1])
+			negRet 	:= -allLBExpressions[cliName].code
 			if cliName == "LEMON" || cliName == "COLLECTD" {
-				result := int(allLBExpressions[cliName].cli.Run(line).(int32))
-				if result == -1 {
-					logger.Error("[%s] metric returned a negative number [%d]", cliName, result)
-					cm.MetricValue = -allLBExpressions[cliName].code
-					return fmt.Errorf("[%s] metric returned a negative number [%d]", cliName, result)
+				ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[cliName].cli.Run, line)
+				if err != nil && len(ret.([]interface{})) != 0 {
+					cm.MetricValue = negRet
+					return fmt.Errorf("metric [%s] returned a negative number [%v]", cliName, ret)
 				}
-				cm.MetricValue += result
+
+				retVal := ret.([]interface{})[0].(int32)
+				cm.MetricValue += int(retVal)
 			} else {
 				constant := strings.TrimSpace(regexp.MustCompile("(?i)(load constant)").Split(loads[0], -1)[1])
 				if !cm.AddConstant(constant) {
 					return fmt.Errorf("failed to load the constant value [%v]", constant)
 				}
 			}
-
 			// Added metric value to the total in case of no problems
 			continue
 		}
-
 		// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
 		logger.Error("Unable to parse the configuration file line [%s]", line)
-
 	}
 
 	if cm.MetricValue == 0 {
@@ -127,27 +130,15 @@ func Evaluate(cm *utils.ConfigurationMapping) error {
 func defaultLoad() int {
 	swap := swapFree()
 	logger.Debug("Result of swap formula = %f", swap)
-	cpuload := cpuLoad()
-	logger.Debug("Result of cpu formula = %f", cpuload)
-	swaping := float32(0)
-	/*if lbalias.ChecksDone["swapping"] {
-		logger.Debug("Result of swapoing formula = %f", swaping)
-	}*/
-
+	cpuLoad := cpuLoad()
+	logger.Debug("Result of cpu formula = %f", cpuLoad)
+	swapping := float32(0)
 	fSm, nbProcesses, users := sessionManager()
-	/*if lbalias.ChecksDone["xsessions"] {
-		logger.Debug("Result of X sessions formula = %f", f_sm)
-	} else {
-		f_sm = float32(0)
-	}
-	*/
 	logger.Debug("Number of processes = %d", int(nbProcesses))
 	logger.Debug("Number of users logged in = %d ", int(users))
-
-	myLoad := (((swap + users/25.) / 2.) + (2. * swaping) + (3. * cpuload) + (2. * fSm)) / 6.
-
-	//((swap + users / 25.) / 2.) + (2. * swaping * self.check_swaping) + (3. * cpuload) + (2. * f_sm * self.check_xsessions)) / 6.
-	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swaping = %.3f, cpuload = %.3f, f_sm = %.3f", myLoad, swap, users, swaping, cpuload, fSm)
+	myLoad := (((swap + users/25.) / 2.) + (2. * swapping) + (3. * cpuLoad) + (2. * fSm)) / 6.
+	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, " +
+		"cpuLoad = %.3f, f_sm = %.3f", myLoad, swap, users, swapping, cpuLoad, fSm)
 	return int(myLoad * 1000)
 
 }
@@ -159,8 +150,7 @@ func swapFree() float32 {
 		return -2
 	}
 	memoryMap := map[string]int{}
-	//fmt.Println("Looking for ", portHex)
-	memory, _ := regexp.Compile("^((MemTotal)|(MemFree)|(SwapTotal)|(SwapFree)|(CommitLimit)|(Committed_AS)): +([0-9]+)")
+	memory := regexp.MustCompile("^((MemTotal)|(MemFree)|(SwapTotal)|(SwapFree)|(CommitLimit)|(Committed_AS)): +([0-9]+)")
 	for _, line := range lines {
 		match := memory.FindStringSubmatch(line)
 		if len(match) > 0 {
@@ -174,7 +164,6 @@ func swapFree() float32 {
 	if memoryMap["SwapTotal"] == 0 {
 		memoryMap["SwapTotal"], memoryMap["SwapFree"] = memoryMap["MemTotal"], memoryMap["MemFree"]
 	}
-	// recalculate swap numbers in Gbytes
 	memoryMap["SwapTotal"] = memoryMap["SwapTotal"] / (1024 * 1024)
 	memoryMap["SwapFree"] = memoryMap["SwapFree"] / (1024 * 1024)
 
@@ -200,9 +189,7 @@ func cpuLoad() float32 {
 }
 
 func sessionManager() (float32, float32, float32) {
-
 	out, err := exec.Command("/bin/ps", "auxw").Output()
-
 	if err != nil {
 		logger.Error("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
 		return -10, -10, -10
@@ -212,9 +199,9 @@ func sessionManager() (float32, float32, float32) {
 	fSm, nbProcesses := 0.0, -1.0
 	users := map[string]bool{}
 	// There are 3 processes per gnome sesion, and 4 for the fvm
-	gnome, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
-	fvm, _ := regexp.Compile("^([^ ]+ +){10}[^ ]*fvwm")
-	user, _ := regexp.Compile("^([^ ]+)")
+	gnome  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
+	fvm  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*fvwm")
+	user	:= regexp.MustCompile("^([^ ]+)")
 
 	for _, line := range strings.Split(string(out), "\n") {
 		nbProcesses++

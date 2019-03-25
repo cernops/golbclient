@@ -2,21 +2,18 @@ package filehandler
 
 import (
 	"bufio"
-	"gitlab.cern.ch/lb-experts/golbclient/utils/logger"
 	"os"
+	"path/filepath"
 )
 
 // ReadAllLinesFromFile : Reads all lines from a file into a string array
 func ReadAllLinesFromFile(path string) (lines []string, err error) {
-	logger.Trace("Attempting to read file [%s]", path)
 	file, err := os.Open(path)
 	if err != nil {
-		logger.Error("Error when attempting to read the file [%s]. Error [%s]", path, err.Error())
 		return nil, err
 	}
 
-	defer file.Close()
-
+	defer func() {err = file.Close()}()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
@@ -35,3 +32,17 @@ func ReadFirstLineFromFile(path string) (line string, err error) {
 	line = lines[0]
 	return line, err
 }
+
+// CreateFileInDir : Creates a file with all the required parent directories with the given permissions. If an issue is
+// detected during this process, an error will be returned. Otherwise, a pointer to @see os.File the instance is
+// returned
+func CreateFileInDir(file string, mode os.FileMode) (fHandle *os.File, err error) {
+	_, err = os.Stat(file)
+	if os.IsNotExist(err) {
+		if err = os.MkdirAll(filepath.Dir(file), mode); err != nil {
+			return fHandle, err
+		}
+	}
+	return
+}
+
