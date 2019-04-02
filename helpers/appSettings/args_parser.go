@@ -1,8 +1,9 @@
 package appSettings
 
 import (
-	"github.com/jessevdk/go-flags"
 	"time"
+
+	"github.com/jessevdk/go-flags"
 )
 
 // LogRotateCfg : Encapsulated options to be used to configure the rotation of the log files
@@ -20,19 +21,21 @@ type ExecutionConf struct {
 // Options : Supported application flags
 type Options struct {
 	/* Logging */
-	LogAutoFileRotation 		LogRotateCfg `group:"rotatecfg" namespace:"rotatecfg" env-namespace:"rotatecfg" description:"Location of the of log file"`
-	LogFileLocation     		string       `short:"l" long:"log" default:"log/app.log" description:"Location of the of log file"`
-	ConsoleDebugLevel   		string       `short:"d" long:"loglevel" default:"FATAL" description:"Console debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]"`
-	FileDebugLevel      		string       `long:"fdevel" default:"TRACE" description:"File debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]"`
-	FileLoggingEnabled			bool		 `long:"flog" description:"Activate the file logging service"`
+	LogAutoFileRotation LogRotateCfg `group:"rotatecfg" namespace:"rotatecfg" env-namespace:"rotatecfg" description:"Location of the of log file"`
+	LogFileLocation     string       `short:"l" long:"log" default:"log/app.log" description:"Location of the of log file"`
+	ConsoleDebugLevel   string       `short:"d" long:"loglevel" default:"FATAL" description:"Console debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]"`
+	FileDebugLevel      string       `long:"fdevel" default:"TRACE" description:"File debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]"`
+	FileLoggingEnabled  bool         `long:"flog" description:"Activate the file logging service"`
 	/* Configuration files */
-	LbMetricConfDir         	string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
-	LbAliasFile             	string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`
-	LbMetricDefaultFileName 	string `short:"c" long:"conf-name" default:"lbclient.conf" description:"Set the default name to be used to lookup for the generic configuration file"`
+	LbMetricConfDir         string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
+	LbAliasFile             string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`
+	LbMetricDefaultFileName string `short:"c" long:"conf-name" default:"lbclient.conf" description:"Set the default name to be used to lookup for the generic configuration file"`
 	/* Execution specific */
-	ExecutionConfiguration 		ExecutionConf `hidden:"true" group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
+	ExecutionConfiguration ExecutionConf `hidden:"true" group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
 	/* Misc */
-	Version 					bool `short:"v" long:"version" description:"Version of the file"`
+	Version bool   `short:"v" long:"version" description:"Version of the file"`
+	GData   string `short:"g" long:"gdata" description:"Option needed by the snmp calls"`
+	NData   string `short:"n" long:"ndata" description:"Option needed by the snmp calls"`
 }
 
 // ParseApplicationSettings : Helper function to handle the parsing of the @see AppArgs schema against a given slice of

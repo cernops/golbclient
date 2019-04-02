@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/jessevdk/go-flags"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
-	"os"
 )
 
 const (
@@ -14,7 +15,7 @@ const (
 	// Version number
 	Version = "2.0"
 	// Release number
-	Release = "8"
+	Release = "9"
 )
 
 func main() {
