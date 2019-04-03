@@ -13,6 +13,8 @@ import (
 func ExecuteWithTimeoutR(timeout time.Duration, f interface{},  args ...interface{}) (ret interface{}, err error){
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 	fnName := getFunctionName(f)
+
+	logger.Debug("Executing function [%s] with max timeout value of [%s]", fnName, timeout.String())
 	defer func() {
 		newNow := time.Now().UnixNano() / int64(time.Millisecond) - now
 		logger.Debug("Function [%s] :: Runtime: %dms", fnName, newNow)
@@ -20,7 +22,7 @@ func ExecuteWithTimeoutR(timeout time.Duration, f interface{},  args ...interfac
 
 	r := make(chan interface{}, 1)
 	e := make(chan error, 1)
-	callFunction(r, e, f, args...)
+	go callFunction(r, e, f, args...)
 	select {
 	case res := <-r:
 		return res, <-e
@@ -41,7 +43,6 @@ func callFunction(r chan<- interface{}, e chan<- error, f interface{}, args ...i
 	defer func() {
 		if r := recover(); r != nil {
 			if re, ok := r.(error); re != nil && ok {
-				logger.Error("Failed to launch the function [%s]. Error [%s]", getFunctionName(f), re.Error())
 				err = re
 			}
 		}
