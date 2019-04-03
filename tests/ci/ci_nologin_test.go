@@ -25,7 +25,7 @@ func TestNologinFunctionality(t *testing.T) {
 }
 
 func TestNologinFailedFunctionality(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.ERROR)
 
 	path := "/etc/nologin"
 	err := ioutil.WriteFile(path, []byte("Hello"), 0755)
