@@ -2,19 +2,20 @@ package timer
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"reflect"
 	"runtime"
 	"time"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 // ExecuteWithTimeoutR : Executes a function given a maximum timeout value. If the timeout value is exceeded, a error
 // will be returned.
-func ExecuteWithTimeoutR(timeout time.Duration, f interface{},  args ...interface{}) (ret interface{}, err error){
+func ExecuteWithTimeoutR(timeout time.Duration, f interface{}, args ...interface{}) (ret interface{}, err error) {
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 	fnName := getFunctionName(f)
 	defer func() {
-		newNow := time.Now().UnixNano() / int64(time.Millisecond) - now
+		newNow := time.Now().UnixNano()/int64(time.Millisecond) - now
 		logger.Debug("Function [%s] :: Runtime: %dms", fnName, newNow)
 	}()
 
@@ -65,8 +66,8 @@ func callFunction(r chan<- interface{}, e chan<- error, f interface{}, args ...i
 			resL = append(resL, v.Interface())
 		}
 	}
-	r<-resL
-	e<-err
+	r <- resL
+	e <- err
 }
 
 // getFunctionName : retrieves the function name signature from the given interface

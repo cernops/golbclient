@@ -2,17 +2,18 @@ package lbconfig
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/timer"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
+	param "gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/timer"
 )
 
 // ExpressionCode : return value for the CLI calls
@@ -79,10 +80,10 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 		runningChecks := actions.FindStringSubmatch(line)
 		if len(runningChecks) > 0 {
 			/********************************** CHECKS **********************************/
-			myAction 	:= strings.ToUpper(runningChecks[1])
-			negRet		:= -allLBExpressions[myAction].code
+			myAction := strings.ToUpper(runningChecks[1])
+			negRet := -allLBExpressions[myAction].code
 			ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default)
-			if err != nil || ret == false {
+			if err != nil || ret.([]interface{})[0] == false {
 				cm.MetricValue = negRet
 				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
 					myAction, cm.MetricValue)
@@ -93,7 +94,7 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 		if len(loads) > 0 {
 			/********************************** LOADS **********************************/
 			cliName := strings.ToUpper(loads[1])
-			negRet 	:= -allLBExpressions[cliName].code
+			negRet := -allLBExpressions[cliName].code
 			if cliName == "LEMON" || cliName == "COLLECTD" {
 				ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[cliName].cli.Run, line)
 				if err != nil && len(ret.([]interface{})) != 0 {
@@ -137,7 +138,7 @@ func defaultLoad() int {
 	logger.Debug("Number of processes = %d", int(nbProcesses))
 	logger.Debug("Number of users logged in = %d ", int(users))
 	myLoad := (((swap + users/25.) / 2.) + (2. * swapping) + (3. * cpuLoad) + (2. * fSm)) / 6.
-	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, " +
+	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, "+
 		"cpuLoad = %.3f, f_sm = %.3f", myLoad, swap, users, swapping, cpuLoad, fSm)
 	return int(myLoad * 1000)
 
@@ -199,9 +200,9 @@ func sessionManager() (float32, float32, float32) {
 	fSm, nbProcesses := 0.0, -1.0
 	users := map[string]bool{}
 	// There are 3 processes per gnome sesion, and 4 for the fvm
-	gnome  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
-	fvm  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*fvwm")
-	user	:= regexp.MustCompile("^([^ ]+)")
+	gnome := regexp.MustCompile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
+	fvm := regexp.MustCompile("^([^ ]+ +){10}[^ ]*fvwm")
+	user := regexp.MustCompile("^([^ ]+)")
 
 	for _, line := range strings.Split(string(out), "\n") {
 		nbProcesses++

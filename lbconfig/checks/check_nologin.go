@@ -23,7 +23,7 @@ func (nl NoLogin) Run(args ...interface{}) (interface{}, error) {
 		return false, fmt.Errorf("wrong type given as the alias name, please use the [string] type")
 	}
 
-	noLogin := [2]string{"/etc/noLogin", "/etc/iss.noLogin"}
+	noLogin := [2]string{"/etc/nologin", "/etc/iss.nologin"}
 	isDefault, ok := args[2].(bool)
 	if !ok {
 		return false, fmt.Errorf("wrong type given as the default value, please use the [boolean] type")
