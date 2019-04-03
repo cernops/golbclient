@@ -25,7 +25,7 @@ func createRogerFile(state string) error {
 	return nil
 }
 func TestRogerFunctionality(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.ERROR)
 
 	err := createRogerFile("production")
 	if err != nil {
@@ -45,7 +45,7 @@ func TestRogerFunctionality(t *testing.T) {
 }
 
 func TestRogerFailedFunctionality(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.FATAL)
 
 	err := createRogerFile("draining")
 	if err != nil {
