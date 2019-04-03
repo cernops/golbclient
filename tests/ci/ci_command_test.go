@@ -40,7 +40,7 @@ func TestCommandDoesNotExistFunctionality(t *testing.T) {
 	}
 }
 func TestCommandFailFunctionality(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.FATAL)
 	cfg := mapping.NewConfiguration("../test/lbclient_command_failed.conf", "command_load_functionality_test")
 	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if err == nil {
