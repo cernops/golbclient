@@ -2,6 +2,7 @@ package ci
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
@@ -11,7 +12,12 @@ import (
 
 func createRogerFile(state string) error {
 	path := "/etc/roger/current.yaml"
-
+	if _, err := os.Stat("/etc/roger"); os.IsNotExist(err) {
+		err = os.Mkdir("/etc/roger", os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
 	err := ioutil.WriteFile(path, []byte("---\nappstate: "+state+"\n"), 0755)
 	if err != nil {
 		return err
