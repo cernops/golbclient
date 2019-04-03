@@ -3,6 +3,7 @@ package timer
 import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 	"reflect"
 	"runtime"
 	"time"
@@ -37,6 +38,25 @@ func ExecuteWithTimeoutV(timeout time.Duration, f interface{}, args ...interface
 	return err
 }
 
+// ExecuteWithTimeoutRInt : Executes a function given a maximum timeout value and returns it's output in the format
+// of [int]. If the timeout value is exceeded of the function produced an error, an error will also be returned
+//
+func ExecuteWithTimeoutRInt(timeout time.Duration, f interface{}, args ...interface{}) (int, error) {
+	value, err := ExecuteWithTimeoutR(timeout, f, args...)
+	if err != nil {
+		return -1, err
+	}
+
+	if parsedOutput, ok := value.([]interface{}); ok {
+		if len(parsedOutput) == 0 {
+			return -1, fmt.Errorf("expected output but got nothing from the function [%s]", getFunctionName(f))
+		}
+		return int(parser.ParseInterfaceAsInteger(parsedOutput[0])), nil
+	}
+	return -1, fmt.Errorf("internal error when calling the [callFunction] helper - the output is not of type " +
+		"([]interface{}) but is instead [%T]", value)
+}
+
 // callFunction : reflection method used to call an interface as a function
 func callFunction(r chan<- interface{}, e chan<- error, f interface{}, args ...interface{}) {
 	var err error
@@ -59,7 +79,6 @@ func callFunction(r chan<- interface{}, e chan<- error, f interface{}, args ...i
 		if v.Interface() == nil {
 			continue
 		}
-
 		if e, ok := v.Interface().(error); ok {
 			err = e
 		} else {

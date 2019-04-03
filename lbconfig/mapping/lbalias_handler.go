@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
@@ -49,18 +48,6 @@ func (cm ConfigurationMapping) String() string {
 		}
 	}
 	return out.String()
-}
-func (cm *ConfigurationMapping) AddConstant(exp string) bool {
-	logger.Debug("Adding Constant [%s]", exp)
-	// @TODO: Replace with the parser.ParseInterfaceAsFloat (reflection?)
-	f, err := strconv.ParseFloat(exp, 32)
-	if err != nil {
-		logger.Error("Error parsing the floating point number from the value [%s]", exp)
-		return false
-	}
-
-	cm.MetricValue += int(f)
-	return true
 }
 
 func (cm *ConfigurationMapping) addAlias(alias string) {

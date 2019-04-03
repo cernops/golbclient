@@ -23,11 +23,11 @@ type ExpressionCode struct {
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 var allLBExpressions = map[string]ExpressionCode{
-	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
-	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
-	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80}},
-	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
+	"NOLOGIN":       {code: 1, 	cli: checks.NoLogin{}},
+	"TMPFULL":       {code: 6, 	cli: checks.TmpFull{}},
+	"SSHDAEMON":     {code: 7, 	cli: checks.DaemonListening{Port: 22}},
+	"WEBDAEMON":     {code: 8, 	cli: checks.DaemonListening{Port: 80}},
+	"FTPDAEMON":     {code: 9, 	cli: checks.DaemonListening{Port: 21}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
@@ -36,8 +36,9 @@ var allLBExpressions = map[string]ExpressionCode{
 	"COMMAND":       {code: 14, cli: checks.Command{}},
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
-	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
+	"CONSTANT":		 {code: 16, cli: checks.MetricConstant{}},
+	"XSESSIONS":     {code: 6, 	cli: checks.CheckAttribute{}},
+	"SWAPPING":      {code: 6, 	cli: checks.CheckAttribute{}},
 }
 
 /*
@@ -65,55 +66,40 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 	logger.Debug("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
 
 	// Detect all comments
-	comment, _ := regexp.Compile("^(#.*)?$")
-	// Detect all checksToExecute to be made
-	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checksToExecute, "|") + ")")
-	// Detect all loads to be made
-	constant, _ := regexp.Compile("(?i)^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)")
+	comment := regexp.MustCompile("^(#.*)?$")
+	// Detect all actions (checks or loads) to be made
+	checksFormat 	:= "^CHECK (" + strings.Join(checksToExecute, "|") + ")"
+	loadsFormat 	:= "^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)"
+	actions 		:= regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))`, checksFormat, loadsFormat))
 
 	// Read the configuration file line-by-line
 	for _, line := range lines {
 		if comment.MatchString(line) {
 			continue
 		}
-		runningChecks := actions.FindStringSubmatch(line)
-		if len(runningChecks) > 0 {
-			/********************************** CHECKS **********************************/
-			myAction 	:= strings.ToUpper(runningChecks[1])
+		foundActions := actions.FindStringSubmatch(line)
+		if len(foundActions) > 0 {
+			/********************************** ACTIONS **********************************/
+			myAction := strings.ToUpper(strings.Split(line, " ")[1])
+			if _, ok := allLBExpressions[myAction]; !ok {
+				return fmt.Errorf("the given action (check or load) metric [%s] is not supported", myAction)
+			}
+			isLoad		:= regexp.MustCompile("(?i)^LOAD").MatchString(myAction)
 			negRet		:= -allLBExpressions[myAction].code
-			ret, err 	:= timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default, )
-			if err != nil || ret == false {
+			ret, err 	:= timer.ExecuteWithTimeoutRInt(timeout, allLBExpressions[myAction].cli.Run,
+				line, cm.AliasNames, cm.Default)
+
+			if err != nil || ret < 0 {
 				cm.MetricValue = negRet
 				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
 					myAction, cm.MetricValue)
+			} else if !isLoad {
+				cm.MetricValue += ret
 			}
-			continue
+		} else {
+			// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
+			logger.Error("Unable to parse the configuration file line [%s]", line)
 		}
-		loads := constant.FindStringSubmatch(line)
-		if len(loads) > 0 {
-			/********************************** LOADS **********************************/
-			cliName := strings.ToUpper(loads[1])
-			negRet 	:= -allLBExpressions[cliName].code
-			if cliName == "LEMON" || cliName == "COLLECTD" {
-				ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[cliName].cli.Run, line)
-				if err != nil && len(ret.([]interface{})) != 0 {
-					cm.MetricValue = negRet
-					return fmt.Errorf("metric [%s] returned a negative number [%v]", cliName, ret)
-				}
-
-				retVal := ret.([]interface{})[0].(int32)
-				cm.MetricValue += int(retVal)
-			} else {
-				constant := strings.TrimSpace(regexp.MustCompile("(?i)(load constant)").Split(loads[0], -1)[1])
-				if !cm.AddConstant(constant) {
-					return fmt.Errorf("failed to load the constant value [%v]", constant)
-				}
-			}
-			// Added metric value to the total in case of no problems
-			continue
-		}
-		// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
-		logger.Error("Unable to parse the configuration file line [%s]", line)
 	}
 
 	if cm.MetricValue == 0 {

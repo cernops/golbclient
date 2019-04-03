@@ -17,7 +17,7 @@ func (rogerState RogerState) Run(a ...interface{}) (interface{}, error) {
 
 	f, err := os.Open(rogerCurrentFile)
 	if err != nil {
-		return false, err
+		return -1, err
 	}
 	defer func() { err = f.Close() }()
 
@@ -36,10 +36,10 @@ func (rogerState RogerState) Run(a ...interface{}) (interface{}, error) {
 	logger.Trace("Roger appstate [%s]", myState)
 
 	if myState == "production" || myState == "ignore_roger" {
-		return true, nil
+		return 1, nil
 	}
 
 	logger.Info("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
-	return false, nil
+	return -1, nil
 
 }

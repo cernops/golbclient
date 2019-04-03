@@ -23,11 +23,11 @@ func (command Command) Run(args ...interface{}) (interface{}, error) {
 		logger.Trace("Attempting to run command [%s]", usrCmd)
 		out, err := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
-			return false, err
+			return 0, err
 		}
 
 		logger.Debug("Command output [%s]", out)
-		return true, nil
+		return 1, nil
 	}
-	return false, nil
+	return -1, nil
 }

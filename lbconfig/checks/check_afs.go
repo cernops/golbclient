@@ -16,8 +16,8 @@ func (afs AFS) Run(args ...interface{}) (interface{}, error) {
 	logger.Debug("Checking the that AFS directory is accessible...")
 	output, err := runner.RunCommand(fmt.Sprintf("ls -al %v", afsDir), true, 0)
 	if err != nil  {
-		return false, err
+		return -1, err
 	}
 	logger.Trace("Successfully accessed the AFS directory with output [%v]", output)
-	return true, nil
+	return 1, nil
 }
