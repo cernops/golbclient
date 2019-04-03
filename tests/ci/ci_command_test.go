@@ -51,5 +51,4 @@ func TestCommandFailFunctionality(t *testing.T) {
 			cfg.MetricValue)
 		t.Fail()
 	}
-	t.FailNow()
 }
