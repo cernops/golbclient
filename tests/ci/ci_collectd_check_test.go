@@ -15,7 +15,7 @@ func TestCICollectdCLI(t *testing.T) {
 	output, err := runner.Run("/usr/bin/collectdctl",
 		true, defaultTimeout, "getval", "test")
 	if err != nil {
-		logger.Error("An error was detected when running the CI [collectdctl]")
+		logger.Error("An error was detected when running the CI [collectdctl]. Error [%s]", err.Error())
 		t.FailNow()
 	} else if len(strings.TrimSpace(output)) == 0 {
 		logger.Error("The CI [collectdctl] failed to return a row value for a pre-defined metric")

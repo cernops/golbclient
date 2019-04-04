@@ -89,7 +89,7 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 			ret, err 	:= timer.ExecuteWithTimeoutRInt(timeout, allLBExpressions[myAction].cli.Run,
 				line, cm.AliasNames, cm.Default)
 
-			if err != nil || ret < 0 {
+			if err != nil {
 				cm.MetricValue = negRet
 				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
 					myAction, cm.MetricValue)

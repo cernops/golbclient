@@ -25,7 +25,7 @@ func TestLemonLoadFunctionality(t *testing.T) {
 
 // TestLemonLoadConfigurationFile : integration test for all the functionality supplied by the lemon-cli, output value must be = 35
 func TestLemonLoadConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
+	logger.SetLevel(logger.ERROR)
 
 	cfg := mapping.NewConfiguration("../test/lbclient_lemon_load.conf", "lemonTest")
 	err := lbconfig.Evaluate(cfg, defaultTimeout)
