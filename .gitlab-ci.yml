@@ -3,6 +3,7 @@ image: gitlab-registry.cern.ch/linuxsupport/cc7-base
 stages:
   - build
   - test
+  - snmpd
   - benchmark
   - build_rpm
   - koji_scratch
@@ -82,6 +83,15 @@ test-go11:
   script:
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
+
+test-snmpd-call:
+  stage: snmpd
+  script:
+    - yum install lbclient -y
+    - go11 build -o lbclient && cp -f lbclient /usr/local/sbin/lbclient
+    - export VA=`./lbclient -v` && export VB=`/usr/local/sbin/lbclient -v`
+    - if [[ "$VA" != "$VB" ]]; then false; fi
+    - /usr/bin/snmpget -v 3 -u loadbalancing -l authNoPriv -a MD5 -A $SNMP_AUTH localhost .1.3.6.1.4.1.96.255.1
 
 bench-go09:
   stage: benchmark
