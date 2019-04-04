@@ -14,18 +14,15 @@ import (
 func ExecuteWithTimeoutR(timeout time.Duration, f interface{},  args ...interface{}) (ret interface{}, err error){
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 	fnName := getFunctionName(f)
-
 	logger.Debug("Executing function [%s] with max timeout value of [%s]", fnName, timeout.String())
-	defer func() {
-		newNow := time.Now().UnixNano() / int64(time.Millisecond) - now
-		logger.Debug("Function [%s] :: Runtime: %dms", fnName, newNow)
-	}()
 
 	r := make(chan interface{}, 1)
 	e := make(chan error, 1)
 	go callFunction(r, e, f, args...)
 	select {
 	case res := <-r:
+		newNow := time.Now().UnixNano() / int64(time.Millisecond) - now
+		logger.Debug("Function [%s] :: Runtime: %dms", fnName, newNow)
 		return res, <-e
 	case <-time.After(timeout):
 		return nil, fmt.Errorf("the function [%s] has reached the timeout value of [%s]",
