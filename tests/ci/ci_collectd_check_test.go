@@ -53,18 +53,17 @@ func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue i
 		}
 	}
 	if cfg.MetricValue != metricValue {
-		logger.Error("We were expecting the value %i, and got %i", cfg.MetricValue, metricValue)
+		logger.Error("We were expecting the value %v, and got %v", metricValue, cfg.MetricValue)
 		t.FailNow()
 	}
-
 }
 
 func TestCollectd(t *testing.T) {
 	var myTests [6]lbTest
 	myTests[0] = lbTest{"CollectdFunctionality", "../test/lbclient_collectd_check_single.conf", true, 250, nil}
-	myTests[1] = lbTest{"ConfigurationFile", "../test/lbclient_collectd_check.conf", true, 125, nil}
+	myTests[1] = lbTest{"ConfigurationFile", "../test/lbclient_collectd_check.conf", true, 529, nil}
 	myTests[2] = lbTest{"FailedConfigurationFile", "../test/lbclient_collectd_check_fail.conf", false, -15, nil}
-	myTests[3] = lbTest{"FailedConfigurationFileWithKeys", "../test/lbclient_collectd_check_with_keys.conf", true, 135, nil}
+	myTests[3] = lbTest{"FailedConfigurationFileWithKeys", "../test/lbclient_collectd_check_with_keys.conf", true, 529, nil}
 	myTests[4] = lbTest{"FailedConfigurationFileWithWrongKey", "../test/lbclient_collectd_check_with_wrong_key.conf", false, -15, nil}
 	myTests[5] = lbTest{"FailedConfigurationFileWithEmptyKey", "../test/lbclient_collectd_check_fail_with_empty_key.conf", false, -15, nil}
 	for _, myTest := range myTests {

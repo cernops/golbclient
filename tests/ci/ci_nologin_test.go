@@ -30,7 +30,7 @@ func TestNologin(t *testing.T) {
 
 	var myTests [2]lbTest
 	myTests[0] = lbTest{"noLoginWorks", "../test/lbclient_nologin.conf", true, 5, nil}
-	myTests[1] = lbTest{"noLoginFails", "../test/lbclient_nologin.conf", true, -1, createNoLogin}
+	myTests[1] = lbTest{"noLoginFails", "../test/lbclient_nologin.conf", false, -1, createNoLogin}
 	for _, myTest := range myTests {
 		t.Run(myTest.title, func(t *testing.T) {
 			RunEvaluate(t, myTest.configuration, myTest.shouldWork, myTest.metricValue, myTest.setup)
