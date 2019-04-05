@@ -26,12 +26,12 @@ func TestRogerFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
 	createRogerFile(t, "production")
-	RunEvaluate(t, "../test/lbclient_roger.conf", true, 42)
+	RunEvaluate(t, "../test/lbclient_roger.conf", true, 42, nil)
 }
 
 func TestRogerFailedFunctionality(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
 	createRogerFile(t, "draining")
-	RunEvaluate(t, "../test/lbclient_roger.conf", false, -13)
+	RunEvaluate(t, "../test/lbclient_roger.conf", false, -13, nil)
 }

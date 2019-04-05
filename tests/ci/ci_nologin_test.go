@@ -6,42 +6,9 @@ import (
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 )
 
-func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue int) {
-	cfg := mapping.NewConfiguration(configFile)
-	err := lbconfig.Evaluate(cfg, defaultTimeout)
-	if shouldWork == true {
-		if err != nil {
-			logger.Error("Got back an error, and we  were not expecting that. Error [%s] ", err.Error())
-			t.FailNow()
-		}
-	} else {
-		if err == nil {
-			logger.Error("The evaluation of the alias was supposed to fail")
-			t.FailNow()
-		}
-	}
-	if cfg.MetricValue != metricValue {
-		logger.Error("We were expecting the value %i, and got %i", cfg.MetricValue, metricValue)
-		t.FailNow()
-	}
-
-}
-
-func TestNologin(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
-	t.Run("nologinWorks", nologinWorks)
-	t.Run("nologinFails", nologinFails)
-}
-
-func nologinWorks(t *testing.T) {
-	RunEvaluate(t, "../test/lbclient_nologin.conf", true, 5)
-}
-
-func nologinFails(t *testing.T) {
+func createNoLogin(t *testing.T) {
 	path := "/etc/nologin"
 	err := ioutil.WriteFile(path, []byte("Hello"), 0755)
 	if err != nil {
@@ -56,5 +23,17 @@ func nologinFails(t *testing.T) {
 		}
 	}()
 
-	RunEvaluate(t, "../test/lbclient_nologin.conf", true, -1)
+}
+
+func TestNologin(t *testing.T) {
+	logger.SetLevel(logger.ERROR)
+
+	var myTests [2]lbTest
+	myTests[0] = lbTest{"noLoginWorks", "../test/lbclient_nologin.conf", true, 5, nil}
+	myTests[1] = lbTest{"noLoginFails", "../test/lbclient_nologin.conf", true, -1, createNoLogin}
+	for _, myTest := range myTests {
+		t.Run(myTest.title, func(t *testing.T) {
+			RunEvaluate(t, myTest.configuration, myTest.shouldWork, myTest.metricValue, myTest.setup)
+		})
+	}
 }
