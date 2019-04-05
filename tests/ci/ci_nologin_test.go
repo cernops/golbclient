@@ -10,30 +10,44 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 )
 
-func TestNologinFunctionality(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
-	cfg := mapping.NewConfiguration("../test/lbclient_nologin.conf", "Check that the nologin works")
+func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue int) {
+	cfg := mapping.NewConfiguration(configFile)
 	err := lbconfig.Evaluate(cfg, defaultTimeout)
-	if err != nil {
-		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
-		t.Fail()
+	if shouldWork == true {
+		if err != nil {
+			logger.Error("Got back an error, and we  were not expecting that. Error [%s] ", err.Error())
+			t.FailNow()
+		}
+	} else {
+		if err == nil {
+			logger.Error("The evaluation of the alias was supposed to fail")
+			t.FailNow()
+		}
 	}
-	if cfg.MetricValue != 5 {
-		logger.Error("The expected metric value was [5] but got [%d] instead. Failing the test...", cfg.MetricValue)
-		t.Fail()
+	if cfg.MetricValue != metricValue {
+		logger.Error("We were expecting the value %i, and got %i", cfg.MetricValue, metricValue)
+		t.FailNow()
 	}
+
 }
 
-func TestNologinFailedFunctionality(t *testing.T) {
+func TestNologin(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
+	t.Run("nologinWorks", nologinWorks)
+	t.Run("nologinFails", nologinFails)
+}
 
+func nologinWorks(t *testing.T) {
+	RunEvaluate(t, "../test/lbclient_nologin.conf", true, 5)
+}
+
+func nologinFails(t *testing.T) {
 	path := "/etc/nologin"
 	err := ioutil.WriteFile(path, []byte("Hello"), 0755)
 	if err != nil {
 		t.Errorf("Unable to write file: %v", err)
 		t.FailNow()
 	}
-
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -41,14 +55,6 @@ func TestNologinFailedFunctionality(t *testing.T) {
 			t.FailNow()
 		}
 	}()
-	cfg := mapping.NewConfiguration("../test/lbclient_nologin.conf", "blabla") //Check that nologin fails if the file exists")
-	err = lbconfig.Evaluate(cfg, defaultTimeout)
-	if err == nil {
-		logger.Error("There was no error with this configuration. We were expecting a 'nologing error'")
-		t.Fail()
-	}
-	if cfg.MetricValue != -1 {
-		logger.Error("The expected metric value was [-1] but got [%d] instead. Failing the test...", cfg.MetricValue)
-		t.Fail()
-	}
+
+	RunEvaluate(t, "../test/lbclient_nologin.conf", true, -1)
 }

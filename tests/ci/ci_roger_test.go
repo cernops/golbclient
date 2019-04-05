@@ -6,61 +6,32 @@ import (
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 )
 
-func createRogerFile(state string) error {
+func createRogerFile(t *testing.T, state string) {
 	path := "/etc/roger/current.yaml"
 	if _, err := os.Stat("/etc/roger"); os.IsNotExist(err) {
 		err = os.Mkdir("/etc/roger", os.ModePerm)
 		if err != nil {
-			return err
+			t.FailNow()
 		}
 	}
 	err := ioutil.WriteFile(path, []byte("---\nappstate: "+state+"\n"), 0755)
 	if err != nil {
-		return err
+		t.FailNow()
 	}
-	return nil
 }
+
 func TestRogerFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	err := createRogerFile("production")
-	if err != nil {
-		t.Errorf("Error creating the file %v", err)
-		t.FailNow()
-	}
-	cfg := mapping.NewConfiguration("../test/lbclient_roger.conf")
-	err = lbconfig.Evaluate(cfg, defaultTimeout)
-	if err != nil {
-		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
-		t.Fail()
-	}
-	if cfg.MetricValue != 42 {
-		logger.Error("The expected metric value was [42] but got [%d] instead. Failing the test...", cfg.MetricValue)
-		t.Fail()
-	}
+	createRogerFile(t, "production")
+	RunEvaluate(t, "../test/lbclient_roger.conf", true, 42)
 }
 
 func TestRogerFailedFunctionality(t *testing.T) {
 	logger.SetLevel(logger.FATAL)
 
-	err := createRogerFile("draining")
-	if err != nil {
-		t.Errorf("Error creating the file %v", err)
-		t.FailNow()
-	}
-
-	cfg := mapping.NewConfiguration("../test/lbclient_roger.conf")
-	err = lbconfig.Evaluate(cfg, defaultTimeout)
-	if err == nil {
-		logger.Error("There was no error with this configuration. We were expecting a 'roger error'")
-		t.Fail()
-	}
-	if cfg.MetricValue != -13 {
-		logger.Error("The expected metric value was [-1] but got [%d] instead. Failing the test...", cfg.MetricValue)
-		t.Fail()
-	}
+	createRogerFile(t, "draining")
+	RunEvaluate(t, "../test/lbclient_roger.conf", false, -13)
 }
