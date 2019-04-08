@@ -64,7 +64,7 @@ func TestCollectd(t *testing.T) {
 	myTests[1] = lbTest{"ConfigurationFile", "../test/lbclient_collectd_check.conf", true, 529, nil}
 	myTests[2] = lbTest{"FailedConfigurationFile", "../test/lbclient_collectd_check_fail.conf", false, -15, nil}
 	myTests[3] = lbTest{"FailedConfigurationFileWithKeys", "../test/lbclient_collectd_check_with_keys.conf", true, 529, nil}
-	myTests[4] = lbTest{"FailedConfigurationFileWithWrongKey", "../test/lbclient_collectd_check_with_wrong_key.conf", false, -15, nil}
+	myTests[4] = lbTest{"FailedConfigurationFileWithWrongKey", "../test/lbclient_collectd_check_fail_with_wrong_key.conf", false, -15, nil}
 	myTests[5] = lbTest{"FailedConfigurationFileWithEmptyKey", "../test/lbclient_collectd_check_fail_with_empty_key.conf", false, -15, nil}
 	for _, myTest := range myTests {
 		t.Run(myTest.title, func(t *testing.T) {
