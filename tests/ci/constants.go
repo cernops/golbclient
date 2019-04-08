@@ -1,7 +1,6 @@
 package ci
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -24,13 +23,11 @@ type lbTest struct {
 
 func runEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue int, setup func(*testing.T), cleanup func(*testing.T)) bool {
 	if setup != nil {
-		fmt.Printf("Calling the setup function")
 		setup(t)
 	}
 	cfg := mapping.NewConfiguration(configFile)
 	err := lbconfig.Evaluate(cfg, defaultTimeout)
 	if cleanup != nil {
-		fmt.Printf("Setting the call for the cleanup")
 		defer cleanup(t)
 	}
 	if shouldWork == true {
@@ -55,6 +52,7 @@ func runEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue i
 }
 
 func runMultipleTests(t *testing.T, myTests []lbTest) {
+	logger.SetLevel(logger.ERROR)
 	for _, myTest := range myTests {
 		logger.Info("Running th test %v\n", myTest.title)
 		if t.Run(myTest.title, func(t *testing.T) {
