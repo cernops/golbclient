@@ -1,13 +1,10 @@
 package ci
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
@@ -26,43 +23,6 @@ func TestCICollectdCLI(t *testing.T) {
 	logger.Trace("CI [collectdctl] output [%s]", output)
 }
 
-type lbTest struct {
-	title         string
-	configuration string
-	shouldWork    bool
-	metricValue   int
-	setup         func(*testing.T)
-	cleanup       func(*testing.T)
-}
-
-func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue int, setup func(*testing.T), cleanup func(*testing.T)) {
-	if setup != nil {
-		fmt.Printf("Calling the setup function")
-		setup(t)
-	}
-	cfg := mapping.NewConfiguration(configFile)
-	err := lbconfig.Evaluate(cfg, defaultTimeout)
-	if cleanup != nil {
-		fmt.Printf("Setting the call for the cleanup")
-		defer cleanup(t)
-	}
-	if shouldWork == true {
-		if err != nil {
-			logger.Error("Got back an error, and we  were not expecting that. Error [%s] ", err.Error())
-			t.FailNow()
-		}
-	} else {
-		if err == nil {
-			logger.Error("The evaluation of the alias was supposed to fail")
-			t.FailNow()
-		}
-	}
-	if cfg.MetricValue != metricValue {
-		logger.Error("We were expecting the value %v, and got %v", metricValue, cfg.MetricValue)
-		t.FailNow()
-	}
-}
-
 func TestCollectd(t *testing.T) {
 	var myTests [6]lbTest
 	myTests[0] = lbTest{"CollectdFunctionality", "../test/lbclient_collectd_check_single.conf", true, 5, nil, nil}
@@ -71,10 +31,6 @@ func TestCollectd(t *testing.T) {
 	myTests[3] = lbTest{"FailedConfigurationFile", "../test/lbclient_collectd_check_fail.conf", false, -15, nil, nil}
 	myTests[4] = lbTest{"FailedConfigurationFileWithWrongKey", "../test/lbclient_collectd_check_fail_with_wrong_key.conf", false, -15, nil, nil}
 	myTests[5] = lbTest{"FailedConfigurationFileWithEmptyKey", "../test/lbclient_collectd_check_fail_with_empty_key.conf", false, -15, nil, nil}
-	for _, myTest := range myTests {
-		logger.Info("Running th test %v\n", myTest.title)
-		t.Run(myTest.title, func(t *testing.T) {
-			RunEvaluate(t, myTest.configuration, myTest.shouldWork, myTest.metricValue, myTest.setup, myTest.cleanup)
-		})
-	}
+
+	runMultipleTests(t, myTests[:])
 }

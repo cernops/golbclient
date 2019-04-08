@@ -28,14 +28,9 @@ func removeNoLogin(t *testing.T) {
 }
 
 func TestNologin(t *testing.T) {
-	logger.SetLevel(logger.TRACE)
-
 	var myTests [2]lbTest
 	myTests[0] = lbTest{"noLoginWorks", "../test/lbclient_nologin.conf", true, 5, nil, nil}
 	myTests[1] = lbTest{"noLoginFails", "../test/lbclient_nologin.conf", false, -1, createNoLogin, removeNoLogin}
-	for _, myTest := range myTests {
-		t.Run(myTest.title, func(t *testing.T) {
-			RunEvaluate(t, myTest.configuration, myTest.shouldWork, myTest.metricValue, myTest.setup, myTest.cleanup)
-		})
-	}
+
+	runMultipleTests(t, myTests[:])
 }
