@@ -11,6 +11,7 @@ import (
 func createNoLogin(t *testing.T) {
 	path := "/etc/nologin"
 	err := ioutil.WriteFile(path, []byte("Hello"), 0755)
+	logger.Info("Creating the nologin file")
 	if err != nil {
 		t.Errorf("Unable to write file: %v", err)
 		t.FailNow()
@@ -26,7 +27,7 @@ func createNoLogin(t *testing.T) {
 }
 
 func TestNologin(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
+	logger.SetLevel(logger.DEBUG)
 
 	var myTests [2]lbTest
 	myTests[0] = lbTest{"noLoginWorks", "../test/lbclient_nologin.conf", true, 5, nil}
