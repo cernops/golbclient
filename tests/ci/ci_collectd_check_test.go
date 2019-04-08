@@ -32,14 +32,19 @@ type lbTest struct {
 	shouldWork    bool
 	metricValue   int
 	setup         func(*testing.T)
+	cleanup       func(*testing.T)
 }
 
-func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue int, setup func(*testing.T)) {
-	cfg := mapping.NewConfiguration(configFile)
-	err := lbconfig.Evaluate(cfg, defaultTimeout)
+func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue int, setup func(*testing.T), cleanup func(*testing.T)) {
 	if setup != nil {
 		fmt.Printf("Calling the setup function")
 		setup(t)
+	}
+	cfg := mapping.NewConfiguration(configFile)
+	err := lbconfig.Evaluate(cfg, defaultTimeout)
+	if cleanup != nil {
+		fmt.Printf("Setting the call for the cleanup")
+		defer cleanup(t)
 	}
 	if shouldWork == true {
 		if err != nil {
@@ -60,16 +65,16 @@ func RunEvaluate(t *testing.T, configFile string, shouldWork bool, metricValue i
 
 func TestCollectd(t *testing.T) {
 	var myTests [6]lbTest
-	myTests[0] = lbTest{"CollectdFunctionality", "../test/lbclient_collectd_check_single.conf", true, 5, nil}
-	myTests[1] = lbTest{"ConfigurationFile", "../test/lbclient_collectd_check.conf", true, 3, nil}
-	myTests[2] = lbTest{"ConfigurationFileWithKeys", "../test/lbclient_collectd_check_with_keys.conf", true, 7, nil}
-	myTests[3] = lbTest{"FailedConfigurationFile", "../test/lbclient_collectd_check_fail.conf", false, -15, nil}
-	myTests[4] = lbTest{"FailedConfigurationFileWithWrongKey", "../test/lbclient_collectd_check_fail_with_wrong_key.conf", false, -15, nil}
-	myTests[5] = lbTest{"FailedConfigurationFileWithEmptyKey", "../test/lbclient_collectd_check_fail_with_empty_key.conf", false, -15, nil}
+	myTests[0] = lbTest{"CollectdFunctionality", "../test/lbclient_collectd_check_single.conf", true, 5, nil, nil}
+	myTests[1] = lbTest{"ConfigurationFile", "../test/lbclient_collectd_check.conf", true, 3, nil, nil}
+	myTests[2] = lbTest{"ConfigurationFileWithKeys", "../test/lbclient_collectd_check_with_keys.conf", true, 7, nil, nil}
+	myTests[3] = lbTest{"FailedConfigurationFile", "../test/lbclient_collectd_check_fail.conf", false, -15, nil, nil}
+	myTests[4] = lbTest{"FailedConfigurationFileWithWrongKey", "../test/lbclient_collectd_check_fail_with_wrong_key.conf", false, -15, nil, nil}
+	myTests[5] = lbTest{"FailedConfigurationFileWithEmptyKey", "../test/lbclient_collectd_check_fail_with_empty_key.conf", false, -15, nil, nil}
 	for _, myTest := range myTests {
 		logger.Info("Running th test %v\n", myTest.title)
 		t.Run(myTest.title, func(t *testing.T) {
-			RunEvaluate(t, myTest.configuration, myTest.shouldWork, myTest.metricValue, myTest.setup)
+			RunEvaluate(t, myTest.configuration, myTest.shouldWork, myTest.metricValue, myTest.setup, myTest.cleanup)
 		})
 	}
 }
