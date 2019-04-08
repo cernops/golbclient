@@ -1,42 +1,21 @@
 package ci
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 	"testing"
+
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
 )
 
-// TestLemonLoadFunctionality : fundamental functionality test for the [lemon-cli], output value must be = 1
-func TestLemonLoadFunctionality(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
-	cfg := mapping.NewConfiguration("../test/lbclient_lemon_load_single.conf", "myTest")
-	err := lbconfig.Evaluate(cfg, defaultTimeout)
-	if err != nil {
-		logger.Error("Detected an error when attempting to evaluate the alias [%s], Error [%s]", cfg.ConfigFilePath, err.Error())
-		t.Fail()
-	}
-	if cfg.MetricValue != 1 {
-		logger.Error("The expected metric value was [1] but got [%d] instead. Failing the test...", cfg.MetricValue)
-		t.Fail()
-	}
-}
+func TestLemonLoad(t *testing.T) {
+	var myTests [3]lbTest
+	myTests[0] = lbTest{"LemonLoadSingle", "../test/lbclient_lemon_load_single.conf", true, 1, nil, nil}
+	myTests[1] = lbTest{"LemonLoad", "../test/lbclient_lemon_load.conf", true, 27, nil, nil}
+	myTests[2] = lbTest{"LemonFailed", "../test/lbclient_lemon_check_fail.conf", false, -11, nil, nil}
 
-// TestLemonLoadConfigurationFile : integration test for all the functionality supplied by the lemon-cli, output value must be = 35
-func TestLemonLoadConfigurationFile(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
-
-	cfg := mapping.NewConfiguration("../test/lbclient_lemon_load.conf", "lemonTest")
-	err := lbconfig.Evaluate(cfg, defaultTimeout)
-	if err != nil {
-		logger.Error("Failed to run the client for the given configuration file [%s]. Error [%s]", cfg.ConfigFilePath, err.Error())
-		t.Fail()
-	}
-	if cfg.MetricValue != 27 {
-		logger.Error("The expected metric value was [27] but got [%d] instead. Failing the test...", cfg.MetricValue)
-		t.Fail()
-	}
+	runMultipleTests(t, myTests[:])
 }
 
 // TestLemonFailedConfigurationFile : integration test for all the functionality supplied by the lemon-cli, fail test
