@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 func createRogerFile(t *testing.T, state string) {
@@ -21,17 +19,16 @@ func createRogerFile(t *testing.T, state string) {
 		t.FailNow()
 	}
 }
-
-func TestRogerFunctionality(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
-
+func createRogerFileProduction(t *testing.T) {
 	createRogerFile(t, "production")
-	runEvaluate(t, "../test/lbclient_roger.conf", true, 42, nil, nil)
+}
+func createRogerFileDraining(t *testing.T) {
+	createRogerFile(t, "draining")
 }
 
-func TestRogerFailedFunctionality(t *testing.T) {
-	logger.SetLevel(logger.FATAL)
-
-	createRogerFile(t, "draining")
-	runEvaluate(t, "../test/lbclient_roger.conf", false, -13, nil, nil)
+func TestRoger(t *testing.T) {
+	var myTests [2]lbTest
+	myTests[0] = lbTest{"LemonLoadSingle", "../test/lbclient_roger.conf", true, 42, createRogerFileProduction, nil}
+	myTests[1] = lbTest{"LemonLoadSingle", "../test/lbclient_roger.conf", false, -13, createRogerFileDraining, nil}
+	runMultipleTests(t, myTests[:])
 }

@@ -27,7 +27,7 @@ func TestLemon(t *testing.T) {
 	var myTests [3]lbTest
 	myTests[0] = lbTest{"CollectdFunctionality", "../test/lbclient_lemon_check_single.conf", true, 12, nil, nil}
 	myTests[1] = lbTest{"ConfigurationFile", "../test/lbclient_lemon_check.conf", true, 8, nil, nil}
-	myTests[2] = lbTest{"LemonFailed", "../test/lbclient_lemon_check_fail", false, -11, nil, nil}
+	myTests[2] = lbTest{"LemonFailed", "../test/lbclient_lemon_check_fail.conf", false, -12, nil, nil}
 
 	runMultipleTests(t, myTests[:])
 }
