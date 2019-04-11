@@ -106,11 +106,10 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 					cm.MetricValue = negRet
 					return fmt.Errorf("metric [%s] returned a negative number [%v]", cliName, ret)
 				}
-				if len(ret.([]interface{})) != 0 && !checkConfig {
+				if len(ret.([]interface{})) < 0 && !checkConfig {
 					cm.MetricValue = negRet
 					return nil
 				}
-
 				retVal := ret.([]interface{})[0].(int32)
 				cm.MetricValue += int(retVal)
 			} else {
