@@ -29,8 +29,8 @@ func TestCollectd(t *testing.T) {
 		lbTest{title: "ConfigurationFile", configuration: "../test/lbclient_collectd_check.conf", expectedMetricValue: 3},
 		lbTest{title: "ConfigurationFileWithKeys", configuration: "../test/lbclient_collectd_check_with_keys.conf", expectedMetricValue: 7},
 		lbTest{title: "FailedConfigurationFile", configuration: "../test/lbclient_collectd_check_fail.conf", shouldFail: true, expectedMetricValue: -15},
-		lbTest{title: "FailedConfigurationFileWithWrongKey", configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", expectedMetricValue: -15},
-		lbTest{title: "FailedConfigurationFileWithEmptyKey", configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", expectedMetricValue: -15},
+		lbTest{title: "FailedConfigurationFileWithWrongKey", configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", shouldFail: true, expectedMetricValue: -15},
+		lbTest{title: "FailedConfigurationFileWithEmptyKey", configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", shouldFail: true, expectedMetricValue: -15},
 	}
 
 	runMultipleTests(t, myTests)

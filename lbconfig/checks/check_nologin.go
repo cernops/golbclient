@@ -37,7 +37,7 @@ func (nl NoLogin) Run(args ...interface{}) (interface{}, error) {
 		_, err := os.Stat(file)
 
 		if err == nil {
-			logger.Debug("File [%s] is present", file)
+			logger.Error("File [%s] is present", file)
 			return false, nil
 		}
 	}

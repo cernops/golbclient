@@ -2,9 +2,10 @@ package checks
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 	"regexp"
 	"strings"
+
+	param "gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
@@ -27,9 +28,8 @@ func (g ParamCheck) Run(args ...interface{}) (interface{}, error) {
 	if g.Type == nil {
 		if isCheck {
 			return false, fmt.Errorf("expected a Type of check to be given, please see the contract [Parameterized]")
-		} else {
-			return -1, fmt.Errorf("expected a Type of check to be given, please see the contract [Parameterized]")
 		}
+		return -1, fmt.Errorf("expected a Type of check to be given, please see the contract [Parameterized]")
 	}
 
 	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
@@ -108,7 +108,6 @@ func preventPanic(isCheck bool, isLoad bool) interface{} {
 		return nil
 	}
 }
-
 
 // compatibilityProcess : Processes the metric line so that all the metrics found (_metric) are ported to the new format ([metric])
 func (g ParamCheck) compatibilityProcess(metric *string) {

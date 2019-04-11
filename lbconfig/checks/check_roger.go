@@ -39,7 +39,7 @@ func (rogerState RogerState) Run(a ...interface{}) (interface{}, error) {
 		return true, nil
 	}
 
-	logger.Info("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
+	logger.Error("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
 	return false, nil
 
 }

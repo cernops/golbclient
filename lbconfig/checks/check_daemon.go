@@ -3,9 +3,10 @@ package checks
 import (
 	"bufio"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"os"
 	"regexp"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 type DaemonListening struct {
@@ -18,7 +19,7 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 		logger.Error("Error opening [%s]", proc)
 		return false
 	}
-	defer func() {err = file.Close()}()
+	defer func() { err = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	// The format of the file is 'sl  local_address rem_address   st'
@@ -34,6 +35,7 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 			return true
 		}
 	}
+	logger.Error("The port [%s] is closed", portHex)
 	return false
 }
 

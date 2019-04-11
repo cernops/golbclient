@@ -24,6 +24,7 @@ func (command Command) Run(args ...interface{}) (interface{}, error) {
 		logger.Trace("Attempting to run command [%s]", usrCmd)
 		out, err := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
+			logger.Error("The command [%s] failed", usrCmd)
 			return false, err
 		}
 
