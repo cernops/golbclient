@@ -5,11 +5,12 @@ import (
 )
 
 func TestCommand(t *testing.T) {
-	var myTests [3]lbTest
+	myTests := []lbTest{
 
-	myTests[0] = lbTest{"Command", "../test/lbclient_command.conf", "", true, 53, nil, nil}
-	myTests[1] = lbTest{"CommandDoesNotExist", "../test/lbclient_failed_command.conf", "", true, -14, nil, nil}
-	myTests[2] = lbTest{"CommandFail", "../test/lbclient_command_failed.conf", "", true, -14, nil, nil}
+		lbTest{title: "Command", configuration: "../test/lbclient_command.conf", expectedMetricValue: 53},
+		lbTest{title: "CommandDoesNotExist", configuration: "../test/lbclient_failed_command.conf", expectedMetricValue: -14},
+		lbTest{title: "CommandFail", configuration: "../test/lbclient_command_failed.conf", expectedMetricValue: -14},
+	}
 
-	//runMultipleTests(t, false, myTests[:])
+	runMultipleTests(t, myTests)
 }

@@ -28,9 +28,10 @@ func removeNoLogin(t *testing.T) {
 }
 
 func TestNologin(t *testing.T) {
-	var myTests [2]lbTest
-	myTests[0] = lbTest{"noLoginWorks", "../test/lbclient_nologin.conf", "", true, 5, nil, nil}
-	myTests[1] = lbTest{"noLoginFails", "../test/lbclient_nologin.conf", "", true, -1, createNoLogin, removeNoLogin}
+	myTests := []lbTest{
+		lbTest{title: "noLoginWorks", configuration: "../test/lbclient_nologin.conf", expectedMetricValue: 5},
+		lbTest{title: "noLoginFails", configuration: "../test/lbclient_nologin.conf", expectedMetricValue: -1, setup: createNoLogin, cleanup: removeNoLogin},
+	}
 
-	//runMultipleTests(t, false, myTests[:])
+	runMultipleTests(t, myTests)
 }

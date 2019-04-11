@@ -10,5 +10,5 @@ import (
 func TestConstantLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
 
-	//	runEvaluate(t, false, lbTest{"constant load", "../test/lbclient_constant.conf", "", true, 250, nil, nil})
+	runEvaluate(t, lbTest{title: "constant load", configuration: "../test/lbclient_constant.conf", expectedMetricValue: 250})
 }

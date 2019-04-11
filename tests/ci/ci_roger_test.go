@@ -27,8 +27,9 @@ func createRogerFileDraining(t *testing.T) {
 }
 
 func TestRoger(t *testing.T) {
-	var myTests [2]lbTest
-	myTests[0] = lbTest{"LemonLoadSingle", "../test/lbclient_roger.conf", "", true, 42, createRogerFileProduction, nil}
-	myTests[1] = lbTest{"LemonLoadSingle", "../test/lbclient_roger.conf", "", true, -13, createRogerFileDraining, nil}
-	//	runMultipleTests(t, false, myTests[:])
+	myTests := []lbTest{
+		lbTest{title: "LemonLoadSingle", configuration: "../test/lbclient_roger.conf", expectedMetricValue: 42, setup: createRogerFileProduction},
+		lbTest{title: "LemonLoadSingle", configuration: "../test/lbclient_roger.conf", expectedMetricValue: -13, setup: createRogerFileDraining},
+	}
+	runMultipleTests(t, myTests)
 }

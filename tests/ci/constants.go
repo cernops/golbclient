@@ -18,7 +18,7 @@ type lbTest struct {
 	title                string
 	configuration        string
 	configurationContent string
-	shouldWork           bool
+	shouldFail           bool
 	expectedMetricValue  int
 	validateConfig       bool
 	setup                func(*testing.T)
@@ -26,18 +26,18 @@ type lbTest struct {
 }
 
 func runEvaluate(t *testing.T, test lbTest) bool {
-	if myTest.setup != nil {
-		myTest.setup(t)
+	if test.setup != nil {
+		test.setup(t)
 	}
 	var configFile string
-	if myTest.configuration != "" {
-		configFile = myTest.configuration
+	if test.configuration != "" {
+		configFile = test.configuration
 	} else {
 		file, err := ioutil.TempFile("/tmp", "lbclient_test")
 		if err != nil {
 			t.FailNow()
 		}
-		_, err = file.WriteString(myTest.configurationContent)
+		_, err = file.WriteString(test.configurationContent)
 		if err != nil {
 			t.FailNow()
 		}
@@ -45,25 +45,25 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 		configFile = file.Name()
 	}
 	cfg := mapping.NewConfiguration(configFile)
-	err := lbconfig.Evaluate(cfg, defaultTimeout, myTest.validateConfig)
-	if myTest.cleanup != nil {
-		defer myTest.cleanup(t)
+	err := lbconfig.Evaluate(cfg, defaultTimeout, test.validateConfig)
+	if test.cleanup != nil {
+		defer test.cleanup(t)
 	}
-	if myTest.shouldWork == true {
-		if err != nil {
-			logger.Error("Got back an error, and we were not expecting that. Error [%s] ", err.Error())
-			t.FailNow()
-			return false
-		}
-	} else {
+	if test.shouldFail {
 		if err == nil {
 			logger.Error("The evaluation of the alias was supposed to fail")
 			t.FailNow()
 			return false
 		}
+	} else {
+		if err != nil {
+			logger.Error("Got back an error, and we were not expecting that. Error [%s] ", err.Error())
+			t.FailNow()
+			return false
+		}
 	}
-	if cfg.MetricValue != myTest.metricValue {
-		logger.Error("We were expecting the value [%v], and got [%v]", myTest.metricValue, cfg.MetricValue)
+	if cfg.MetricValue != test.expectedMetricValue {
+		logger.Error("We were expecting the value [%v], and got [%v]", test.expectedMetricValue, cfg.MetricValue)
 		t.FailNow()
 		return false
 	}

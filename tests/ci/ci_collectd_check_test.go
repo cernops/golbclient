@@ -24,13 +24,14 @@ func TestCICollectdCLI(t *testing.T) {
 }
 
 func TestCollectd(t *testing.T) {
-	var myTests [6]lbTest
-	myTests[0] = lbTest{title: "CollectdFunctionality", configuration: "../test/lbclient_collectd_check_single.conf", shouldWork: true, metricValue: 5}
-	myTests[1] = lbTest{title: "ConfigurationFile", configuration: "../test/lbclient_collectd_check.conf", shouldWork: true, metricValue: 3}
-	myTests[2] = lbTest{title: "ConfigurationFileWithKeys", configuration: "../test/lbclient_collectd_check_with_keys.conf", shouldWork: true, metricValue: 7}
-	myTests[3] = lbTest{title: "FailedConfigurationFile", configuration: "../test/lbclient_collectd_check_fail.conf", shouldWork: true, metricValue: -15}
-	myTests[4] = lbTest{title: "FailedConfigurationFileWithWrongKey", configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", shouldWork: true, metricValue: -15}
-	myTests[5] = lbTest{title: "FailedConfigurationFileWithEmptyKey", configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", shouldWork: true, metricValue: -15}
+	myTests := []lbTest{
+		lbTest{title: "CollectdFunctionality", configuration: "../test/lbclient_collectd_check_single.conf", expectedMetricValue: 5},
+		lbTest{title: "ConfigurationFile", configuration: "../test/lbclient_collectd_check.conf", expectedMetricValue: 3},
+		lbTest{title: "ConfigurationFileWithKeys", configuration: "../test/lbclient_collectd_check_with_keys.conf", expectedMetricValue: 7},
+		lbTest{title: "FailedConfigurationFile", configuration: "../test/lbclient_collectd_check_fail.conf", expectedMetricValue: -15},
+		lbTest{title: "FailedConfigurationFileWithWrongKey", configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", expectedMetricValue: -15},
+		lbTest{title: "FailedConfigurationFileWithEmptyKey", configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", expectedMetricValue: -15},
+	}
 
-	//	runMultipleTests(t, false, myTests[:])
+	runMultipleTests(t, myTests)
 }
