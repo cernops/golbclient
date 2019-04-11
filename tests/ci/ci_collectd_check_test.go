@@ -28,7 +28,7 @@ func TestCollectd(t *testing.T) {
 		lbTest{title: "CollectdFunctionality", configuration: "../test/lbclient_collectd_check_single.conf", expectedMetricValue: 5},
 		lbTest{title: "ConfigurationFile", configuration: "../test/lbclient_collectd_check.conf", expectedMetricValue: 3},
 		lbTest{title: "ConfigurationFileWithKeys", configuration: "../test/lbclient_collectd_check_with_keys.conf", expectedMetricValue: 7},
-		lbTest{title: "FailedConfigurationFile", configuration: "../test/lbclient_collectd_check_fail.conf", expectedMetricValue: -15},
+		lbTest{title: "FailedConfigurationFile", configuration: "../test/lbclient_collectd_check_fail.conf", shouldFail: true, expectedMetricValue: -15},
 		lbTest{title: "FailedConfigurationFileWithWrongKey", configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", expectedMetricValue: -15},
 		lbTest{title: "FailedConfigurationFileWithEmptyKey", configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", expectedMetricValue: -15},
 	}
