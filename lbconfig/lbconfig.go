@@ -46,7 +46,7 @@ var allLBExpressions = map[string]ExpressionCode{
 */
 
 // Evaluate : Evaluates a [lbalias] entry
-func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
+func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConfig bool) error {
 	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
 
 	// Create a string array containing all the checksToExecute to be performed
@@ -66,7 +66,7 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 	logger.Debug("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
 
 	// Detect all comments
-	comment, _ := regexp.Compile("^(#.*)?$")
+	comment, _ := regexp.Compile("^[ \t]*(#.*)?$")
 	// Detect all checksToExecute to be made
 	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checksToExecute, "|") + ")")
 	// Detect all loads to be made
@@ -82,11 +82,16 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 			/********************************** CHECKS **********************************/
 			myAction := strings.ToUpper(runningChecks[1])
 			negRet := -allLBExpressions[myAction].code
+			logger.Info("Doing ", myAction)
 			ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default)
-			if err != nil || ret.([]interface{})[0] == false {
+			logger.Info("Do we have an error, ", ret, err)
+			if err != nil {
 				cm.MetricValue = negRet
-				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
-					myAction, cm.MetricValue)
+				return err
+			}
+			if ret.([]interface{})[0] == false && !checkConfig {
+				cm.MetricValue = negRet
+				return nil
 			}
 			continue
 		}
@@ -97,9 +102,13 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 			negRet := -allLBExpressions[cliName].code
 			if cliName == "LEMON" || cliName == "COLLECTD" {
 				ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[cliName].cli.Run, line)
-				if err != nil && len(ret.([]interface{})) != 0 {
+				if err != nil {
 					cm.MetricValue = negRet
 					return fmt.Errorf("metric [%s] returned a negative number [%v]", cliName, ret)
+				}
+				if len(ret.([]interface{})) != 0 && !checkConfig {
+					cm.MetricValue = negRet
+					return nil
 				}
 
 				retVal := ret.([]interface{})[0].(int32)
@@ -115,6 +124,12 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
 		}
 		// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
 		logger.Error("Unable to parse the configuration file line [%s]", line)
+		cm.MetricValue = -1
+		return fmt.Errorf("Unable to parse the configuration file line [%s]", line)
+	}
+	if checkConfig {
+		logger.Info("The configuration file is correct")
+		return nil
 	}
 
 	if cm.MetricValue == 0 {

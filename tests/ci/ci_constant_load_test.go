@@ -9,5 +9,6 @@ import (
 // TestConstantLoadFunctionality : fundamental functionality test for the [load constant], output value must be = 250
 func TestConstantLoadFunctionality(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	runEvaluate(t, "../test/lbclient_constant.conf", true, 250, nil, nil)
+
+	//	runEvaluate(t, false, lbTest{"constant load", "../test/lbclient_constant.conf", "", true, 250, nil, nil})
 }

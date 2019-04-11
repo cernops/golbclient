@@ -14,8 +14,10 @@ type LogRotateCfg struct {
 	MsgBuffer   int  `long:"msgBuffer" default:"100" description:"The message buffer capacity."`
 }
 
+// ExecutionConf options for the execution
 type ExecutionConf struct {
-	MetricTimeout time.Duration `long:"timeout" default:"30s" description:"The timeout value used when executing a metric line"`
+	MetricTimeout time.Duration `hidden:"true" long:"timeout" default:"30s" description:"The timeout value used when executing a metric line"`
+	CheckConfig   bool          `short:"t" long:"checkconfig" description:"Checks that the configuration file is correct. Returns 0 if it is"  `
 }
 
 // Options : Supported application flags
@@ -31,7 +33,7 @@ type Options struct {
 	LbAliasFile             string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`
 	LbMetricDefaultFileName string `short:"c" long:"conf-name" default:"lbclient.conf" description:"Set the default name to be used to lookup for the generic configuration file"`
 	/* Execution specific */
-	ExecutionConfiguration ExecutionConf `hidden:"true" group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
+	ExecutionConfiguration ExecutionConf `group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
 	/* Misc */
 	Version bool   `short:"v" long:"version" description:"Version of the file"`
 	GData   string `short:"g" long:"gdata" description:"Option needed by the snmp calls"`

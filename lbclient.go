@@ -55,7 +55,10 @@ func main() {
 		logger.Fatal("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
 		os.Exit(1)
 	}
-
-	// Print the output
-	launcher.PrintOutput(OID)
+	if launcher.AppOptions.ExecutionConfiguration.CheckConfig {
+		logger.Info("The configuration file is correct")
+	} else {
+		// Print the output
+		launcher.PrintOutput(OID)
+	}
 }
