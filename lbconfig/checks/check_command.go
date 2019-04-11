@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -14,7 +15,7 @@ type Command struct{}
 	@TODO use the runner API to enable pipped commands support
 */
 
-func (command Command) Run(args ...interface{}) (interface{}, error) {
+func (command Command) Run(args ...interface{}) (int, error) {
 	cmd, _ := regexp.Compile("(?i)(^check[ ]+command)")
 	line := args[0].(string)
 	found := cmd.Split(line, -1)
@@ -25,11 +26,12 @@ func (command Command) Run(args ...interface{}) (interface{}, error) {
 		out, err := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
 			logger.Error("The command [%s] failed", usrCmd)
-			return false, err
+			return -1, err
 		}
 
 		logger.Debug("Command output [%s]", out)
-		return true, nil
+		return 1, nil
 	}
-	return false, nil
+
+	return -1, fmt.Errorf("there was no command to execute in the line [%s]", line)
 }

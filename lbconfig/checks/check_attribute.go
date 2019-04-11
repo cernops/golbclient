@@ -3,7 +3,7 @@ package checks
 type CheckAttribute struct {
 }
 
-func (checkAttribute CheckAttribute) Run(...interface{}) (interface{}, error) {
+func (checkAttribute CheckAttribute) Run(...interface{}) (int, error) {
 	// This will be used later on for the default load
-	return true, nil
+	return -1, nil
 }

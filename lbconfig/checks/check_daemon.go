@@ -39,19 +39,19 @@ func (daemon DaemonListening) daemonListen(proc string) bool {
 	return false
 }
 
-func (daemon DaemonListening) Run(args ...interface{}) (interface{}, error) {
-	rVal := false
+func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
+	rVal := -1
 	if (daemon.Port < 1) || (daemon.Port > 65535) {
-		return false, fmt.Errorf("the daemon port is out of range. Must be within the limit [1-65535]")
+		return -1, fmt.Errorf("the daemon port is out of range. Must be within the limit [1-65535]")
 	}
 	var listen []string
 	if daemon.daemonListen("/proc/net/tcp") {
 		listen = append(listen, "ipv4")
-		rVal = true
+		rVal = 1
 	}
 	if daemon.daemonListen("/proc/net/tcp6") {
 		listen = append(listen, "ipv6")
-		rVal = true
+		rVal = 1
 	}
 
 	if logger.GetLevel() == logger.DEBUG {
