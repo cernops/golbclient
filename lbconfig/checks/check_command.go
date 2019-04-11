@@ -1,13 +1,14 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"regexp"
 	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
-type Command struct {}
+type Command struct{}
 
 /*
 	@TODO use the runner API to enable pipped commands support

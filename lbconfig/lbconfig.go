@@ -82,9 +82,9 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 			/********************************** CHECKS **********************************/
 			myAction := strings.ToUpper(runningChecks[1])
 			negRet := -allLBExpressions[myAction].code
-			logger.Info("Doing ", myAction)
+
 			ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default)
-			logger.Info("Do we have an error, ", ret, err)
+
 			if err != nil {
 				cm.MetricValue = negRet
 				return err
