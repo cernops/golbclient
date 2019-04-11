@@ -21,6 +21,7 @@ type lbTest struct {
 	shouldFail           bool
 	expectedMetricValue  int
 	validateConfig       bool
+	timeout              time.Duration
 	setup                func(*testing.T)
 	cleanup              func(*testing.T)
 }
@@ -45,7 +46,11 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 		configFile = file.Name()
 	}
 	cfg := mapping.NewConfiguration(configFile)
-	err := lbconfig.Evaluate(cfg, defaultTimeout, test.validateConfig)
+
+	if test.timeout == 0 {
+		test.timeout = defaultTimeout
+	}
+	err := lbconfig.Evaluate(cfg, test.timeout, test.validateConfig)
 	if test.cleanup != nil {
 		defer test.cleanup(t)
 	}
@@ -71,7 +76,7 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 }
 
 func runMultipleTests(t *testing.T, myTests []lbTest) {
-	logger.SetLevel(logger.ERROR)
+	logger.SetLevel(logger.FATAL)
 	for _, myTest := range myTests {
 		logger.Info("Running the test [%v]", myTest.title)
 		if t.Run(myTest.title, func(t *testing.T) {
