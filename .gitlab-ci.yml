@@ -61,6 +61,7 @@ build-go10:
 build-go11:
   stage: build
   script:
+    - yum install gcc -y
     - go11 build -race ./...
 
 test-go09:
