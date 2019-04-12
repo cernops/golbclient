@@ -1,6 +1,7 @@
 package ci
 
 import (
+	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 
@@ -11,26 +12,33 @@ import (
 // TestCICollectdCLI : checks if the alternative [collectd] used in the CI pipeline is OK
 func TestCICollectdCLI(t *testing.T) {
 	logger.SetLevel(logger.ERROR)
-	output, err := runner.Run("/usr/bin/collectdctl",
-		true, defaultTimeout, "getval", "test")
-	if err != nil {
-		logger.Error("An error was detected when running the CI [collectdctl]. Error [%s]", err.Error())
-		t.FailNow()
-	} else if len(strings.TrimSpace(output)) == 0 {
-		logger.Error("The CI [collectdctl] failed to return a row value for a pre-defined metric")
-		t.FailNow()
-	}
-	logger.Trace("CI [collectdctl] output [%s]", output)
+	cliPath := "/usr/bin/collectdctl"
+	metricId :=  "test"
+	output, err := runner.Run(cliPath,true, defaultTimeout, "getval", metricId)
+
+	assert.Nil(t, err, "An error was detected when running the CLI [collectdctl] at [%s]. Error [%s]",
+		cliPath, err)
+	assert.NotEmpty(t, strings.TrimSpace(output),
+		"The CLI [collectdctl] failed to return a row value for a pre-defined metric [%s]. " +
+			"Failing the test...", metricId)
+
+	logger.Trace("CLI [collectdctl] output [%s]", output)
 }
 
 func TestCollectd(t *testing.T) {
 	myTests := []lbTest{
-		lbTest{title: "CollectdFunctionality", configuration: "../test/lbclient_collectd_check_single.conf", expectedMetricValue: 5},
-		lbTest{title: "ConfigurationFile", configuration: "../test/lbclient_collectd_check.conf", expectedMetricValue: 3},
-		lbTest{title: "ConfigurationFileWithKeys", configuration: "../test/lbclient_collectd_check_with_keys.conf", expectedMetricValue: 7},
-		lbTest{title: "FailedConfigurationFile", configuration: "../test/lbclient_collectd_check_fail.conf", shouldFail: true, expectedMetricValue: -15},
-		lbTest{title: "FailedConfigurationFileWithWrongKey", configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", shouldFail: true, expectedMetricValue: -15},
-		lbTest{title: "FailedConfigurationFileWithEmptyKey", configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", shouldFail: true, expectedMetricValue: -15},
+		{title: "CollectdFunctionality",
+			configuration: "../test/lbclient_collectd_check_single.conf", expectedMetricValue: 5},
+		{title: "ConfigurationFile",
+			configuration: "../test/lbclient_collectd_check.conf", expectedMetricValue: 3},
+		{title: "ConfigurationFileWithKeys",
+			configuration: "../test/lbclient_collectd_check_with_keys.conf", expectedMetricValue: 7},
+		{title: "FailedConfigurationFile",
+			configuration: "../test/lbclient_collectd_check_fail.conf", shouldFail: true, expectedMetricValue: -15},
+		{title: "FailedConfigurationFileWithWrongKey",
+			configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf", shouldFail: true, expectedMetricValue: -15},
+		{title: "FailedConfigurationFileWithEmptyKey",
+			configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf", shouldFail: true, expectedMetricValue: -15},
 	}
 
 	runMultipleTests(t, myTests)
@@ -38,9 +46,13 @@ func TestCollectd(t *testing.T) {
 
 func TestCollectdLoad(t *testing.T) {
 	myTests := []lbTest{
-		lbTest{title: "CollectdLoad", configuration: "../test/lbclient_collectd_load_single.conf", expectedMetricValue: 98},
-		lbTest{title: "LoadConfigurationFile", configuration: "../test/lbclient_collectd_load.conf", expectedMetricValue: 72},
-		lbTest{title: "LoadFailedConfigurationFile", configuration: "../test/lbclient_collectd_load_fail.conf", shouldFail: true, expectedMetricValue: -15},
+		{title: "CollectdLoad",
+			configuration: "../test/lbclient_collectd_load_single.conf", expectedMetricValue: 98},
+		{title: "LoadConfigurationFile",
+			configuration: "../test/lbclient_collectd_load.conf", expectedMetricValue: 72},
+		{title: "LoadFailedConfigurationFile",
+			configuration: "../test/lbclient_collectd_load_fail.conf", shouldFail: true, expectedMetricValue: -15},
 	}
+
 	runMultipleTests(t, myTests)
 }

@@ -1,6 +1,9 @@
+//+build linux darwin
+
 package ci
 
 import (
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -26,50 +29,60 @@ type lbTest struct {
 	cleanup              func(*testing.T)
 }
 
-func runEvaluate(t *testing.T, test lbTest) bool {
-	if test.setup != nil {
-		test.setup(t)
-	}
-	var configFile string
-	if test.configuration != "" {
-		configFile = test.configuration
+func (l *lbTest) setupConfigurationFile(t *testing.T) {
+	if l.configuration != "" {
+		return
 	} else {
 		file, err := ioutil.TempFile("/tmp", "lbclient_test")
-		if err != nil {
-			t.FailNow()
-		}
-		_, err = file.WriteString(test.configurationContent)
-		if err != nil {
-			t.FailNow()
-		}
-		defer os.Remove(file.Name())
-		configFile = file.Name()
-	}
-	cfg := mapping.NewConfiguration(configFile)
+		assert.Nil(t, err, "An unexpected error occurred when attempting to create the temporary test file. " +
+				"Error [%s]", err.Error())
 
-	if test.timeout == 0 {
-		test.timeout = defaultTimeout
+		_, err = file.WriteString(l.configurationContent)
+		assert.Nil(t, err, "An unexpected error occurred when attempting to write the temporary test file [%s]." +
+				" Error [%s]", file.Name(), err.Error())
+
+		defer func() {
+			if err := os.Remove(file.Name()); err != nil {
+				logger.Warn("An unexpected error occurred when attempting to close the file [%s]. Error [%s]",
+					file.Name(), err.Error())
+			}
+		}()
+		l.configuration = file.Name()
 	}
-	err := lbconfig.Evaluate(cfg, test.timeout, test.validateConfig)
+}
+
+func runEvaluate(t *testing.T, test lbTest) bool {
+	assert.NotNil(t, test)
+	logger.Debug("Attempting to run the test [%v]...", test.title)
+	if test.setup != nil {
+		logger.Trace("Executing the [setUp] function [%v]...", test.setup)
+		test.setup(t)
+	}
 	if test.cleanup != nil {
+		logger.Trace("Executing the [tearDown] function [%v]...", test.cleanup)
 		defer test.cleanup(t)
 	}
+
+	test.setupConfigurationFile(t)
+	cfg := mapping.NewConfiguration(test.configuration)
+
+	if test.timeout == 0 {	test.timeout = defaultTimeout	}
+	err := lbconfig.Evaluate(cfg, test.timeout, test.validateConfig)
+
 	if test.shouldFail {
 		if err == nil {
-			logger.Error("The evaluation of the alias was supposed to fail")
-			t.FailNow()
+			t.Fatalf("Received a null error when expecting the test to fail. Failing test...")
 			return false
 		}
 	} else {
 		if err != nil {
-			logger.Error("Got back an error, and we were not expecting that. Error [%s] ", err.Error())
-			t.FailNow()
+			t.Fatalf("Unexpected error received. Error [%s] ", err.Error())
 			return false
 		}
 	}
 	if cfg.MetricValue != test.expectedMetricValue {
-		logger.Error("We were expecting the value [%v], and got [%v]", test.expectedMetricValue, cfg.MetricValue)
-		t.FailNow()
+		t.Fatalf("Received the metric value [%v] but was expecting [%v]. Failing the test...",
+			cfg.MetricValue, test.expectedMetricValue)
 		return false
 	}
 	return true
@@ -78,11 +91,10 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 func runMultipleTests(t *testing.T, myTests []lbTest) {
 	logger.SetLevel(logger.FATAL)
 	for _, myTest := range myTests {
-		logger.Info("Running the test [%v]", myTest.title)
 		if t.Run(myTest.title, func(t *testing.T) {
 			runEvaluate(t, myTest)
 		}) != true {
-			logger.Error("The command [%v] failed. Repeating with [TRACE] verbose level...", myTest.title)
+			logger.Error("The command [%v] failed. Repeating with [TRACE] verbosity level...", myTest.title)
 			logger.SetLevel(logger.TRACE)
 			runEvaluate(t, myTest)
 			logger.SetLevel(logger.ERROR)

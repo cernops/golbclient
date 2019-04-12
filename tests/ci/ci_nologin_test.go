@@ -1,6 +1,7 @@
 package ci
 
 import (
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -10,27 +11,26 @@ import (
 
 func createNoLogin(t *testing.T) {
 	path := "/etc/nologin"
+	logger.Debug("Attempting to create the [nologin] file [%s]...", path)
 	err := ioutil.WriteFile(path, []byte("Hello"), 0755)
-	logger.Info("Creating the nologin file")
-	if err != nil {
-		t.Errorf("Unable to write file: %v", err)
-		t.FailNow()
-	}
+
+	assert.Nil(t, err, "Unable to write file: %v", err)
 }
 func removeNoLogin(t *testing.T) {
 	path := "/etc/nologin"
+	logger.Debug("Attempting to remove the [nologin] file [%s]...", path)
 	err := os.Remove(path)
-	logger.Info("Removing the file\n")
-	if err != nil {
-		t.Errorf("Failed to remove the file %v", err)
-		t.FailNow()
-	}
+
+	assert.Nil(t, err, "Failed to remove the file %v", err)
 }
 
-func TestNologin(t *testing.T) {
+func TestNoLogin(t *testing.T) {
 	myTests := []lbTest{
-		lbTest{title: "noLoginWorks", configuration: "../test/lbclient_nologin.conf", expectedMetricValue: 5},
-		lbTest{title: "noLoginFails", configuration: "../test/lbclient_nologin.conf", expectedMetricValue: -1, setup: createNoLogin, cleanup: removeNoLogin},
+		{title: "noLoginWorks",
+			configuration: "../test/lbclient_nologin.conf", expectedMetricValue: 5},
+		{title: "noLoginFails",
+			configuration: "../test/lbclient_nologin.conf", expectedMetricValue: -1,
+			setup: createNoLogin, cleanup: removeNoLogin},
 	}
 
 	runMultipleTests(t, myTests)
