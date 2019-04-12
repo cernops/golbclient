@@ -3,17 +3,17 @@ package lbconfig
 import (
 	"bytes"
 	"fmt"
+
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
-	"sync"
 )
 
 // AppLauncher : Helper struct that encapsulates the logic of running [lbclient]
 type AppLauncher struct {
-	AppOptions 					appSettings.Options
-	lbConfMappings 				[]*mapping.ConfigurationMapping
-	MetricType, MetricValue 	string
+	AppOptions              appSettings.Options
+	lbConfMappings          []*mapping.ConfigurationMapping
+	MetricType, MetricValue string
 }
 
 // NewAppLauncher : Factory-pattern function that creates and returns a new @see AppLauncher struct instance pointer
@@ -55,8 +55,7 @@ func (l *AppLauncher) ApplyLoggerSettings() error {
 
 // Run : This function encapsulates the following steps of the application runtime:
 // 	1 - Reads the configuration files and creates the correlated @see mapping.ConfigurationMapping instances
-//  2 - Evaluates each of the above created instances concurrently
-// 	3 - Once this function exits, the correlated @see AppLauncher instance gets its MetricType and MetricValue fields
+// 	2 - Once this function exits, the correlated @see AppLauncher instance gets its MetricType and MetricValue fields
 //      populated and ready to be used
 func (l *AppLauncher) Run() error {
 	lbConfMappings, err := mapping.ReadLBConfigFiles(l.AppOptions)
@@ -66,35 +65,28 @@ func (l *AppLauncher) Run() error {
 
 	// Application output
 	var appOutput bytes.Buffer
-
-	// Concurrent evaluation
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(len(lbConfMappings))
-
+	var returnCode error
 	// Evaluate for each of the configuration files found
-	for _, value := range lbConfMappings {
-		go func(confMapping *mapping.ConfigurationMapping) {
-			defer waitGroup.Done()
-			logger.Trace("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
-			err := Evaluate(confMapping, l.AppOptions.ExecutionConfiguration.MetricTimeout)
-			/* Abort if an error occurs */
-			if err != nil {
-				logger.Warn("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)
-			}
-			appOutput.WriteString(confMapping.String() + ",")
-		}(value)
+	for _, confMapping := range lbConfMappings {
+		logger.Trace("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
+		err := Evaluate(confMapping,
+			l.AppOptions.ExecutionConfiguration.MetricTimeout, len(l.AppOptions.ExecutionConfiguration.CheckConfigFilePath) != 0)
+		/* Abort if an error occurs */
+		if err != nil {
+			logger.Warn("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)
+			returnCode = err
+		}
+		appOutput.WriteString(confMapping.String() + ",")
 	}
 
-	// Wait for concurrent loop to finish before proceeding
-	waitGroup.Wait()
 	l.MetricType, l.MetricValue = mapping.GetReturnCode(appOutput, lbConfMappings)
 	logger.Debug("metric = [%s]", l.MetricValue)
 
-	return nil
+	return returnCode
 }
 
 // Output : Returns the formatted output of the @see AppLauncher instance
-func (l *AppLauncher) Output(oid string) string{
+func (l *AppLauncher) Output(oid string) string {
 	return fmt.Sprintf("%s\n%s\n%s\n", oid, l.MetricType, l.MetricValue)
 }
 

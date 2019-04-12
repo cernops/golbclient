@@ -1,19 +1,21 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
+	"fmt"
 	"regexp"
 	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
-type Command struct {}
+type Command struct{}
 
 /*
 	@TODO use the runner API to enable pipped commands support
 */
 
-func (command Command) Run(args ...interface{}) (interface{}, error) {
+func (command Command) Run(args ...interface{}) (int, error) {
 	cmd, _ := regexp.Compile("(?i)(^check[ ]+command)")
 	line := args[0].(string)
 	found := cmd.Split(line, -1)
@@ -23,11 +25,13 @@ func (command Command) Run(args ...interface{}) (interface{}, error) {
 		logger.Trace("Attempting to run command [%s]", usrCmd)
 		out, err := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
-			return false, err
+			logger.Error("The command [%s] failed", usrCmd)
+			return -1, err
 		}
 
 		logger.Debug("Command output [%s]", out)
-		return true, nil
+		return 1, nil
 	}
-	return false, nil
+
+	return -1, fmt.Errorf("there was no command to execute in the line [%s]", line)
 }

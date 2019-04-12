@@ -2,14 +2,12 @@ package logger
 
 import (
 	"fmt"
+	"github.com/jcelliott/lumber"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 	"os"
 	"runtime"
 	"strings"
-
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
-
-	"github.com/jcelliott/lumber"
 )
 
 // Level : lumber logging levels wrapper
