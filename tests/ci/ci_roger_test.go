@@ -16,7 +16,7 @@ func createRogerFile(t *testing.T, state string) {
 	}
 	err := ioutil.WriteFile(path, []byte("---\nappstate: "+state+"\n"), 0755)
 
-	assert.Nil(t, err, err.Error())
+	assert.Nil(t, err)
 }
 
 func createRogerFileProduction(t *testing.T) {

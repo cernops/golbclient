@@ -35,11 +35,11 @@ func (l *lbTest) setupConfigurationFile(t *testing.T) {
 	} else {
 		file, err := ioutil.TempFile("/tmp", "lbclient_test")
 		assert.Nil(t, err, "An unexpected error occurred when attempting to create the temporary test file. " +
-				"Error [%s]", err.Error())
+				"Error [%v]", err)
 
 		_, err = file.WriteString(l.configurationContent)
 		assert.Nil(t, err, "An unexpected error occurred when attempting to write the temporary test file [%s]." +
-				" Error [%s]", file.Name(), err.Error())
+				" Error [%v]", file.Name(), err)
 
 		defer func() {
 			if err := os.Remove(file.Name()); err != nil {
