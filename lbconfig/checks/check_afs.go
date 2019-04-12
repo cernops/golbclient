@@ -1,23 +1,24 @@
 package checks
 
 import (
-	"fmt"
+	"os"
+
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
 const afsDir = "/afs/cern.ch/user/"
 
 // AFS : struct that represent the AFS : CLI implementation
-type AFS struct {}
+type AFS struct{}
 
 // Run : Runs the AFS : CLI implementation function
-func (afs AFS) Run(args ...interface{}) (interface{}, error) {
+func (afs AFS) Run(args ...interface{}) (int, error) {
 	logger.Debug("Checking the that AFS directory is accessible...")
-	output, err := runner.RunCommand(fmt.Sprintf("ls -al %v", afsDir), true, 0)
-	if err != nil  {
-		return false, err
+	if _, err := os.Stat(afsDir); os.IsNotExist(err) {
+		logger.Error("AFS directory does not exist")
+		return -1, nil
 	}
-	logger.Trace("Successfully accessed the AFS directory with output [%v]", output)
-	return true, nil
+
+	logger.Trace("Successfully accessed the AFS directory")
+	return 1, nil
 }

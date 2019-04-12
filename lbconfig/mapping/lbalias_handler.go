@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
@@ -50,18 +49,6 @@ func (cm ConfigurationMapping) String() string {
 	}
 	return out.String()
 }
-func (cm *ConfigurationMapping) AddConstant(exp string) bool {
-	logger.Debug("Adding Constant [%s]", exp)
-	// @TODO: Replace with the parser.ParseInterfaceAsFloat (reflection?)
-	f, err := strconv.ParseFloat(exp, 32)
-	if err != nil {
-		logger.Error("Error parsing the floating point number from the value [%s]", exp)
-		return false
-	}
-
-	cm.MetricValue += int(f)
-	return true
-}
 
 func (cm *ConfigurationMapping) addAlias(alias string) {
 	cm.AliasNames = append(cm.AliasNames, alias)
@@ -69,6 +56,10 @@ func (cm *ConfigurationMapping) addAlias(alias string) {
 
 // ReadLBConfigFiles : Returns all the configuration files to be evaluated
 func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationMapping, err error) {
+	if len(options.ExecutionConfiguration.CheckConfigFilePath) != 0 {
+		confFiles = append(confFiles, NewConfiguration(options.ExecutionConfiguration.CheckConfigFilePath))
+		return
+	}
 
 	tmpConfMap := make(map[string]bool)
 	var defaultMapping *ConfigurationMapping
@@ -101,7 +92,7 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 	lbAliasesFileContent, err := filehandler.ReadAllLinesFromFile(options.LbAliasFile)
 	if err != nil {
 		logger.Debug("There is no lbalias configuration file [%v]", options.LbAliasFile)
-		return
+		return nil, err
 	}
 
 	formatLbLine := regexp.MustCompile(`^\s*lbalias\s*=\s*(\S+)`)

@@ -13,9 +13,9 @@ const (
 	// OID : SNMP identifier
 	OID = ".1.3.6.1.4.1.96.255.1"
 	// Version number
-	Version = "2.0"
+	Version = "2.0.1"
 	// Release number
-	Release = "10"
+	Release = "1"
 )
 
 func main() {
@@ -55,7 +55,10 @@ func main() {
 		logger.Fatal("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
 		os.Exit(1)
 	}
-
-	// Print the output
-	launcher.PrintOutput(OID)
+	if len(launcher.AppOptions.ExecutionConfiguration.CheckConfigFilePath) != 0  {
+		logger.Info("The configuration file is correct")
+	} else {
+		// Print the output
+		launcher.PrintOutput(OID)
+	}
 }
