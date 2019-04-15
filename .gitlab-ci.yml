@@ -45,40 +45,40 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 
-build-go09:
+.build-go09:
   stage: build
   script:
     - export GOPATH=/go
     - go09 get ./...
     - go09 build -race
 
-build-go10:
+.build-go10:
   stage: build
   script:
     - export GOPATH=/go
     - go10 get ./...
     - go10 build -race
 
-build-go11:
+.build-go11:
   stage: build
   script:
     - go11 build -race ./...
 
-test-go09:
+.test-go09:
   stage: test
   script:
     - export GOPATH=/go && go09 get ./...
     - go09 test -v -cover ./tests/ci/...
     - go09 test -race ./tests/ci/...
 
-test-go10:
+.test-go10:
   stage: test
   script:
     - export GOPATH=/go && go10 get ./...
     - go10 test -v -cover ./tests/ci/...
     - go10 test -race ./tests/ci/...
 
-test-go11:
+.test-go11:
   stage: test
   script:
     - go11 test -v -cover ./tests/ci/...
@@ -92,27 +92,27 @@ test-snmpd-call:
     - go11 build -o /usr/local/sbin/lbclient
     - /usr/bin/snmpget -v 3 -u loadbalancing -l authNoPriv -a MD5 -A $SNMP_AUTH localhost .1.3.6.1.4.1.96.255.1
 
-bench-go09:
+.bench-go09:
   stage: benchmark
   script:
     - export GOPATH=/go && go09 get ./...
     - go09 test ./tests/benchmarking/... -bench=. -benchmem
     - go09 test ./tests/benchmarking/... -bench=. -benchmem -race
 
-bench-go10:
+.bench-go10:
   stage: benchmark
   script:
     - export GOPATH=/go && go10 get ./...
     - go10 test ./tests/benchmarking/... -bench=. -benchmem
     - go10 test ./tests/benchmarking/... -bench=. -benchmem -race
 
-bench-go11:
+.bench-go11:
   stage: benchmark
   script:
     - go11 test ./tests/benchmarking/... -bench=. -benchmem
     - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
 
-build_rpm:
+.build_rpm:
   stage: build_rpm
   script:
     - cd $PREFIX/lb-experts/golbclient
@@ -129,14 +129,14 @@ build_rpm:
     expire_in: 1 week
 
 
-kojicheck:
+.kojicheck:
   stage: koji_scratch
   script:
     - echo "Checking if $PKG_REL exists"
     - if koji --config=.koji search -r build $PKG | egrep  "$PKG_REL6|$PKG_REL7" ; then exit 1; fi
   allow_failure: true
 
-kojiscratch:
+.kojiscratch:
   stage: koji_scratch
   script:
     - echo "koji build --wait --scratch $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm"
@@ -144,7 +144,7 @@ kojiscratch:
     - echo "Building on ai6"
     -  koji --config=.koji build --wait --scratch ai6 SRPMS/${PKG_REL6}.src.rpm
 
-koji:
+.koji:
   stage: koji
   script:
     - echo "koji build --wait $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm"
@@ -154,7 +154,7 @@ koji:
   only:
     - tags
 
-tag_qa:
+.tag_qa:
   stage: deploy_qa
   when: manual
   only:
@@ -164,7 +164,7 @@ tag_qa:
     - koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}
   allow_failure: false
 
-tag_prod:
+.tag_prod:
   stage: deploy_prod
   when: manual
   only:
