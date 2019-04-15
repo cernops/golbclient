@@ -86,10 +86,12 @@ before_script:
 
 test-snmpd-call:
   stage: snmpd
+  tags:
+    - docker-privileged
   script:
+    - iptables -L
     - yum install -y net-snmp net-snmp-utils
     - go11 build -o /usr/local/sbin/lbclient
-    - sleep 100000
     - /usr/bin/snmpget -v 3 -u loadbalancing -l authNoPriv -a MD5 -A $SNMP_AUTH localhost .1.3.6.1.4.1.96.255.1
 
 .bench-go09:
