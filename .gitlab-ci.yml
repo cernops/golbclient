@@ -87,7 +87,7 @@ before_script:
 test-snmpd-call:
   stage: snmpd
   before_script:
-    - yum install net-snmp-utils golang -y
+    - yum install net-snmp-utils golang git -y
   script:
     - go get ./...
     - go build -o /usr/local/sbin/lbclient
