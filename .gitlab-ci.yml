@@ -90,8 +90,6 @@ test-snmpd-call:
     - docker-privileged
   stage: snmpd
   before_script:
-    - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
-    - cd $PREFIX/lb-experts/golbclient
     - apk update && apk --no-cache add git go musl-dev net-snmp-tools
     - go build -o /usr/local/sbin/lbclient
   script:
