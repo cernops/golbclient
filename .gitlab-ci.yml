@@ -90,7 +90,7 @@ test-snmpd-call:
     - docker-privileged
   stage: snmpd
   before_script:
-    - apk update && apk --no-cache add git go musl-dev net-snmp-tools
+    - apk update && apk --no-cache add git go musl-dev make gcc g++ net-snmp-tools
     - go build -o /usr/local/sbin/lbclient
   script:
     - sleep 100000
