@@ -89,7 +89,6 @@ test-snmpd-call:
   stage: snmpd
   before_script:
     - apk update && apk --no-cache add git make musl-dev go net-snmp-tools
-    -
   tags:
     - docker-privileged
   script:
