@@ -85,14 +85,16 @@ before_script:
     - go11 test -race ./tests/ci/...
 
 test-snmpd-call:
-  image: golang:latest
+  image: docker:latest
   tags:
     - docker-privileged
   stage: snmpd
   before_script:
-    - apk update && apk --no-cache add net-snmp-tools
-  script:
+    - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
+    - cd $PREFIX/lb-experts/golbclient
+    - apk update && apk --no-cache add git go musl-dev net-snmp-tools
     - go build -o /usr/local/sbin/lbclient
+  script:
     - sleep 100000
     - /usr/bin/snmpget -v 3 -u loadbalancing -l authNoPriv -a MD5 -A $SNMP_AUTH localhost .1.3.6.1.4.1.96.255.1
 
