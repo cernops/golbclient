@@ -85,7 +85,7 @@ before_script:
     - go11 test -race ./tests/ci/...
 
 test-snmpd-call:
-  image: docker:latest
+  image: docker:18.03
   tags:
     - docker-privileged
   stage: snmpd
