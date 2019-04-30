@@ -39,7 +39,7 @@ type DaemonListening struct {
 const (
 	tcp4ConfSock string = `/proc/net/tcp`
 	tcp6ConfSock        = `/proc/net/tcp6`
-	udp4ConfSock string = `/proc/net/udp`
+	udp4ConfSock 		= `/proc/net/udp`
 	udp6ConfSock        = `/proc/net/udp6`
 )
 
@@ -77,9 +77,7 @@ func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 // parseMetricLineJSON : parse a given json Metric line into the expected schema
 func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 	if len(line) <= 2 { //TODO: does it make sense to check regex, i.e. '{   }'
-		msg := "Empty metrics line detected. Aborting execution..."
-		logger.Error(msg)
-		return fmt.Errorf(msg)
+		return fmt.Errorf("empty metrics line detected. Failing the check")
 	}
 
 	// Account for parsing errors
@@ -255,7 +253,7 @@ func (daemon *DaemonListening) processMetricLine(metric string) (requiredLines i
 			`["ipv4", "ipv6", "4", "6"]`)
 	}
 
-	logger.Trace("Finished processing Metric file [%v]", daemon)
+	logger.Trace("Finished processing Metric file [%#v]", daemon)
 	return
 }
 
@@ -273,7 +271,7 @@ func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
 	outputIPs := regexp.MustCompile(`inet[0-9]?[ ][\w.:]*`).FindAllString(output, -1)
 	logger.Trace("Found local addresses [%v]", outputIPs)
 	for _, ip := range outputIPs {
-		daemon.Hosts = append(daemon.Hosts, host(regexp.MustCompile("inet([6])?[ ]").Split(ip, -1)[1]))
+		daemon.Hosts = append(daemon.Hosts, host(regexp.MustCompile(`inet([6])?[ ]`).Split(ip, -1)[1]))
 	}
 
 	// Add the any interface static IP pattern
@@ -293,14 +291,16 @@ func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
 			portsFormat.WriteString("|")
 		}
 
-		portHex := fmt.Sprintf("%04x", p)
+		portHex := strings.ToUpper(fmt.Sprintf("%04x", p))
 		logger.Trace("Scanning port [%d] with HEX [%s]", p, portHex)
 		portsFormat.WriteString(fmt.Sprintf("(%s)", portHex))
 	}
 
 	// Get all the Ports combination
 	regex 		:= regexp.MustCompile(
-		fmt.Sprintf(`^ *[0-9]+: [0-9A-F]+:(%s) [0-9A-F]+:[0-9A-F]+ 0A`, portsFormat.String()))
+		fmt.Sprintf(` *[0-9]+: [0-9A-F]+:(%s) [0-9A-F]+:[0-9A-F]+ 0A`, portsFormat.String()))
+
+	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
 
 	// @TODO only read the required files
 	tcp4Content, err := filehandler.ReadAllLinesFromFileAsString(tcp4ConfSock, " ")
@@ -326,7 +326,7 @@ func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
 	foundLines += len(regex.FindStringSubmatch(udp6Content))
 
 	if foundLines < requiredLines {
-		return -1, fmt.Errorf("expected to find [%d] lines but got [%s] instead", requiredLines, foundLines)
+		return -1, fmt.Errorf("expected to find [%d] lines but got [%d] instead", requiredLines, foundLines)
 	}
 
 	return 1, nil

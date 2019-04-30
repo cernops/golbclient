@@ -40,6 +40,7 @@ var allLBExpressions = map[string]ExpressionCode{
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"CONSTANT":      {code: 16, cli: checks.MetricConstant{}},
+	"DAEMON":        {code: 17, cli: checks.DaemonListening{}},
 }
 
 /*
