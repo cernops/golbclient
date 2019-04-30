@@ -27,13 +27,12 @@ type host = string
 
 // DaemonListening : struct responsible for all the daemon check slices
 type DaemonListening struct {
-	ports      []port
-	protocols  []protocol
-	ipVersions []ipVersion
-	hosts      []host
+	Ports      []port
+	Protocols  []protocol
+	IpVersions []ipVersion
+	Hosts      []host
 	// Backwards compatibility
 	Metric string
-
 }
 
 // Configuration file socks
@@ -54,7 +53,7 @@ type daemonJSONContainer struct {
 
 
 // listening_default_values_map : map that is used to set the default values for
-// the ones not found in the metric line
+// the ones not found in the Metric line
 var defaultProtocols = []protocol{"tcp", "udp"}
 var defaultIPVersions = []ipVersion{"ipv4", "ipv6"}
 
@@ -63,8 +62,8 @@ func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 	metric := args[0].(string)
 
 	// Log
-	logger.Trace("Processing daemon check on metric line [%s]", metric)
-	// Process the daemon metric & abort if an error was detected
+	logger.Trace("Processing daemon check on Metric line [%s]", metric)
+	// Process the daemon Metric & abort if an error was detected
 	requiredLines, err := daemon.processMetricLine(metric)
 	if err != nil {
 		logger.Error(err.Error())
@@ -75,7 +74,7 @@ func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 	return daemon.isListening(requiredLines)
 }
 
-// parseMetricLineJSON : parse a given json metric line into the expected schema
+// parseMetricLineJSON : parse a given json Metric line into the expected schema
 func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 	if len(line) <= 2 { //TODO: does it make sense to check regex, i.e. '{   }'
 		msg := "Empty metrics line detected. Aborting execution..."
@@ -91,7 +90,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 			} else {
 				err = fmt.Errorf("%v", r)
 			}
-			logger.Error("Error when decoding metric [%s]. Error [%s]. Failing metric...", line, err.Error())
+			logger.Error("Error when decoding Metric [%s]. Error [%s]. Failing Metric...", line, err.Error())
 		}
 	}()
 
@@ -117,11 +116,11 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 			}
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(r)
-			daemon.ports = append(daemon.ports, port(r))
+			daemon.Ports = append(daemon.Ports, port(r))
 		} else if i, isFloat := p.(float64); isFloat {
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(port(i))
-			daemon.ports = append(daemon.ports, port(i))
+			daemon.Ports = append(daemon.Ports, port(i))
 		} else {
 			return fmt.Errorf("the `port` value [%v] is not supported", p)
 		}
@@ -133,7 +132,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		s, isString := p.(string)
 		if isString {
 			validateProtocol(protocol(s))
-			daemon.protocols = append(daemon.protocols, protocol(s))
+			daemon.Protocols = append(daemon.Protocols, protocol(s))
 		} else {
 			return fmt.Errorf("the `protocol` value [%v] is not supported", p)
 		}
@@ -151,7 +150,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 			} else {
 				return fmt.Errorf("the `ip` value [%s] is not supported", s)
 			}
-			daemon.ipVersions = append(daemon.ipVersions, ipVersion(s))
+			daemon.IpVersions = append(daemon.IpVersions, ipVersion(s))
 		} else {
 			return fmt.Errorf("the `ip` value [%v] is not supported", p)
 		}
@@ -162,7 +161,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
-			daemon.hosts = append(daemon.hosts, host(s))
+			daemon.Hosts = append(daemon.Hosts, host(s))
 		} else {
 			return fmt.Errorf("the `host` value [%v] is not supported", p)
 		}
@@ -217,8 +216,8 @@ func validateUniqueKeys(line interface{}) {
 	}
 }
 
-// processMetricLine : this function is responsible for the extraction of the JSON metric string from the
-// 	configuration line. Attempt to parse the extracted JSON or use the hardcoded metric line if provided
+// processMetricLine : this function is responsible for the extraction of the JSON Metric string from the
+// 	configuration line. Attempt to parse the extracted JSON or use the hardcoded Metric line if provided
 //	(backwards-compatibility) process. Fetch the required amount of lines that need to be seen in the output of netstat.
 func (daemon *DaemonListening) processMetricLine(metric string) (requiredLines int, err error) {
 	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
@@ -235,7 +234,7 @@ func (daemon *DaemonListening) processMetricLine(metric string) (requiredLines i
 		return -1, err
 	}
 
-	// Fetch the required metric's amount
+	// Fetch the required Metric's amount
 	requiredLines = daemon.getRequiredLines()
 
 	// Apply default values
@@ -244,23 +243,23 @@ func (daemon *DaemonListening) processMetricLine(metric string) (requiredLines i
 		return -1, err
 	}
 
-	// The port metric argument is mandatory
-	if len(daemon.ports) == 0 {
+	// The port Metric argument is mandatory
+	if len(daemon.Ports) == 0 {
 		return -1, fmt.Errorf("a port needs to be specified in a daemon check in the format `{port : <val>}`." +
 			" Failing check")
-	} else if len(daemon.protocols) == 0 {
+	} else if len(daemon.Protocols) == 0 {
 		return -1, fmt.Errorf(`failed to parse the given [protocol] entry. Only the following values are supported` +
 			` ["tcp", "udp"]`)
-	} else if len(daemon.ipVersions) == 0 {
+	} else if len(daemon.IpVersions) == 0 {
 		return -1, fmt.Errorf(`failed to parse the given [ip] version entry. Only the following values are supported` +
 			`["ipv4", "ipv6", "4", "6"]`)
 	}
 
-	logger.Trace("Finished processing metric file [%v]", daemon)
+	logger.Trace("Finished processing Metric file [%v]", daemon)
 	return
 }
 
-// fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of hosts to check
+// fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of Hosts to check
 func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
 	// Log
 	logger.Trace("Fetching all IPs from the local interfaces")
@@ -274,12 +273,12 @@ func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
 	outputIPs := regexp.MustCompile(`inet[0-9]?[ ][\w.:]*`).FindAllString(output, -1)
 	logger.Trace("Found local addresses [%v]", outputIPs)
 	for _, ip := range outputIPs {
-		daemon.hosts = append(daemon.hosts, host(regexp.MustCompile("inet([6])?[ ]").Split(ip, -1)[1]))
+		daemon.Hosts = append(daemon.Hosts, host(regexp.MustCompile("inet([6])?[ ]").Split(ip, -1)[1]))
 	}
 
 	// Add the any interface static IP pattern
-	daemon.hosts = append(daemon.hosts, host("0.0.0.0"))
-	daemon.hosts = append(daemon.hosts, host("::"))
+	daemon.Hosts = append(daemon.Hosts, host("0.0.0.0"))
+	daemon.Hosts = append(daemon.Hosts, host("::"))
 
 	return nil
 }
@@ -289,7 +288,7 @@ func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
 	var foundLines int
 
 	var portsFormat bytes.Buffer
-	for i, p := range daemon.ports {
+	for i, p := range daemon.Ports {
 		if i != 0 {
 			portsFormat.WriteString("|")
 		}
@@ -299,7 +298,7 @@ func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
 		portsFormat.WriteString(fmt.Sprintf("(%s)", portHex))
 	}
 
-	// Get all the ports combination
+	// Get all the Ports combination
 	regex 		:= regexp.MustCompile(
 		fmt.Sprintf(`^ *[0-9]+: [0-9A-F]+:(%s) [0-9A-F]+:[0-9A-F]+ 0A`, portsFormat.String()))
 
@@ -336,18 +335,18 @@ func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
 // applyDefaultValues : function responsible for setting the default values of the Hosts, IPVersions & Protocols.
 // 	Will return an error if an issue was detected when attempting to retrieve Hosts
 func (daemon *DaemonListening) applyDefaultValues() error {
-	// If no protocols were given
-	if len(daemon.protocols) == 0 {
-		daemon.protocols = defaultProtocols
+	// If no Protocols were given
+	if len(daemon.Protocols) == 0 {
+		daemon.Protocols = defaultProtocols
 	}
 
 	// If no ip versions were given
-	if len(daemon.ipVersions) == 0 {
-		daemon.ipVersions = defaultIPVersions
+	if len(daemon.IpVersions) == 0 {
+		daemon.IpVersions = defaultIPVersions
 	}
 
-	// If no hosts were given
-	if len(daemon.hosts) == 0 {
+	// If no Hosts were given
+	if len(daemon.Hosts) == 0 {
 		// Fetch all listening interfaces
 		err := daemon.fetchAllLocalInterfaces()
 		if err != nil {
@@ -361,10 +360,10 @@ func (daemon *DaemonListening) applyDefaultValues() error {
 // getRequiredLines :
 func (daemon *DaemonListening) getRequiredLines() (requiredLines int) {
 	requiredLines = 1
-	countIfNotZero(len(daemon.ports), &requiredLines)
-	countIfNotZero(len(daemon.ipVersions), &requiredLines)
-	countIfNotZero(len(daemon.hosts), &requiredLines)
-	countIfNotZero(len(daemon.protocols), &requiredLines)
+	countIfNotZero(len(daemon.Ports), &requiredLines)
+	countIfNotZero(len(daemon.IpVersions), &requiredLines)
+	countIfNotZero(len(daemon.Hosts), &requiredLines)
+	countIfNotZero(len(daemon.Protocols), &requiredLines)
 	return
 }
 

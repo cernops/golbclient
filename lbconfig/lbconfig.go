@@ -25,12 +25,14 @@ type ExpressionCode struct {
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 var allLBExpressions = map[string]ExpressionCode{
 	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
+	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
-	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80}},
-	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
+	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{	Metric: `{"port": 22, 	"protocol": "tcp", "ip":"ipv4"}`}},
+	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{	Metric: `{"port": 80, 	"protocol": "tcp", "ip":"ipv4"}`}},
+	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{	Metric: `{"port": 21, 	"protocol": "tcp", "ip":"ipv4"}`}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
-	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
+	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Metric: `{"port": 2811, "protocol": "tcp", "ip":"ipv4"}`}},
 	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
 	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
 	"ROGER":         {code: 13, cli: checks.RogerState{}},
@@ -38,8 +40,6 @@ var allLBExpressions = map[string]ExpressionCode{
 	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"CONSTANT":      {code: 16, cli: checks.MetricConstant{}},
-	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
 }
 
 /*
