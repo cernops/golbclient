@@ -2,10 +2,14 @@ package checks
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
+	"math/big"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -294,6 +298,18 @@ func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
 		portHex := strings.ToUpper(fmt.Sprintf("%04x", p))
 		logger.Trace("Scanning port [%d] with HEX [%s]", p, portHex)
 		portsFormat.WriteString(fmt.Sprintf("(%s)", portHex))
+	}
+
+
+	var hostsFormat bytes.Buffer
+	for i, h := range daemon.Hosts {
+		if i != 0 {
+			hostsFormat.WriteString("|")
+		}
+
+
+		logger.Fatal("Scanning host [%s] with HEX [%s]", h, network.Pack32BinaryIP4(h))
+		//hostsFormat.WriteString(fmt.Sprintf("(%s)", ipHex))
 	}
 
 	// Get all the Ports combination
