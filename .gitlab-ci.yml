@@ -43,6 +43,7 @@ before_script:
  # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
  # Daemon check preparation
+  - yum install net-tools -y
   - nc -l -p 22   &
   - nc -l -p 21   &
   - nc -l -p 2811 &
