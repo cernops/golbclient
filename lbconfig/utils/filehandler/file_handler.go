@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ReadAllLinesFromFile : Reads all lines from a file into a string array
@@ -31,6 +32,16 @@ func ReadFirstLineFromFile(path string) (line string, err error) {
 	}
 	line = lines[0]
 	return line, err
+}
+
+// ReadAllLinesFromFileAsString : Reads all the lines from a file into a single string joined by the given separator 
+func ReadAllLinesFromFileAsString(path string, separator string) (content string, err error) {
+	lines, err := ReadAllLinesFromFile(path)
+	if err != nil {
+		return content, err
+	}
+	content = strings.Join(lines, separator)
+	return content, err
 }
 
 // CreateFileInDir : Creates a file with all the required parent directories with the given permissions. If an issue is
