@@ -71,11 +71,11 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 				return nil
 			}
 			logger.Debug("Checking the file [%v]", path)
-			if strings.HasSuffix(path, options.LbMetricDefaultFileName) {
+			if info.Name() ==  options.LbMetricDefaultFileName {
 				defaultMapping = NewConfiguration(path)
 				logger.Trace("Added the default")
-			} else if strings.HasSuffix(path, ".cern.ch") {
-				aliasName := strings.Split(path, "lbclient.conf.")[1]
+			} else if strings.HasSuffix(info.Name(), ".cern.ch") && strings.HasPrefix(info.Name(), "lbclient.conf") {
+				aliasName := strings.TrimSpace(strings.Split(path, "lbclient.conf.")[1])
 				logger.Trace("Added config for %v", aliasName)
 				confFiles = append(confFiles, NewConfiguration(path, aliasName))
 				tmpConfMap[aliasName] = true
