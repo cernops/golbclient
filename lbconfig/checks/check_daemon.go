@@ -295,7 +295,7 @@ func (daemon *DaemonListening) isListening() (int, error) {
 
 	// Get all the Ports combination
 	regex 		:= regexp.MustCompile(
-		fmt.Sprintf(` *[0-9]+: (%s):(%s) [0-9A-F]+:[0-9A-F]+ 0A`, hostsFormat, portsFormat))
+		fmt.Sprintf(`[0-9]+: (%s):(%s)`, hostsFormat, portsFormat))
 	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
 
 
@@ -338,11 +338,15 @@ func (daemon *DaemonListening) applyDefaultValues() error {
 	// If no Protocols were given
 	if len(daemon.Protocols) == 0 {
 		daemon.Protocols = defaultProtocols
+		daemon.requiresTcp = true
+		daemon.requiresUdp = true
 	}
 
 	// If no ip versions were given
 	if len(daemon.IpVersions) == 0 {
 		daemon.IpVersions = defaultIPVersions
+		daemon.requiresIPv4 = true
+		daemon.requiresIPv6 = true
 	}
 
 	// If no Hosts were given
@@ -367,8 +371,7 @@ func (daemon *DaemonListening) getHostRegexFormat() (string, error) {
 		}
 		hostHex, err := network.GetPackedReprFromIP(h)
 		if err != nil {
-			return "", fmt.Errorf("failed to parse the given string [%s] as a valid IPv4 or IPv6 address. " +
-				"Error [%s]", h, err.Error())
+			return "", err
 		}
 
 		logger.Trace("Scanning host [%s] with HEX [%s]", h, hostHex)
@@ -399,11 +402,15 @@ func (daemon *DaemonListening) getPortsRegexFormat() string {
 // will then be added to the given counter
 func sumAndMatchIfRequired(cond bool, sockPath string, regex *regexp.Regexp, counter *int) error {
 	if cond {
+		logger.Trace("Looking for regex in sock file [%s]...", sockPath)
+		
 		fileContent, err := filehandler.ReadAllLinesFromFileAsString(sockPath, " ")
 		if err != nil {
 			return fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
 		}
-		*counter += len(regex.FindStringSubmatch(fileContent))
+		foundLines := len(regex.FindStringSubmatch(fileContent))
+		*counter += foundLines
+		logger.Debug("Found [%d] matching lines in sock file...", foundLines, sockPath)
 	}
 	return nil
 }
