@@ -9,7 +9,6 @@ func TestDaemonCheck(t *testing.T) {
 	myTests := []lbTest{
 		{title: "DaemonLegacyTest",
 			configuration: "../test/daemon/lbclient_daemon_legacy_check.conf", 			expectedMetricValue: 5},
-
 		{title: "DaemonNewSyntaxTest",
 			configuration: "../test/daemon/lbclient_daemon_check.conf", 				expectedMetricValue: 5},
 		{title: "DaemonFailPart1",

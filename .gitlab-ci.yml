@@ -12,7 +12,7 @@ stages:
 
 
 before_script:
-  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
+  - yum -y install --exclude python2-libcomps gcc krb5-workstation koji rpm-build rpmdevtools
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
