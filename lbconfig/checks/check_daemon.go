@@ -2,14 +2,11 @@ package checks
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
-	"math/big"
-	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -31,6 +28,9 @@ type host = string
 
 // DaemonListening : struct responsible for all the daemon check slices
 type DaemonListening struct {
+	// Internal
+	requiresTcp, requiresUdp, requiresIPv4, requiresIPv6 bool
+	// Metric syntax
 	Ports      []port
 	Protocols  []protocol
 	IpVersions []ipVersion
@@ -68,19 +68,19 @@ func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 	// Log
 	logger.Trace("Processing daemon check on Metric line [%s]", metric)
 	// Process the daemon Metric & abort if an error was detected
-	requiredLines, err := daemon.processMetricLine(metric)
+	err := daemon.processMetricLine(metric)
 	if err != nil {
 		logger.Error(err.Error())
 		return -1, err
 	}
 
 	// Check if there is anything listening
-	return daemon.isListening(requiredLines)
+	return daemon.isListening()
 }
 
 // parseMetricLineJSON : parse a given json Metric line into the expected schema
 func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
-	if len(line) <= 2 { //TODO: does it make sense to check regex, i.e. '{   }'
+	if len(line) <= 2 {
 		return fmt.Errorf("empty metrics line detected. Failing the check")
 	}
 
@@ -133,7 +133,16 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
-			validateProtocol(protocol(s))
+			s = strings.TrimSpace(s)
+			if p != "tcp" && p != "udp" {
+				panic(fmt.Sprintf("The specified protocol [%s] is not supported", p))
+			} else {
+				if p == "tcp" {
+					daemon.requiresTcp = true
+				} else {
+					daemon.requiresUdp = true
+				}
+			}
 			daemon.Protocols = append(daemon.Protocols, protocol(s))
 		} else {
 			return fmt.Errorf("the `protocol` value [%v] is not supported", p)
@@ -147,8 +156,10 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		if isString {
 			if s == "ipv4" || s == "4" {
 				s = ""
+				daemon.requiresIPv4 = true
 			} else if s == "ipv6" || s == "6" {
 				s = "6"
+				daemon.requiresIPv6 = true
 			} else {
 				return fmt.Errorf("the `ip` value [%s] is not supported", s)
 			}
@@ -175,13 +186,6 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 func validatePortRange(port port) {
 	if (port < 1) || (port > 65535) {
 		panic(fmt.Sprintf("The specified port [%d] is out of range [1-65535]", port))
-	}
-}
-
-// validateProtocol : validates that the given protocol is an accepted value
-func validateProtocol(p protocol) {
-	if p != "tcp" && p != "udp" {
-		panic(fmt.Sprintf("The specified protocol [%s] is not supported", p))
 	}
 }
 
@@ -221,7 +225,7 @@ func validateUniqueKeys(line interface{}) {
 // processMetricLine : this function is responsible for the extraction of the JSON Metric string from the
 // 	configuration line. Attempt to parse the extracted JSON or use the hardcoded Metric line if provided
 //	(backwards-compatibility) process. Fetch the required amount of lines that need to be seen in the output of netstat.
-func (daemon *DaemonListening) processMetricLine(metric string) (requiredLines int, err error) {
+func (daemon *DaemonListening) processMetricLine(metric string) error {
 	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
 	// 	For more information, see: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 	if len(daemon.Metric) != 0 {
@@ -231,34 +235,30 @@ func (daemon *DaemonListening) processMetricLine(metric string) (requiredLines i
 	// The parsing is now always done
 	metric = regexp.MustCompile("{(.*?)}").FindString(metric)
 	// Parse json
-	err = daemon.parseMetricLineJSON(metric)
+	err := daemon.parseMetricLineJSON(metric)
 	if err != nil {
-		return -1, err
+		return err
 	}
-
-	// Fetch the required Metric's amount
-	requiredLines = daemon.getRequiredLines()
 
 	// Apply default values
 	err = daemon.applyDefaultValues()
 	if err != nil {
-		return -1, err
+		return err
 	}
 
 	// The port Metric argument is mandatory
 	if len(daemon.Ports) == 0 {
-		return -1, fmt.Errorf("a port needs to be specified in a daemon check in the format `{port : <val>}`." +
-			" Failing check")
+		return fmt.Errorf("a port needs to be specified in a daemon check in the format `{port : <val>}`")
 	} else if len(daemon.Protocols) == 0 {
-		return -1, fmt.Errorf(`failed to parse the given [protocol] entry. Only the following values are supported` +
+		return fmt.Errorf(`failed to parse the given [protocol] entry. Only the following values are supported` +
 			` ["tcp", "udp"]`)
 	} else if len(daemon.IpVersions) == 0 {
-		return -1, fmt.Errorf(`failed to parse the given [ip] version entry. Only the following values are supported` +
+		return fmt.Errorf(`failed to parse the given [ip] version entry. Only the following values are supported` +
 			`["ipv4", "ipv6", "4", "6"]`)
 	}
 
 	logger.Trace("Finished processing Metric file [%#v]", daemon)
-	return
+	return nil
 }
 
 // fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of Hosts to check
@@ -286,63 +286,47 @@ func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
 }
 
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
-func (daemon *DaemonListening) isListening(requiredLines int) (int, error) {
-	var foundLines int
-
-	var portsFormat bytes.Buffer
-	for i, p := range daemon.Ports {
-		if i != 0 {
-			portsFormat.WriteString("|")
-		}
-
-		portHex := strings.ToUpper(fmt.Sprintf("%04x", p))
-		logger.Trace("Scanning port [%d] with HEX [%s]", p, portHex)
-		portsFormat.WriteString(fmt.Sprintf("(%s)", portHex))
-	}
-
-
-	var hostsFormat bytes.Buffer
-	for i, h := range daemon.Hosts {
-		if i != 0 {
-			hostsFormat.WriteString("|")
-		}
-
-
-		logger.Fatal("Scanning host [%s] with HEX [%s]", h, network.Pack32BinaryIP4(h))
-		//hostsFormat.WriteString(fmt.Sprintf("(%s)", ipHex))
+func (daemon *DaemonListening) isListening() (int, error) {
+	portsFormat 		:= daemon.getPortsRegexFormat()
+	hostsFormat, err 	:= daemon.getHostRegexFormat()
+	if err != nil {
+		return -1, err
 	}
 
 	// Get all the Ports combination
 	regex 		:= regexp.MustCompile(
-		fmt.Sprintf(` *[0-9]+: [0-9A-F]+:(%s) [0-9A-F]+:[0-9A-F]+ 0A`, portsFormat.String()))
-
+		fmt.Sprintf(` *[0-9]+: (%s):(%s) [0-9A-F]+:[0-9A-F]+ 0A`, hostsFormat, portsFormat))
 	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
 
-	// @TODO only read the required files
-	tcp4Content, err := filehandler.ReadAllLinesFromFileAsString(tcp4ConfSock, " ")
+
+	var foundLines int
+
+	// TCP & IPv4
+	err = sumAndMatchIfRequired(daemon.requiresIPv4 && daemon.requiresTcp, tcp4ConfSock, regex, &foundLines)
 	if err != nil {
-		return -1, fmt.Errorf("unable to open the file [%s]. Error [%s]", tcp4ConfSock, err)
-	}
-	tcp6Content, err := filehandler.ReadAllLinesFromFileAsString(tcp6ConfSock, " ")
-	if err != nil {
-		return -1, fmt.Errorf("unable to open the file [%s]. Error [%s]", tcp6ConfSock, err)
-	}
-	udp4Content, err := filehandler.ReadAllLinesFromFileAsString(udp4ConfSock, " ")
-	if err != nil {
-		return -1, fmt.Errorf("unable to open the file [%s]. Error [%s]", udp4ConfSock, err)
-	}
-	udp6Content, err := filehandler.ReadAllLinesFromFileAsString(udp6ConfSock, " ")
-	if err != nil {
-		return -1, fmt.Errorf("unable to open the file [%s]. Error [%s]", udp6ConfSock, err)
+		return -1, err
 	}
 
-	foundLines += len(regex.FindStringSubmatch(tcp4Content))
-	foundLines += len(regex.FindStringSubmatch(tcp6Content))
-	foundLines += len(regex.FindStringSubmatch(udp4Content))
-	foundLines += len(regex.FindStringSubmatch(udp6Content))
+	// TCP & IPv6
+	err = sumAndMatchIfRequired(daemon.requiresIPv6 && daemon.requiresTcp, tcp6ConfSock, regex, &foundLines)
+	if err != nil {
+		return -1, err
+	}
 
-	if foundLines < requiredLines {
-		return -1, fmt.Errorf("expected to find [%d] lines but got [%d] instead", requiredLines, foundLines)
+	// UDP & IPv4
+	err = sumAndMatchIfRequired(daemon.requiresIPv4 && daemon.requiresUdp, udp4ConfSock, regex, &foundLines)
+	if err != nil {
+		return -1, err
+	}
+
+	// UDP & IPv6
+	err = sumAndMatchIfRequired(daemon.requiresIPv6 && daemon.requiresUdp, udp6ConfSock, regex, &foundLines)
+	if err != nil {
+		return -1, err
+	}
+
+	if foundLines < 1 {
+		return -1, fmt.Errorf("expected to find at least 1 matching line for the daemon check [%#v]", daemon)
 	}
 
 	return 1, nil
@@ -373,19 +357,53 @@ func (daemon *DaemonListening) applyDefaultValues() error {
 	return nil
 }
 
-// getRequiredLines :
-func (daemon *DaemonListening) getRequiredLines() (requiredLines int) {
-	requiredLines = 1
-	countIfNotZero(len(daemon.Ports), &requiredLines)
-	countIfNotZero(len(daemon.IpVersions), &requiredLines)
-	countIfNotZero(len(daemon.Hosts), &requiredLines)
-	countIfNotZero(len(daemon.Protocols), &requiredLines)
-	return
+// getHostRegexFormat : Helper function that creates a regex-ready string from all the found [daemon.Hosts] entries
+func (daemon *DaemonListening) getHostRegexFormat() (string, error) {
+	// Get all hosts in a regex-ready format
+	var hostsFormat bytes.Buffer
+	for i, h := range daemon.Hosts {
+		if i != 0 {
+			hostsFormat.WriteString("|")
+		}
+		hostHex, err := network.GetPackedReprFromIP(h)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse the given string [%s] as a valid IPv4 or IPv6 address. " +
+				"Error [%s]", h, err.Error())
+		}
+
+		logger.Trace("Scanning host [%s] with HEX [%s]", h, hostHex)
+		hostsFormat.WriteString(fmt.Sprintf("(%s)", hostHex))
+	}
+
+	return hostsFormat.String(), nil
 }
 
-// countIfNotZero : helper function for the [getRequiredLines] function
-func countIfNotZero(value int, counter *int) {
-	if value > 0 {
-		*counter *= value
+// getPortsRegexFormat : Helper function that creates a regex-ready string from all the found [daemon.Ports] entries
+func (daemon *DaemonListening) getPortsRegexFormat() string {
+	// Get all ports in a regex-ready format
+	var portsFormat bytes.Buffer
+	for i, p := range daemon.Ports {
+		if i != 0 {
+			portsFormat.WriteString("|")
+		}
+
+		portHex := strings.ToUpper(fmt.Sprintf("%04x", p))
+		logger.Trace("Scanning port [%d] with HEX [%s]", p, portHex)
+		portsFormat.WriteString(fmt.Sprintf("(%s)", portHex))
 	}
+	return portsFormat.String()
+}
+
+// sumAndMatchIfRequired : Helper function that only executed if the given condition evaluates to [true]. If so,
+// the file contents of @arg sockPath will be read and matched against the given @arg regex. The amount of matches
+// will then be added to the given counter
+func sumAndMatchIfRequired(cond bool, sockPath string, regex *regexp.Regexp, counter *int) error {
+	if cond {
+		fileContent, err := filehandler.ReadAllLinesFromFileAsString(sockPath, " ")
+		if err != nil {
+			return fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
+		}
+		*counter += len(regex.FindStringSubmatch(fileContent))
+	}
+	return nil
 }
