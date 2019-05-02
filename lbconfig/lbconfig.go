@@ -74,7 +74,7 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 	// Detect all actions (checks or loads) to be made
 	checksFormat := "^CHECK (" + strings.Join(checksToExecute, "|") + ")"
 	loadsFormat := "^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)"
-	actions := regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))[\n\r\s]*`, checksFormat, loadsFormat))
+	actions := regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))`, checksFormat, loadsFormat))
 
 	// Read the configuration file line-by-line
 	for _, line := range lines {
