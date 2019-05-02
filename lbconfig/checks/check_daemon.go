@@ -249,12 +249,6 @@ func (daemon *DaemonListening) processMetricLine(metric string) error {
 	// The port Metric argument is mandatory
 	if len(daemon.Ports) == 0 {
 		return fmt.Errorf("a port needs to be specified in a daemon check in the format `{port : <val>}`")
-	} else if len(daemon.Protocols) == 0 {
-		return fmt.Errorf(`failed to parse the given [protocol] entry. Only the following values are supported` +
-			` ["tcp", "udp"]`)
-	} else if len(daemon.IpVersions) == 0 {
-		return fmt.Errorf(`failed to parse the given [ip] version entry. Only the following values are supported` +
-			`["ipv4", "ipv6", "4", "6"]`)
 	}
 
 	logger.Trace("Finished processing Metric file [%#v]", daemon)
