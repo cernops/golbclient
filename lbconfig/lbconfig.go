@@ -20,7 +20,6 @@ import (
 type ExpressionCode struct {
 	code int
 	cli  CLI
-	requiresArgs bool
 }
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
@@ -34,14 +33,14 @@ var allLBExpressions = map[string]ExpressionCode{
 	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{	Metric: `{"port": 21, 	"protocol": "tcp", "ip":"ipv4"}`}},
 	"AFS":           {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Metric: `{"port": 2811, "protocol": "tcp", "ip":"ipv4"}`}},
-	"LEMON":         {code: 12, requiresArgs: true, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
+	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
 	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
 	"ROGER":         {code: 13, cli: checks.RogerState{}},
-	"COMMAND":       {code: 14, requiresArgs: true, cli: checks.Command{}},
-	"COLLECTD":      {code: 15, requiresArgs: true, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
+	"COMMAND":       {code: 14, cli: checks.Command{}},
+	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
 	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
-	"CONSTANT":      {code: 16, requiresArgs: true, cli: checks.MetricConstant{}},
-	"DAEMON":        {code: 17, requiresArgs: true, cli: checks.DaemonListening{}},
+	"CONSTANT":      {code: 16, cli: checks.MetricConstant{}},
+	"DAEMON":        {code: 17, cli: checks.DaemonListening{}},
 }
 
 /*
@@ -75,7 +74,7 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 	// Detect all actions (checks or loads) to be made
 	checksFormat := "^CHECK (" + strings.Join(checksToExecute, "|") + ")"
 	loadsFormat := "^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)"
-	actions := regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))[ ]+`, checksFormat, loadsFormat))
+	actions := regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))[\n\r\s]*`, checksFormat, loadsFormat))
 
 	// Read the configuration file line-by-line
 	for _, line := range lines {
