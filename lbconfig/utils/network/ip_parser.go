@@ -13,13 +13,8 @@ func GetPackedReprFromIP(ipAddress string) (string, error) {
 		return "", fmt.Errorf("the given string [%s] is not a valid IP address", ipAddress)
 	}
 
-	ipv4 := false
-	if ip.To4() != nil {
-		ipv4 = true
-	}
-
 	ipInt := big.NewInt(0)
-	if ipv4 {
+	if ip.To4() != nil {
 		ipInt.SetBytes(ip.To4())
 		ipHex := strings.ToUpper(fmt.Sprintf("%08x", reverseBytesSlice(ipInt.Bytes())))
 		return ipHex, nil

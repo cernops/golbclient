@@ -42,13 +42,13 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
  # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
- # Daemon check preparation
-  - yum install iproute -y
-  - nc -l -p 22   &
-  - nc -l -p 21   &
-  - nc -l -p 2811 &
-  - nc -l -p 80   &
 
+.openTestPorts: &openTestPorts |
+  yum install iproute -y
+  nc -l -p 22   &
+  nc -l -p 21   &
+  nc -l -p 2811 &
+  nc -l -p 80   &
 
 build-go09:
   stage: build
@@ -72,6 +72,7 @@ build-go11:
 test-go09:
   stage: test
   script:
+    - *openTestPorts
     - export GOPATH=/go && go09 get ./...
     - go09 test -v -cover ./tests/ci/...
     - go09 test -race ./tests/ci/...
@@ -79,6 +80,7 @@ test-go09:
 test-go10:
   stage: test
   script:
+    - *openTestPorts
     - export GOPATH=/go && go10 get ./...
     - go10 test -v -cover ./tests/ci/...
     - go10 test -race ./tests/ci/...
@@ -86,6 +88,7 @@ test-go10:
 test-go11:
   stage: test
   script:
+    - *openTestPorts
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
 
