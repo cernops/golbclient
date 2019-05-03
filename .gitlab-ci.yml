@@ -45,18 +45,15 @@ before_script:
 
 .openTestPorts: &openTestPorts |
   yum install iproute nmap-ncat -y
-  nc -l      -p           22        &
+  nc -l      -p   127.0.0.1:22      &
   nc -l      -p           21        &
   nc -l      -p           2811      &
   nc -l      -p           80        &
   nc -l      -p           922       &
   nc -l -u   -p           922       &
-  nc -l      -p   127.0.0.1:22      &
-  nc -l      -p   127.0.0.1:22   -6 &
   sleep 1
   cat /proc/net/tcp
   cat /proc/net/tcp6
-  sleep 10000
 
 build-go09:
   stage: build
