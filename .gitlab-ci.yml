@@ -52,7 +52,7 @@ before_script:
   nc -l      -p           922       &
   nc -l -u   -p           922       &
   nc -l  127.0.0.1 202              &
-  nc -l  127.0.0.1 202         -6   &
+  nc -l  ::1 202               -6   &
   sleep 1
   cat /proc/net/tcp
   cat /proc/net/tcp6
