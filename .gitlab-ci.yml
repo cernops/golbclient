@@ -51,12 +51,11 @@ before_script:
   nc -l      -p           80        &
   nc -l      -p           922       &
   nc -l -u   -p           922       &
-  nc -l  -s 127.0.0.1 -p  22        &
-  nc -l  -s 127.0.0.1 -p  22   -6   &
+  nc -l  127.0.0.1 202              &
+  nc -l  127.0.0.1 202         -6   &
   sleep 1
   cat /proc/net/tcp
   cat /proc/net/tcp6
-  sleep 10000
 
 build-go09:
   stage: build
@@ -84,6 +83,7 @@ test-go09:
     - export GOPATH=/go && go09 get ./...
     - go09 test -v -cover ./tests/ci/...
     - go09 test -race ./tests/ci/...
+    - sleep 10000
 
 test-go10:
   stage: test

@@ -39,7 +39,7 @@ func TestDaemonCheck(t *testing.T) {
 		{title: "UDPTestOnTCP",
 			configurationContent: "check daemon {\"port\":22, \"protocol\":\"udp\"}\nload constant 32", shouldFail: true, expectedMetricValue: -17},
 		{title: "UDPTestOnTCPorUDP",
-			configurationContent: "check daemon {\"port\":22, \"protocol\":[\"udp\",\"tcp\"]}\nload constant 33", expectedMetricValue: 33},
+			configurationContent: "check daemon {\"port\":202, \"protocol\":[\"udp\",\"tcp\"]}\nload constant 33", expectedMetricValue: 33},
 		{title: "UDPTestOnTCPorUDP",
 			configurationContent: "check daemon {\"port\":[22,922], \"protocol\":\"udp\"}\nload constant 33", expectedMetricValue: 33},
 		{title: "UDPTestIpv4",
