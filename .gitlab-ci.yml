@@ -44,7 +44,7 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 .openTestPorts: &openTestPorts |
-  yum install iproute -y
+  yum install iproute nmap-ncat -y
   nc -l      -p           22        &
   nc -l      -p           21        &
   nc -l      -p           2811      &
@@ -53,6 +53,9 @@ before_script:
   nc -l -u   -p           922       &
   nc -l      -p   127.0.0.1:22      &
   nc -l      -p   127.0.0.1:22   -6 &
+  sleep 1
+  cat /proc/net/tcp
+  cat /proc/net/tcp6
 
 build-go09:
   stage: build
