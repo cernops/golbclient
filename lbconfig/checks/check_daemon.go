@@ -4,37 +4,27 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
+
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
-
-// port : int alias-type to represent a port number
-type port = int
-
-// protocol : string alias-type used to distinguish between different transport protocol types
-type protocol = string
-
-// ipVersion : int alias-type used to distinguish between different IP levels
-type ipVersion = string
-
-// host : string alias-type used to identify in which host the daemon should be listening on
-type host = string
 
 // DaemonListening : struct responsible for all the daemon check slices
 type DaemonListening struct {
 	// Internal
 	requiresTcp, requiresUdp, requiresIPv4, requiresIPv6 bool
 	// Metric syntax
-	Ports      []port
-	Protocols  []protocol
-	IpVersions []ipVersion
-	Hosts      []host
+	Ports []int
+	//P.SAIZ Please, remove these two items
+	//	Protocols  []protocol
+	//IpVersions []ipVersion
+	Hosts []string
+
 	// Backwards compatibility
 	Metric string
 }
@@ -43,7 +33,7 @@ type DaemonListening struct {
 const (
 	tcp4ConfSock string = `/proc/net/tcp`
 	tcp6ConfSock        = `/proc/net/tcp6`
-	udp4ConfSock 		= `/proc/net/udp`
+	udp4ConfSock        = `/proc/net/udp`
 	udp6ConfSock        = `/proc/net/udp6`
 )
 
@@ -55,12 +45,10 @@ type daemonJSONContainer struct {
 	Host      interface{} `json:"host"`
 }
 
-
 // listening_default_values_map : map that is used to set the default values for
 // the ones not found in the Metric line
-var defaultProtocols = []protocol{"tcp", "udp"}
-var defaultIPVersions = []ipVersion{"ipv4", "ipv6"}
-
+var defaultProtocols = []string{"tcp", "udp"}
+var defaultIPVersions = []string{"ipv4", "ipv6"}
 
 func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 	metric := args[0].(string)
@@ -118,11 +106,13 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 			}
 			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
 			validatePortRange(r)
-			daemon.Ports = append(daemon.Ports, port(r))
-		} else if i, isFloat := p.(float64); isFloat {
-			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
-			validatePortRange(port(i))
-			daemon.Ports = append(daemon.Ports, port(i))
+			daemon.Ports = append(daemon.Ports, r)
+			/* P.Saiz is this needed??
+
+			} else if i, isFloat := p.(float64); isFloat {
+					// Validate if the found port is acceptable, if not, panics - used to jump stack frame
+					validatePortRange(int(i))
+					daemon.Ports = append(daemon.Ports, int(i)) */
 		} else {
 			return fmt.Errorf("the `port` value [%v] is not supported", p)
 		}
@@ -135,6 +125,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		if isString {
 			s = strings.TrimSpace(s)
 			if p != "tcp" && p != "udp" {
+				//P.Saiz Return error, please
 				panic(fmt.Sprintf("The specified protocol [%s] is not supported", p))
 			} else {
 				if p == "tcp" {
@@ -143,7 +134,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 					daemon.requiresUdp = true
 				}
 			}
-			daemon.Protocols = append(daemon.Protocols, protocol(s))
+			//	daemon.Protocols = append(daemon.Protocols, protocol(s))
 		} else {
 			return fmt.Errorf("the `protocol` value [%v] is not supported", p)
 		}
@@ -163,7 +154,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 			} else {
 				return fmt.Errorf("the `ip` value [%s] is not supported", s)
 			}
-			daemon.IpVersions = append(daemon.IpVersions, ipVersion(s))
+			//	daemon.IpVersions = append(daemon.IpVersions, ipVersion(s))
 		} else {
 			return fmt.Errorf("the `ip` value [%v] is not supported", p)
 		}
@@ -174,7 +165,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 	for _, p := range *transformationContainer {
 		s, isString := p.(string)
 		if isString {
-			daemon.Hosts = append(daemon.Hosts, host(s))
+			daemon.Hosts = append(daemon.Hosts, s)
 		} else {
 			return fmt.Errorf("the `host` value [%v] is not supported", p)
 		}
@@ -183,10 +174,12 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 }
 
 // validatePortRange : validates that the given port is within the accepted range
-func validatePortRange(port port) {
+//P.Saiz What about replacing the panic by returning error
+func validatePortRange(port int) error {
 	if (port < 1) || (port > 65535) {
-		panic(fmt.Sprintf("The specified port [%d] is out of range [1-65535]", port))
+		return fmt.Errorf("the specified port [%d] is out of range [1-65535]", port)
 	}
+	return nil
 }
 
 // pipelineTransform : helper function that populates a container based on a given interface.
@@ -255,6 +248,7 @@ func (daemon *DaemonListening) processMetricLine(metric string) error {
 	return nil
 }
 
+/*
 // fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of Hosts to check
 func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
 	// Log
@@ -278,20 +272,19 @@ func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
 
 	return nil
 }
-
+*/
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *DaemonListening) isListening() (int, error) {
-	portsFormat 		:= daemon.getPortsRegexFormat()
-	hostsFormat, err 	:= daemon.getHostRegexFormat()
+	portsFormat := daemon.getPortsRegexFormat()
+	hostsFormat, err := daemon.getHostRegexFormat()
 	if err != nil {
 		return -1, err
 	}
 
 	// Get all the Ports combination
-	regex 		:= regexp.MustCompile(
+	regex := regexp.MustCompile(
 		fmt.Sprintf(`[0-9]+: (%s):(%s)`, hostsFormat, portsFormat))
 	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
-
 
 	var foundLines int
 
@@ -330,34 +323,37 @@ func (daemon *DaemonListening) isListening() (int, error) {
 // 	Will return an error if an issue was detected when attempting to retrieve Hosts
 func (daemon *DaemonListening) applyDefaultValues() error {
 	// If no Protocols were given
-	if len(daemon.Protocols) == 0 {
-		daemon.Protocols = defaultProtocols
+	//	if len(daemon.Protocols) == 0 {
+	if !daemon.requiresTcp && !daemon.requiresUdp {
+		//	daemon.Protocols = defaultProtocols
 		daemon.requiresTcp = true
 		daemon.requiresUdp = true
 	}
 
 	// If no ip versions were given
-	if len(daemon.IpVersions) == 0 {
-		daemon.IpVersions = defaultIPVersions
+	//if len(daemon.IpVersions) == 0 {
+	if !daemon.requiresIPv4 && !daemon.requiresIPv6 {
+		//	daemon.IpVersions = defaultIPVersions
 		daemon.requiresIPv4 = true
 		daemon.requiresIPv6 = true
 	}
-
-	// If no Hosts were given
-	if len(daemon.Hosts) == 0 {
-		// Fetch all listening interfaces
-		err := daemon.fetchAllLocalInterfaces()
-		if err != nil {
-			return err
+	/*
+		// If no Hosts were given
+		if len(daemon.Hosts) == 0 {
+			// Fetch all listening interfaces
+			err := daemon.fetchAllLocalInterfaces()
+			if err != nil {
+				return err
+			}
 		}
-	}
-
+	*/
 	return nil
 }
 
 // getHostRegexFormat : Helper function that creates a regex-ready string from all the found [daemon.Hosts] entries
 func (daemon *DaemonListening) getHostRegexFormat() (string, error) {
 	// Get all hosts in a regex-ready format
+	//P.Saiz check if the length is zero and return wildcard
 	var hostsFormat bytes.Buffer
 	for i, h := range daemon.Hosts {
 		if i != 0 {
@@ -397,7 +393,7 @@ func (daemon *DaemonListening) getPortsRegexFormat() string {
 func sumAndMatchIfRequired(cond bool, sockPath string, regex *regexp.Regexp, counter *int) error {
 	if cond {
 		logger.Trace("Looking for regex in sock file [%s]...", sockPath)
-		
+
 		fileContent, err := filehandler.ReadAllLinesFromFileAsString(sockPath, " ")
 		if err != nil {
 			return fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
