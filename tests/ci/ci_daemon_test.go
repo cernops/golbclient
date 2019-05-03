@@ -45,21 +45,21 @@ func TestDaemonCheck(t *testing.T) {
 		{title: "UDPTestIpv4",
 			configurationContent: "check daemon {\"port\":922, \"protocol\":\"udp\", \"ip\":\"ipv4\"}\nload constant 37", expectedMetricValue: 37},
 
-		//Checking localhost
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"127.0.0.1\", \"ip\":\"ipv4\"}\nload constant 37", expectedMetricValue: 37},
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"127.0.0.1\", \"ip\":\"ipv6\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"::1\", \"ip\":\"ipv4\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"::1\", \"ip\":\"ipv6\"}\nload constant 37", expectedMetricValue: 37},
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"::1\", \"ip\":[\"4\", \"ipv6\"}\nload constant 37", expectedMetricValue: 37},
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"127.0.0\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
-		{title: "Localhost",
-			configurationContent: "check daemon {\"port\":22, \"hostl\":\"129.0.0.1\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
+		// Checking localhost
+		{title: "Localhost_22_IPv4",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"127.0.0.1\", \"ip\":\"ipv4\"}\nload constant 37", expectedMetricValue: 37},
+		{title: "Localhost_22_IPv6_fail",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"127.0.0.1\", \"ip\":\"ipv6\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
+		{title: "Localhost_22_IPv4_fail",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"::1\", \"ip\":\"ipv4\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
+		{title: "Localhost_22_IPv6",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"::1\", \"ip\":\"ipv6\"}\nload constant 37", expectedMetricValue: 37},
+		{title: "Localhost_22_Ipv4or6",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"::1\", \"ip\":[\"4\", \"ipv6\"]}\nload constant 37", expectedMetricValue: 37},
+		{title: "Localhost_22_Host_fail",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"127.0.0\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
+		{title: "Localhost_22_Host_not_found",
+			configurationContent: "check daemon {\"port\":22, \"host\":\"129.0.0.1\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
 	}
 
 	runMultipleTests(t, myTests)

@@ -11,6 +11,8 @@ func GetPackedReprFromIP(ipAddress string) (string, error) {
 	ip := net.ParseIP(ipAddress)
 	if ip == nil {
 		return "", fmt.Errorf("the given string [%s] is not a valid IP address", ipAddress)
+	} else if ipAddress == "::1" {
+		return "00000000000000000000000001000000", nil
 	}
 
 	ipInt := big.NewInt(0)

@@ -17,14 +17,10 @@ import (
 // DaemonListening : struct responsible for all the daemon check slices
 type DaemonListening struct {
 	// Internal
-	requiresTcp, requiresUdp, requiresIPv4, requiresIPv6 bool
+	requiresTCP, requiresUDP, requiresIPV4, requiresIPV6 bool
 	// Metric syntax
 	Ports []int
-	//P.SAIZ Please, remove these two items
-	//	Protocols  []protocol
-	//IpVersions []ipVersion
 	Hosts []string
-
 	// Backwards compatibility
 	Metric string
 }
@@ -44,11 +40,6 @@ type daemonJSONContainer struct {
 	IPVersion interface{} `json:"ip"`
 	Host      interface{} `json:"host"`
 }
-
-// listening_default_values_map : map that is used to set the default values for
-// the ones not found in the Metric line
-var defaultProtocols = []string{"tcp", "udp"}
-var defaultIPVersions = []string{"ipv4", "ipv6"}
 
 func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 	metric := args[0].(string)
@@ -72,18 +63,6 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		return fmt.Errorf("empty metrics line detected. Failing the check")
 	}
 
-	// Account for parsing errors
-	defer func() {
-		if r := recover(); r != nil {
-			if re, ok := r.(error); re != nil && ok {
-				err = re
-			} else {
-				err = fmt.Errorf("%v", r)
-			}
-			logger.Error("Error when decoding Metric [%s]. Error [%s]. Failing Metric...", line, err.Error())
-		}
-	}()
-
 	// Attempt to parse the JSON text
 	x := new(daemonJSONContainer)
 	if err = json.NewDecoder(strings.NewReader(line)).Decode(x); err != nil {
@@ -104,15 +83,18 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 			if err != nil {
 				return err
 			}
-			// Validate if the found port is acceptable, if not, panics - used to jump stack frame
-			validatePortRange(r)
-			daemon.Ports = append(daemon.Ports, r)
-			/* P.Saiz is this needed??
+			err = validatePortRange(r)
+			if err != nil {
+				return err
+			}
 
-			} else if i, isFloat := p.(float64); isFloat {
-					// Validate if the found port is acceptable, if not, panics - used to jump stack frame
-					validatePortRange(int(i))
-					daemon.Ports = append(daemon.Ports, int(i)) */
+			daemon.Ports = append(daemon.Ports, r)
+		} else if i, isFloat := p.(float64); isFloat {
+			err := validatePortRange(int(i))
+			if err != nil {
+				return err
+			}
+			daemon.Ports = append(daemon.Ports, int(i))
 		} else {
 			return fmt.Errorf("the `port` value [%v] is not supported", p)
 		}
@@ -125,16 +107,14 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		if isString {
 			s = strings.TrimSpace(s)
 			if p != "tcp" && p != "udp" {
-				//P.Saiz Return error, please
-				panic(fmt.Sprintf("The specified protocol [%s] is not supported", p))
+				return fmt.Errorf("the specified protocol [%s] is not supported", p)
 			} else {
 				if p == "tcp" {
-					daemon.requiresTcp = true
+					daemon.requiresTCP = true
 				} else {
-					daemon.requiresUdp = true
+					daemon.requiresUDP = true
 				}
 			}
-			//	daemon.Protocols = append(daemon.Protocols, protocol(s))
 		} else {
 			return fmt.Errorf("the `protocol` value [%v] is not supported", p)
 		}
@@ -147,14 +127,13 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		if isString {
 			if s == "ipv4" || s == "4" {
 				s = ""
-				daemon.requiresIPv4 = true
+				daemon.requiresIPV4 = true
 			} else if s == "ipv6" || s == "6" {
 				s = "6"
-				daemon.requiresIPv6 = true
+				daemon.requiresIPV6 = true
 			} else {
 				return fmt.Errorf("the `ip` value [%s] is not supported", s)
 			}
-			//	daemon.IpVersions = append(daemon.IpVersions, ipVersion(s))
 		} else {
 			return fmt.Errorf("the `ip` value [%v] is not supported", p)
 		}
@@ -174,7 +153,6 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 }
 
 // validatePortRange : validates that the given port is within the accepted range
-//P.Saiz What about replacing the panic by returning error
 func validatePortRange(port int) error {
 	if (port < 1) || (port > 65535) {
 		return fmt.Errorf("the specified port [%d] is out of range [1-65535]", port)
@@ -248,31 +226,6 @@ func (daemon *DaemonListening) processMetricLine(metric string) error {
 	return nil
 }
 
-/*
-// fetchAllLocalInterfaces : Fetch all local interfaces IPs and add them to the default array of Hosts to check
-func (daemon *DaemonListening) fetchAllLocalInterfaces() error {
-	// Log
-	logger.Trace("Fetching all IPs from the local interfaces")
-
-	// Retrieve all interfaces on the machine by default
-	output, err := runner.RunCommand(`ip addr show`, true, 0)
-	if err != nil {
-		logger.Error("Failed to fetch the interfaces from this machine. Error [%s]", err.Error())
-		return err
-	}
-	outputIPs := regexp.MustCompile(`inet[0-9]?[ ][\w.:]*`).FindAllString(output, -1)
-	logger.Trace("Found local addresses [%v]", outputIPs)
-	for _, ip := range outputIPs {
-		daemon.Hosts = append(daemon.Hosts, host(regexp.MustCompile(`inet([6])?[ ]`).Split(ip, -1)[1]))
-	}
-
-	// Add the any interface static IP pattern
-	daemon.Hosts = append(daemon.Hosts, host("0.0.0.0"))
-	daemon.Hosts = append(daemon.Hosts, host("::"))
-
-	return nil
-}
-*/
 // isListening : checks if a daemon is listening on the given protocol(s) in the selected IP level and port
 func (daemon *DaemonListening) isListening() (int, error) {
 	portsFormat := daemon.getPortsRegexFormat()
@@ -286,79 +239,75 @@ func (daemon *DaemonListening) isListening() (int, error) {
 		fmt.Sprintf(`[0-9]+: (%s):(%s)`, hostsFormat, portsFormat))
 	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
 
-	var foundLines int
-
 	// TCP & IPv4
-	err = sumAndMatchIfRequired(daemon.requiresIPv4 && daemon.requiresTcp, tcp4ConfSock, regex, &foundLines)
+	foundLines, err := matchIfRequired(daemon.requiresIPV4 && daemon.requiresTCP, tcp4ConfSock, regex)
 	if err != nil {
 		return -1, err
+	} else if foundLines >= 1 {
+		logger.Trace("Found the required ports [%s] listening on TCP - IPv4", daemon.Ports)
+		return 1, nil
 	}
 
 	// TCP & IPv6
-	err = sumAndMatchIfRequired(daemon.requiresIPv6 && daemon.requiresTcp, tcp6ConfSock, regex, &foundLines)
+	foundLines, err = matchIfRequired(daemon.requiresIPV6 && daemon.requiresTCP, tcp6ConfSock, regex)
 	if err != nil {
 		return -1, err
+	} else if foundLines >= 1 {
+		logger.Trace("Found the required ports [%s] listening on TCP - IPv6", daemon.Ports)
+		return 1, nil
 	}
 
 	// UDP & IPv4
-	err = sumAndMatchIfRequired(daemon.requiresIPv4 && daemon.requiresUdp, udp4ConfSock, regex, &foundLines)
+	foundLines, err = matchIfRequired(daemon.requiresIPV4 && daemon.requiresUDP, udp4ConfSock, regex)
 	if err != nil {
 		return -1, err
+	} else if foundLines >= 1 {
+		logger.Trace("Found the required ports [%s] listening on UDP - IPv4", daemon.Ports)
+		return 1, nil
 	}
 
 	// UDP & IPv6
-	err = sumAndMatchIfRequired(daemon.requiresIPv6 && daemon.requiresUdp, udp6ConfSock, regex, &foundLines)
+	foundLines, err = matchIfRequired(daemon.requiresIPV6 && daemon.requiresUDP, udp6ConfSock, regex)
 	if err != nil {
 		return -1, err
+	} else if foundLines >= 1 {
+		logger.Trace("Found the required ports [%s] listening on UDP - IPv6", daemon.Ports)
+		return 1, nil
 	}
 
-	if foundLines < 1 {
-		return -1, fmt.Errorf("expected to find at least 1 matching line for the daemon check [%#v]", daemon)
-	}
-
-	return 1, nil
+	return -1, fmt.Errorf("failed to find the required open ports [%s]", daemon.Ports)
 }
 
 // applyDefaultValues : function responsible for setting the default values of the Hosts, IPVersions & Protocols.
 // 	Will return an error if an issue was detected when attempting to retrieve Hosts
 func (daemon *DaemonListening) applyDefaultValues() error {
 	// If no Protocols were given
-	//	if len(daemon.Protocols) == 0 {
-	if !daemon.requiresTcp && !daemon.requiresUdp {
-		//	daemon.Protocols = defaultProtocols
-		daemon.requiresTcp = true
-		daemon.requiresUdp = true
+	if !daemon.requiresTCP && !daemon.requiresUDP {
+		daemon.requiresTCP = true
+		daemon.requiresUDP = true
 	}
 
 	// If no ip versions were given
-	//if len(daemon.IpVersions) == 0 {
-	if !daemon.requiresIPv4 && !daemon.requiresIPv6 {
-		//	daemon.IpVersions = defaultIPVersions
-		daemon.requiresIPv4 = true
-		daemon.requiresIPv6 = true
+	if !daemon.requiresIPV4 && !daemon.requiresIPV6 {
+		daemon.requiresIPV4 = true
+		daemon.requiresIPV6 = true
 	}
-	/*
-		// If no Hosts were given
-		if len(daemon.Hosts) == 0 {
-			// Fetch all listening interfaces
-			err := daemon.fetchAllLocalInterfaces()
-			if err != nil {
-				return err
-			}
-		}
-	*/
 	return nil
 }
 
 // getHostRegexFormat : Helper function that creates a regex-ready string from all the found [daemon.Hosts] entries
 func (daemon *DaemonListening) getHostRegexFormat() (string, error) {
+	// Return wildcard if no hosts were specified by the user
+	if len(daemon.Hosts) == 0 {
+		return ".*", nil
+	}
 	// Get all hosts in a regex-ready format
-	//P.Saiz check if the length is zero and return wildcard
 	var hostsFormat bytes.Buffer
 	for i, h := range daemon.Hosts {
 		if i != 0 {
 			hostsFormat.WriteString("|")
 		}
+
 		hostHex, err := network.GetPackedReprFromIP(h)
 		if err != nil {
 			return "", err
@@ -367,7 +316,6 @@ func (daemon *DaemonListening) getHostRegexFormat() (string, error) {
 		logger.Trace("Scanning host [%s] with HEX [%s]", h, hostHex)
 		hostsFormat.WriteString(fmt.Sprintf("(%s)", hostHex))
 	}
-
 	return hostsFormat.String(), nil
 }
 
@@ -387,20 +335,19 @@ func (daemon *DaemonListening) getPortsRegexFormat() string {
 	return portsFormat.String()
 }
 
-// sumAndMatchIfRequired : Helper function that only executed if the given condition evaluates to [true]. If so,
+// matchIfRequired : Helper function that only executed if the given condition evaluates to [true]. If so,
 // the file contents of @arg sockPath will be read and matched against the given @arg regex. The amount of matches
 // will then be added to the given counter
-func sumAndMatchIfRequired(cond bool, sockPath string, regex *regexp.Regexp, counter *int) error {
+func matchIfRequired(cond bool, sockPath string, regex *regexp.Regexp) (foundLines int, err error) {
 	if cond {
 		logger.Trace("Looking for regex in sock file [%s]...", sockPath)
 
 		fileContent, err := filehandler.ReadAllLinesFromFileAsString(sockPath, " ")
 		if err != nil {
-			return fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
+			return foundLines, fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
 		}
-		foundLines := len(regex.FindStringSubmatch(fileContent))
-		*counter += foundLines
+		foundLines = len(regex.FindStringSubmatch(fileContent))
 		logger.Debug("Found [%d] matching lines in sock file...", foundLines, sockPath)
 	}
-	return nil
+	return
 }
