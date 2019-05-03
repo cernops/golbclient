@@ -50,7 +50,7 @@ before_script:
   nc -l      -p           2811    &
   nc -l      -p           80      &
   nc -l      -p           922     &
-  nc -l  u   -p           922     &
+  nc -l -u   -p           922     &
   nc -l -s 127.0.0.1 -p   22      &
   nc -l -s 127.0.0.1 -p   22   -6 &
 

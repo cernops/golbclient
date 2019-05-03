@@ -275,7 +275,7 @@ func (daemon *DaemonListening) isListening() (int, error) {
 		return 1, nil
 	}
 
-	return -1, fmt.Errorf("failed to find the required open ports [%s]", daemon.Ports)
+	return -1, fmt.Errorf("failed to find the required open ports [%v]", daemon.Ports)
 }
 
 // applyDefaultValues : function responsible for setting the default values of the Hosts, IPVersions & Protocols.
@@ -347,7 +347,7 @@ func matchIfRequired(cond bool, sockPath string, regex *regexp.Regexp) (foundLin
 			return foundLines, fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
 		}
 		foundLines = len(regex.FindStringSubmatch(fileContent))
-		logger.Debug("Found [%d] matching lines in sock file...", foundLines, sockPath)
+		logger.Debug("Found [%d] matching lines in sock file [%s]...", foundLines, sockPath)
 	}
 	return
 }
