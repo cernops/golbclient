@@ -83,6 +83,16 @@ test-go11:
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
 
+test-snmpd-call:
+  services:
+    - net-snmp:latest
+  stage: snmpd
+    - test
+  script:
+    - yum install -y https://koji.cern.ch/kojifiles/packages/lbclient/2.0.3/1.ai6/x86_64/lbclient-2.0.3-1.ai6.x86_64.rpm
+    - yum install -y net-snmp-utils
+    - /usr/bin/snmpget -v 3 -u loadbalancing -l authNoPriv -a MD5 -A $SNMP_AUTH localhost .1.3.6.1.4.1.96.255.1 || sleep 100000
+
 bench-go09:
   stage: benchmark
   script:
