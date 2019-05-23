@@ -86,8 +86,7 @@ before_script:
 test-snmpd-call:
   services:
     - net-snmp:latest
-  stage: snmpd
-    - test
+  stage: test
   script:
     - yum install -y https://koji.cern.ch/kojifiles/packages/lbclient/2.0.3/1.ai6/x86_64/lbclient-2.0.3-1.ai6.x86_64.rpm
     - yum install -y net-snmp-utils
