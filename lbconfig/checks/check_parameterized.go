@@ -32,12 +32,14 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 	logger.Debug("Adding [%s] metric [%s]", g.Type.Name(), line)
 
 	// Support unintentional errors => e.g., [loadcheck collectd], panics if the regex cannot be compiled
-	found := regexp.MustCompile("(?i)((check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
+	found := regexp.MustCompile("(?i)(((check)( )+(collectd_alarm))|(check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
 
 	// Found the correct syntax
 	if len(found) != 2 || (!isCheck && !isLoad) {
 		return -1, fmt.Errorf("incorrect syntax specified at [%s]. Please use (`load` or `check` `<cli>`)", line)
 	}
+
+
 
 	rawExpression := found[1]
 	// Log
@@ -48,11 +50,18 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 		return -1, fmt.Errorf("detected a (check|load) without metrics. Returning [%v]", rVal)
 	}
 
-	// Backwards compatible (remove unnecessary underscores from the expression)
-	g.compatibilityProcess(&rawExpression)
+	var metrics []string
+	if found[0] != "collectd_alarm" {
+		// Backwards compatible (remove unnecessary underscores from the expression)
+		g.compatibilityProcess(&rawExpression)
 
-	// Discover all the metrics found in the expression
-	metrics := regexp.MustCompile(`\[([^\[\]]*)]`).FindAllString(rawExpression, -1)
+		// Discover all the metrics found in the expression
+		metrics = regexp.MustCompile(`\[([^\[\]]*)]`).FindAllString(rawExpression, -1)
+	} else {
+		// Extract everything between curly brackets (JSON) and send it down to the impl
+		metrics = []string{regexp.MustCompile(`{([^}]*)}`).FindString(rawExpression)}
+	}
+
 	logger.Trace("Found metrics [%v], len [%d]", metrics, len(metrics))
 	parameters := make(map[string]interface{}, len(metrics))
 
