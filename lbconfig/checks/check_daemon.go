@@ -263,7 +263,9 @@ func (daemon *DaemonListening) isListening() (int, error) {
 		foundLines, err := matchIfRequired(cfp.cond, cfp.filepath, regex)
 		if err != nil {
 			return -1, err
-		} else if foundLines >= 1 {
+		}
+
+		if foundLines >= 1 {
 			logger.Trace("Found the required ports [%s] listening on [%s]", daemon.Ports, cfp.filepath)
 			return 1, nil
 		}
