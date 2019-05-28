@@ -41,6 +41,12 @@ type daemonJSONContainer struct {
 	Host      interface{} `json:"host"`
 }
 
+// condFilePair : Helper struct to achieve code-reuse
+type condFilePair struct {
+	cond bool
+	filepath string
+}
+
 func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
 	metric := args[0].(string)
 
@@ -239,40 +245,22 @@ func (daemon *DaemonListening) isListening() (int, error) {
 		fmt.Sprintf(`[0-9]+: (%s):(%s)`, hostsFormat, portsFormat))
 	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
 
-	// TCP & IPv4
-	foundLines, err := matchIfRequired(daemon.requiresIPV4 && daemon.requiresTCP, tcp4ConfSock, regex)
-	if err != nil {
-		return -1, err
-	} else if foundLines >= 1 {
-		logger.Trace("Found the required ports [%s] listening on TCP - IPv4", daemon.Ports)
-		return 1, nil
+	// Conditions & file-lookup map
+	condFilePairList := []condFilePair{
+		{daemon.requiresIPV4 && daemon.requiresTCP, tcp4ConfSock}, // TCP & IPv4
+		{daemon.requiresIPV6 && daemon.requiresTCP, tcp6ConfSock}, // TCP & IPv6
+		{daemon.requiresIPV4 && daemon.requiresUDP, udp4ConfSock}, // UDP & IPv4
+		{daemon.requiresIPV6 && daemon.requiresUDP, udp6ConfSock}, // UDP & IPv6
 	}
 
-	// TCP & IPv6
-	foundLines, err = matchIfRequired(daemon.requiresIPV6 && daemon.requiresTCP, tcp6ConfSock, regex)
-	if err != nil {
-		return -1, err
-	} else if foundLines >= 1 {
-		logger.Trace("Found the required ports [%s] listening on TCP - IPv6", daemon.Ports)
-		return 1, nil
-	}
-
-	// UDP & IPv4
-	foundLines, err = matchIfRequired(daemon.requiresIPV4 && daemon.requiresUDP, udp4ConfSock, regex)
-	if err != nil {
-		return -1, err
-	} else if foundLines >= 1 {
-		logger.Trace("Found the required ports [%s] listening on UDP - IPv4", daemon.Ports)
-		return 1, nil
-	}
-
-	// UDP & IPv6
-	foundLines, err = matchIfRequired(daemon.requiresIPV6 && daemon.requiresUDP, udp6ConfSock, regex)
-	if err != nil {
-		return -1, err
-	} else if foundLines >= 1 {
-		logger.Trace("Found the required ports [%s] listening on UDP - IPv6", daemon.Ports)
-		return 1, nil
+	for _, cfp := range condFilePairList {
+		foundLines, err := matchIfRequired(cfp.cond, cfp.filepath, regex)
+		if err != nil {
+			return -1, err
+		} else if foundLines >= 1 {
+			logger.Trace("Found the required ports [%s] listening on [%s]", daemon.Ports, cfp.filepath)
+			return 1, nil
+		}
 	}
 
 	return -1, fmt.Errorf("failed to find the required open ports [%v]", daemon.Ports)
