@@ -126,6 +126,12 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		}
 	}
 
+	// Protocol :: If no Protocols were given
+	if !daemon.requiresTCP && !daemon.requiresUDP {
+		daemon.requiresTCP = true
+		daemon.requiresUDP = true
+	}
+
 	// Parse :: IP version
 	pipelineTransform(&x.IPVersion, &transformationContainer)
 	for _, p := range *transformationContainer {
@@ -143,6 +149,12 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 		} else {
 			return fmt.Errorf("the `ip` value [%v] is not supported", p)
 		}
+	}
+
+	// IP version :: If no ip versions were given
+	if !daemon.requiresIPV4 && !daemon.requiresIPV6 {
+		daemon.requiresIPV4 = true
+		daemon.requiresIPV6 = true
 	}
 
 	// Parse :: Host
@@ -217,12 +229,6 @@ func (daemon *DaemonListening) processMetricLine(metric string) error {
 		return err
 	}
 
-	// Apply default values
-	err = daemon.applyDefaultValues()
-	if err != nil {
-		return err
-	}
-
 	// The port Metric argument is mandatory
 	if len(daemon.Ports) == 0 {
 		return fmt.Errorf("a port needs to be specified in a daemon check in the format `{port : <val>}`")
@@ -264,23 +270,6 @@ func (daemon *DaemonListening) isListening() (int, error) {
 	}
 
 	return -1, fmt.Errorf("failed to find the required open ports [%v]", daemon.Ports)
-}
-
-// applyDefaultValues : function responsible for setting the default values of the Hosts, IPVersions & Protocols.
-// 	Will return an error if an issue was detected when attempting to retrieve Hosts
-func (daemon *DaemonListening) applyDefaultValues() error {
-	// If no Protocols were given
-	if !daemon.requiresTCP && !daemon.requiresUDP {
-		daemon.requiresTCP = true
-		daemon.requiresUDP = true
-	}
-
-	// If no ip versions were given
-	if !daemon.requiresIPV4 && !daemon.requiresIPV6 {
-		daemon.requiresIPV4 = true
-		daemon.requiresIPV6 = true
-	}
-	return nil
 }
 
 // getHostRegexFormat : Helper function that creates a regex-ready string from all the found [daemon.Hosts] entries
