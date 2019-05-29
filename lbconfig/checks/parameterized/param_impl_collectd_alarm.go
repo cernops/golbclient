@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
-	"regexp"
 	"strings"
 )
 
@@ -17,6 +16,10 @@ type CollectdAlarmImpl struct {
 
 type alarmMetricCache struct {
 	alarms map[string]alarm
+}
+
+var supportedAlarmStates = []string{
+	"UNKNOWN", "ERROR", "WARNING", "OKAY",
 }
 
 func (as alarmMetricCache) getAlarm(key string) (alarm, error) {
@@ -33,26 +36,25 @@ type alarmsParsingSchema struct {
 }
 
 type alarm struct {
-	name, state string
+	Name 	string
+	State 	*string `json:",omitempty"`
 }
 
 func (a alarm) compareAlarmState(a2 alarm) int {
-	if a.state != a2.state {
+	if a.State == nil {
+		logger.Trace("No state was found to be defined by the user...")
+		return 1
+	}
+
+	if a.State != a2.State {
 		logger.Trace("Expected the metric [%s] alarm state to be [%s] but found [%s]. Returning [-1]...",
-			a.name, a.state, a2.state)
+			a.Name, a.State, a2.State)
 		return -1
 	}
-	logger.Trace("Found the metric [%s] with the correct desired state [%s]...", a.name, a.state)
+	logger.Trace("Found the metric [%s] with the correct desired state [%s]...", a.Name, a.State)
 	return 1
 }
 
-type alarmState = string
-const (
-	unknown 	= "UNKNOWN"
-	okay		= "OKAY"
-	critical	= "CRITICAL"
-	warning		= "WARNING"
-)
 
 func (ci CollectdAlarmImpl) Name() string {
 	return "collectd_alarm"
@@ -78,20 +80,36 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 			"Skipping the cli execution...")
 
 		for _, a := range parsingContainer.Alarm {
-			cachedAlarm, err := ci.cache.getAlarm(a.name)
+			cachedAlarm, err := ci.cache.getAlarm(a.Name)
 			if err != nil {
 				return err
 			}
 
-			(*valueList)[a.name] = a.compareAlarmState(cachedAlarm)
+			(*valueList)[a.Name] = a.compareAlarmState(cachedAlarm)
 		}
 	} else {
-		logger.Trace("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...")
-		rawOutput, err := runner.Run(ci.CommandPath, true, 0, "listval", "state=")
+		logger.Trace("No cache found for previous [collectd] alarm cli [%state]. Running the [collectd] cli...",
+			ci.CommandPath)
 
-		logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
-		if err != nil {
-			return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
+		// Run the CLI for all the wanted states
+		for _, state := range supportedAlarmStates {
+			logger.Debug("Running the [collectd] alarm cli [%state] for the state [%state]...", ci.CommandPath, state)
+			rawOutput, err := runner.Run(
+				ci.CommandPath,
+				true,
+				0,
+				"listval",
+				fmt.Sprintf("state=%state", state),
+				`| egrep -o "/.*" | cut -c 2- | sort | uniq`)
+
+			logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
+
+			// Find all the alarms with a Regex
+			// @TODO need to find a way to avoid n^2
+
+			if err != nil {
+				return fmt.Errorf("failed to run the [collectd] cli with the error [%state]", err.Error())
+			}
 		}
 	}
 
