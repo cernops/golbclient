@@ -40,21 +40,22 @@ type alarm struct {
 	State 	*string `json:",omitempty"`
 }
 
-func (a alarm) compareAlarmState(a2 alarm) int {
-	if a.State == nil {
-		logger.Trace("No state was found to be defined by the user...")
-		return 1
+func (a alarm) equivalentAlarmState(a2 alarm) bool {
+	if a.State == nil ||
+		((*a.State == "UNKNOWN" || *a.State == "OKAY") && (*a2.State == "UNKNOWN" || *a2.State == "OKAY")) {
+		logger.Trace("Found matching metric state [UNKNOWN|OKAY]. Returning [true]...")
+		return true
 	}
 
 	if a.State != a2.State {
-		logger.Trace("Expected the metric [%s] alarm state to be [%s] but found [%s]. Returning [-1]...",
+		logger.Trace("Expected the metric [%s] alarm state to be [%s] but found [%s]. Returning [false]...",
 			a.Name, a.State, a2.State)
-		return -1
+		return false
 	}
-	logger.Trace("Found the metric [%s] with the correct desired state [%s]...", a.Name, a.State)
-	return 1
-}
 
+	logger.Trace("Unable to compare the alarm [%v] with [%v]. Returning [false]...", a, a2)
+	return false
+}
 
 func (ci CollectdAlarmImpl) Name() string {
 	return "collectd_alarm"
@@ -74,7 +75,6 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 	}
 
 	// Run the CLI for each metric found
-	var fetchedValue string
 	if ci.cache != nil {
 		logger.Trace("Found cached alarm states from previous [collectd] cli run. " +
 			"Skipping the cli execution...")
@@ -85,7 +85,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				return err
 			}
 
-			(*valueList)[a.Name] = a.compareAlarmState(cachedAlarm)
+			(*valueList)[a.Name] = a.equivalentAlarmState(cachedAlarm)
 		}
 	} else {
 		logger.Trace("No cache found for previous [collectd] alarm cli [%state]. Running the [collectd] cli...",
@@ -104,8 +104,11 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 
 			logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
 
-			// Find all the alarms with a Regex
-			// @TODO need to find a way to avoid n^2
+			// @TODO find way to abort faster (i.e. avoid n) ...?
+			cacheAllTheOutput := strings.Split(rawOutput, "\n")
+			for _, line := range cacheAllTheOutput {
+				ci.cache.alarms[line] = alarm{line, &state}
+			}
 
 			if err != nil {
 				return fmt.Errorf("failed to run the [collectd] cli with the error [%state]", err.Error())
@@ -113,8 +116,16 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		}
 	}
 
-	(*valueList)[metricName] = fetchedValue
-	// Log
-	logger.Trace("Result of the collectd command: [%v]", (*valueList)[metricName])
+	// Check that all the desired metrics have been found and have the desired state
+	for _, alarm := range parsingContainer.Alarm {
+		a, err := ci.cache.getAlarm(alarm.Name)
+		if err != nil {
+			return fmt.Errorf("unable to find the metric [%s]", alarm.Name)
+		}
+
+		if !a.equivalentAlarmState(alarm) {
+			return fmt.Errorf("failed to find a matching alarm state betwee [%v] and [%v]", a, alarm)
+		}
+	}
 	return nil
 }
