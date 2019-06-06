@@ -40,6 +40,7 @@ var allLBExpressions = map[string]ExpressionCode{
 	"CONSTANT":      {code: 16, cli: checks.MetricConstant{}},
 	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPING":       {code: 6, cli: checks.CheckAttribute{}},
 }
 
 /*
