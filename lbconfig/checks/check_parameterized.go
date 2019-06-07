@@ -12,9 +12,18 @@ import (
 )
 
 type ParamCheckType = string
+const (
+	ALARM ParamCheckType = "alarm"
+)
+
 
 type ParamCheck struct {
-	Type param.Parameterized
+	Impl param.Parameterized
+	Type ParamCheckType
+}
+
+func (g ParamCheck) isAlarm() bool {
+	return strings.TrimSpace(strings.ToLower(g.Type)) == ALARM
 }
 
 func (g ParamCheck) Run(args ...interface{}) (int, error) {
@@ -22,17 +31,17 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 	line := args[0].(string)
 	isCheck := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "check")
 
-	// Abort if no Type was given during the instancing of the ParamCheck struct
-	if g.Type == nil {
-		return -1, fmt.Errorf("expected a Type of check to be given, please see the contract [Parameterized]")
+	// Abort if no Impl was given during the instancing of the ParamCheck struct
+	if g.Impl == nil {
+		return -1, fmt.Errorf("expected a Impl of check to be given, please see the contract [Parameterized]")
 	}
 
 	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
 	// Log
-	logger.Debug("Adding [%s] metric [%s]", g.Type.Name(), line)
+	logger.Debug("Adding [%s] metric [%s]", g.Impl.Name(), line)
 
 	// Support unintentional errors => e.g., [loadcheck collectd], panics if the regex cannot be compiled
-	found := regexp.MustCompile("(?i)(((check)( )+(collectd_alarm))|(check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
+	found := regexp.MustCompile("(?i)(((check)( )+(collectd_alarms))|(check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
 
 	// Found the correct syntax
 	if len(found) != 2 || (!isCheck && !isLoad) {
@@ -51,7 +60,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 	}
 
 	var metrics []string
-	if found[0] != "collectd_alarm" {
+	if !g.isAlarm() {
 		// Backwards compatible (remove unnecessary underscores from the expression)
 		g.compatibilityProcess(&rawExpression)
 
@@ -59,14 +68,14 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 		metrics = regexp.MustCompile(`\[([^\[\]]*)]`).FindAllString(rawExpression, -1)
 	} else {
 		// Extract everything between curly brackets (JSON) and send it down to the impl
-		metrics = []string{regexp.MustCompile(`{([^}]*)}`).FindString(rawExpression)}
+		metrics = []string{regexp.MustCompile(`{.*}`).FindString(rawExpression)}
 	}
 
 	logger.Trace("Found metrics [%v], len [%d]", metrics, len(metrics))
 	parameters := make(map[string]interface{}, len(metrics))
 
 	// Run command with a list of all the metrics found and return a key/value map
-	err := g.Type.Run(metrics, &parameters)
+	err := g.Impl.Run(metrics, &parameters)
 	if err != nil {
 		return -1, err
 	}
