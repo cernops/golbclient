@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
+	"reflect"
 	"strings"
 )
 
@@ -15,43 +16,27 @@ type CollectdAlarmImpl struct {
 
 
 type alarmMetricCache struct {
-	alarms map[string]alarm
-}
-
-var supportedAlarmStates = []string{
-	"UNKNOWN", "ERROR", "WARNING", "OKAY",
-}
-
-func (as alarmMetricCache) getAlarm(key string) (alarm, error) {
-	v, ok := as.alarms[key]
-	if !ok {
-		return alarm{}, fmt.Errorf("unexpected error - unable to find the metric with key [%s] in the " +
-			"application cache", key)
-	}
-	return v, nil
+	alarms map[string][]string
 }
 
 type alarmsParsingSchema struct {
-	Alarm []alarm `json:"alarms"`
+	Alarm []alarmState `json:"alarms"`
 }
 
-type alarm struct {
-	Name 	string  `json:"name"`
-	State 	string `json:"state,omitempty"`
+type alarmState struct {
+	State   string   `json:"state"`
+	Names 	[]string `json:"names"`
 }
 
-func (a alarm) equivalentAlarmState(a2 alarm) bool {
-	a2.State = strings.ToUpper(a2.State)
-
-	if len(a.State) == 0 ||
-		((a.State == "UNKNOWN" || a.State == "OKAY") && (a2.State == "UNKNOWN" || a2.State == "OKAY")) {
+func (userAlarm alarmState) equivalentAlarmState(cacheState string) bool {
+	if len(userAlarm.State) == 0 && cacheState == "UNKNOWN" || cacheState == "OKAY" {
 		logger.Trace("Found matching metric state [UNKNOWN|OKAY]. Returning [true]...")
 		return true
 	}
 
-	if a.State != a2.State {
-		logger.Trace("Expected the metric [%s] alarm state to be [%s] but found [%s]. Returning [false]...",
-			a.Name, a.State, a2.State)
+	if userAlarm.State != cacheState {
+		logger.Trace("Expected the alarm state to be [%s] but found [%s]. Returning [false]...",
+			userAlarm.State, cacheState)
 		return false
 	}
 
@@ -75,17 +60,23 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		return fmt.Errorf("could not parse [%s]. Error [%v]", []byte(metrics[0]), err)
 	}
 
+	// Only run collectdctl for the user defined states
+	var userRequiredAlarms []string
+	for _, userAlarm := range parsingContainer.Alarm {
+		userRequiredAlarms = append(userRequiredAlarms, userAlarm.State)
+	}
+
 	// Run the CLI for each metric found
 	if ci.cache == nil {
 		// Initialize the map
-		ci.cache = &alarmMetricCache{alarms:make(map[string]alarm)}
-		resultsCh := make(chan interface{}, len(supportedAlarmStates))
+		ci.cache = &alarmMetricCache{alarms:make(map[string][]string)}
+		resultsCh := make(chan error)
 
 		logger.Trace("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
 			ci.CommandPath)
 
 		// Run the CLI for all the wanted states
-		for _, alarmState := range supportedAlarmStates {
+		for _, alarmState := range userRequiredAlarms {
 			go func(state string) {
 				logger.Debug("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
 				rawOutput, err := runner.Run(
@@ -107,43 +98,40 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				cacheAllTheOutput := strings.Split(rawOutput, "\n")
 				for _, line := range cacheAllTheOutput {
 					logger.Trace("Attempting to cache metric...")
-					ci.cache.alarms[line] = alarm{line, state}
+					if slice, exists := ci.cache.alarms[state]; exists {
+						slice = append(slice, line)
+					} else {
+						ci.cache.alarms[state] = []string{line}
+					}
 					logger.Trace("Cached value for metric [%s] with state [%s]...", line, state)
 				}
 
 				logger.Trace("Cached all the metrics for state [%s]...", state)
-				resultsCh <-true
+				resultsCh <-nil
 			}(alarmState)
 		}
 
 		// Wait for all the metrics to be cached
-		it := 0
-		for result := range resultsCh {
-			if result, ok := result.(error); ok {
+		for i := 0; i <= len(userRequiredAlarms); i++ {
+			r := <-resultsCh
+			if result, ok := r.(error); ok {
 				return result
-			}
-			if _, ok := result.(bool); ok {
-				it++
-				if it >= len(supportedAlarmStates) {
-					// Log
-					logger.Debug("Finished caching all the metrics for the supported states...")
-					close(resultsCh)
-				}
-			} else {
-				return fmt.Errorf("an unexpected result was received from the caching routines [%+v]", result)
 			}
 		}
 	}
 
 	// Check that all the desired metrics have been found and have the desired state
 	for _, al := range parsingContainer.Alarm {
-		a, err := ci.cache.getAlarm(al.Name)
-		if err != nil {
-			return fmt.Errorf("unable to find the metric [%s]", al.Name)
+		cachedAlarmNames, stateFound := ci.cache.alarms[al.State]
+		if !stateFound {
+			return fmt.Errorf("the metric names [%v] was nout found with the desired state [%s]",
+				al.Names, al.State)
 		}
 
-		if !a.equivalentAlarmState(al) {
-			return fmt.Errorf("failed to find a matching alarm state between [%v] and [%v]", a, al)
+		// @TODO possibly find a better way?
+		if !reflect.DeepEqual(cachedAlarmNames, al.Names) {
+			return fmt.Errorf("failed to find a matching alarm state [%s] for the metrics [%v]",
+				al.State, al.Names)
 		}
 	}
 
