@@ -33,7 +33,7 @@ db_unknown=(
 
 ## Okay DB
 db_okay=(
-    "hostname/cpu/percent-system"
+    "cpu/percent-system"
 )
 
 ## Error DB

@@ -1,21 +1,21 @@
 // +build linux darwin
 
+
 package lbconfig
 
 import (
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/timer"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
-	param "gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/timer"
 )
 
 // ExpressionCode : return value for the CLI calls
@@ -28,11 +28,11 @@ type ExpressionCode struct {
 var allLBExpressions = map[string]ExpressionCode{
 	"NOLOGIN":         {code: 1, cli: checks.NoLogin{}},
 	"TMPFULL":         {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":       {code: 7, cli: checks.DaemonListening{Metric:`{"port":22}`}},
-	"WEBDAEMON":       {code: 8, cli: checks.DaemonListening{Metric:`{"port":80}`}},
-	"FTPDAEMON":       {code: 9, cli: checks.DaemonListening{Metric:`{"port":21}`}},
+	"SSHDAEMON":       {code: 7, cli: checks.DaemonListening{Ports: []int{22}}},
+	"WEBDAEMON":       {code: 8, cli: checks.DaemonListening{Ports: []int{80}}},
+	"FTPDAEMON":       {code: 9, cli: checks.DaemonListening{Ports: []int{21}}},
 	"AFS":             {code: 10, cli: checks.AFS{}},
-	"GRIDFTPDAEMON":   {code: 11, cli: checks.DaemonListening{Metric:`{"port":2811}`}},
+	"GRIDFTPDAEMON":   {code: 11, cli: checks.DaemonListening{Ports: []int{2811}}},
 	"LEMON":           {code: 12, cli: checks.ParamCheck{Impl: param.LemonImpl{}}},
 	"LEMONLOAD":       {code: 12, cli: checks.ParamCheck{Impl: param.LemonImpl{}}},
 	"ROGER":           {code: 13, cli: checks.RogerState{}},

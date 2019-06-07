@@ -80,6 +80,11 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 		return -1, err
 	}
 
+	// Return before evaluating an expression
+	if g.isAlarm() {
+		return 1, nil
+	}
+
 	// Parse the expression
 	expression, err := govaluate.NewEvaluableExpression(rawExpression)
 

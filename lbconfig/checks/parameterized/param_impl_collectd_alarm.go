@@ -41,6 +41,8 @@ type alarm struct {
 }
 
 func (a alarm) equivalentAlarmState(a2 alarm) bool {
+	a2.State = strings.ToUpper(a2.State)
+
 	if len(a.State) == 0 ||
 		((a.State == "UNKNOWN" || a.State == "OKAY") && (a2.State == "UNKNOWN" || a2.State == "OKAY")) {
 		logger.Trace("Found matching metric state [UNKNOWN|OKAY]. Returning [true]...")
@@ -53,8 +55,7 @@ func (a alarm) equivalentAlarmState(a2 alarm) bool {
 		return false
 	}
 
-	logger.Trace("Unable to compare the alarm [%v] with [%v]. Returning [false]...", a, a2)
-	return false
+	return true
 }
 
 func (ci CollectdAlarmImpl) Name() string {
@@ -88,45 +89,76 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 			(*valueList)[a.Name] = a.equivalentAlarmState(cachedAlarm)
 		}
 	} else {
+		// Initialize the map
+		ci.cache = &alarmMetricCache{alarms:make(map[string]alarm)}
+		resultsCh := make(chan interface{}, len(supportedAlarmStates))
+
 		logger.Trace("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
 			ci.CommandPath)
 
 		// Run the CLI for all the wanted states
-		for _, state := range supportedAlarmStates {
-			logger.Debug("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
-			rawOutput, err := runner.Run(
-				ci.CommandPath,
-				true,
-				0,
-				"listval",
-				fmt.Sprintf("state=%s", state),
-				`| egrep -o "/.*" | cut -c 2- | sort | uniq`)
+		for _, alarmState := range supportedAlarmStates {
+			go func(state string) {
+				logger.Debug("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
+				rawOutput, err := runner.Run(
+					ci.CommandPath,
+					true,
+					0,
+					"listval",
+					fmt.Sprintf("state=%s", state),
+					`| egrep -o "/.*" | cut -c 2- | sort | uniq`)
 
-			logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
+				if err != nil {
+					resultsCh <-fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
+					close(resultsCh)
+				}
 
-			// @TODO find way to abort faster (i.e. avoid n) ...?
-			cacheAllTheOutput := strings.Split(rawOutput, "\n")
-			for _, line := range cacheAllTheOutput {
-				logger.Trace("Caching value for metric [%s] with state [%s]...", line, state)
-				ci.cache.alarms[line] = alarm{line, state}
+				logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
+
+				// @TODO find way to abort faster (i.e. avoid n) ...?
+				cacheAllTheOutput := strings.Split(rawOutput, "\n")
+				for _, line := range cacheAllTheOutput {
+					logger.Trace("Attempting to cache metric...")
+					ci.cache.alarms[line] = alarm{line, state}
+					logger.Trace("Cached value for metric [%s] with state [%s]...", line, state)
+				}
+
+				logger.Trace("Cached all the metrics for state [%s]...", state)
+				resultsCh <-true
+			}(alarmState)
+		}
+
+		// Wait for all the metrics to be cached
+		it := 0
+		for result := range resultsCh {
+			if result, ok := result.(error); ok {
+				return result
 			}
-
-			if err != nil {
-				return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
+			if _, ok := result.(bool); ok {
+				it++
+				if it >= len(supportedAlarmStates) {
+					// Log
+					logger.Debug("Finished caching all the metrics for the supported states...")
+					close(resultsCh)
+				}
+			} else {
+				return fmt.Errorf("an unexpected result was received from the caching routines [%+v]", result)
 			}
 		}
 	}
 
 	// Check that all the desired metrics have been found and have the desired state
-	for _, alarm := range parsingContainer.Alarm {
-		a, err := ci.cache.getAlarm(alarm.Name)
+	for _, al := range parsingContainer.Alarm {
+		a, err := ci.cache.getAlarm(al.Name)
 		if err != nil {
-			return fmt.Errorf("unable to find the metric [%s]", alarm.Name)
+			return fmt.Errorf("unable to find the metric [%s]", al.Name)
 		}
 
-		if !a.equivalentAlarmState(alarm) {
-			return fmt.Errorf("failed to find a matching alarm state betwee [%v] and [%v]", a, alarm)
+		if !a.equivalentAlarmState(al) {
+			return fmt.Errorf("failed to find a matching alarm state between [%v] and [%v]", a, al)
 		}
 	}
+
+	logger.Debug("Metric [%s] requirements successfully validated...", metrics[0])
 	return nil
 }
