@@ -95,6 +95,8 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		}
 	}
 
+	// @TODO apply the same logic used for the [daemon] check
+
 	(*valueList)[metricName] = fetchedValue
 	// Log
 	logger.Trace("Result of the collectd command: [%v]", (*valueList)[metricName])
