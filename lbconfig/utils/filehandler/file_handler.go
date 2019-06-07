@@ -1,26 +1,20 @@
 package filehandler
 
 import (
-	"bufio"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ReadAllLinesFromFile : Reads all lines from a file into a string array
 func ReadAllLinesFromFile(path string) (lines []string, err error) {
-	file, err := os.Open(path)
+	c, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	defer func() {err = file.Close()}()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	err = scanner.Err()
-	return lines, err
+	return strings.Split(string(c), "\n"), nil
 }
 
 // ReadFirstLineFromFile : Reads the first line from a file
@@ -31,6 +25,16 @@ func ReadFirstLineFromFile(path string) (line string, err error) {
 	}
 	line = lines[0]
 	return line, err
+}
+
+// ReadAllLinesFromFileAsString : Reads all the lines from a file into a single string joined by the given separator
+func ReadAllLinesFromFileAsString(path string, separator string) (string, error) {
+	lines, err := ReadAllLinesFromFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Join(lines, separator), nil
 }
 
 // CreateFileInDir : Creates a file with all the required parent directories with the given permissions. If an issue is
