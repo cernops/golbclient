@@ -76,19 +76,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 	}
 
 	// Run the CLI for each metric found
-	if ci.cache != nil {
-		logger.Trace("Found cached alarm states from previous [collectd] cli run. " +
-			"Skipping the cli execution...")
-
-		for _, a := range parsingContainer.Alarm {
-			cachedAlarm, err := ci.cache.getAlarm(a.Name)
-			if err != nil {
-				return err
-			}
-
-			(*valueList)[a.Name] = a.equivalentAlarmState(cachedAlarm)
-		}
-	} else {
+	if ci.cache == nil {
 		// Initialize the map
 		ci.cache = &alarmMetricCache{alarms:make(map[string]alarm)}
 		resultsCh := make(chan interface{}, len(supportedAlarmStates))
