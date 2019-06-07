@@ -1,3 +1,5 @@
+// +build linux darwin
+
 package lbconfig
 
 import (
@@ -24,23 +26,27 @@ type ExpressionCode struct {
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 var allLBExpressions = map[string]ExpressionCode{
-	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
-	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
-	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80}},
-	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
-	"AFS":           {code: 10, cli: checks.AFS{}},
-	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
-	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
-	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
-	"ROGER":         {code: 13, cli: checks.RogerState{}},
-	"COMMAND":       {code: 14, cli: checks.Command{}},
-	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
-	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
-	"CONSTANT":      {code: 16, cli: checks.MetricConstant{}},
-	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPING":       {code: 6, cli: checks.CheckAttribute{}},
+	"NOLOGIN":         {code: 1, cli: checks.NoLogin{}},
+	"TMPFULL":         {code: 6, cli: checks.TmpFull{}},
+	"SSHDAEMON":       {code: 7, cli: checks.DaemonListening{Port: 22}},
+	"WEBDAEMON":       {code: 8, cli: checks.DaemonListening{Port: 80}},
+	"FTPDAEMON":       {code: 9, cli: checks.DaemonListening{Port: 21}},
+	"AFS":             {code: 10, cli: checks.AFS{}},
+	"GRIDFTPDAEMON":   {code: 11, cli: checks.DaemonListening{Port: 2811}},
+	"LEMON":           {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
+	"LEMONLOAD":       {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
+	"ROGER":           {code: 13, cli: checks.RogerState{}},
+	"COMMAND":         {code: 14, cli: checks.Command{}},
+	"COLLECTD":        {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
+	"COLLECTDLOAD":    {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
+	"COLLECTDALARM":   {code: 15, cli: checks.ParamCheck{Type: param.CollectdAlarmImpl{}}},
+	"COLLECTDALARMS":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdAlarmImpl{}}},
+	"COLLECTD_ALARM":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdAlarmImpl{}}},
+	"COLLECTD_ALARMS": {code: 15, cli: checks.ParamCheck{Type: param.CollectdAlarmImpl{}}},
+	"CONSTANT":        {code: 16, cli: checks.MetricConstant{}},
+	"XSESSIONS":       {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":        {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPING":         {code: 6, cli: checks.CheckAttribute{}},
 }
 
 /*
