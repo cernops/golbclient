@@ -11,9 +11,7 @@ func GetPackedReprFromIP(ipAddress string) (string, error) {
 	ip := net.ParseIP(ipAddress)
 	if ip == nil {
 		return "", fmt.Errorf("the given string [%s] is not a valid IP address", ipAddress)
-	}
-
-	if ipAddress == "::1" {
+	} else if ipAddress == "::1" {
 		return "00000000000000000000000001000000", nil
 	}
 
@@ -29,9 +27,13 @@ func GetPackedReprFromIP(ipAddress string) (string, error) {
 	return ipHex, nil
 }
 
-func reverseBytesSlice(s []byte) []byte {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
+func reverseBytesSlice(slice []byte) []byte {
+	if len(slice) == 0 {
+		return slice
 	}
-	return s
+
+	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
+		slice[i], slice[j] = slice[j], slice[i]
+	}
+	return slice
 }

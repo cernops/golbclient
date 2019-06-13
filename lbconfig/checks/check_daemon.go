@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
-
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 // DaemonListening : struct responsible for all the daemon check slices
@@ -321,11 +319,11 @@ func matchIfRequired(cond bool, sockPath string, regex *regexp.Regexp) (foundLin
 	if cond {
 		logger.Trace("Looking for regex in sock file [%s]...", sockPath)
 
-		fileContent, err := filehandler.ReadAllLinesFromFileAsString(sockPath, " ")
+		fileContent, err := ioutil.ReadFile(sockPath)
 		if err != nil {
 			return foundLines, fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
 		}
-		foundLines = len(regex.FindStringSubmatch(fileContent))
+		foundLines = len(regex.FindStringSubmatch(string(fileContent)))
 		logger.Debug("Found [%d] matching lines in sock file [%s]...", foundLines, sockPath)
 	}
 	return
