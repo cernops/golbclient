@@ -12,7 +12,7 @@ stages:
 
 
 before_script:
-  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
+  - yum -y install --exclude python2-libcomps gcc krb5-workstation koji rpm-build rpmdevtools
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
@@ -43,6 +43,19 @@ before_script:
  # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
+.openTestPorts: &openTestPorts |
+  yum install iproute nmap-ncat -y
+  nc -l      -p           22        &
+  nc -l      -p           21        &
+  nc -l      -p           2811      &
+  nc -l      -p           80        &
+  nc -l      -p           922       &
+  nc -l -u   -p           922       &
+  nc -l  127.0.0.1 202              &
+  nc -l  ::1 202               -6   &
+  sleep 1
+  cat /proc/net/tcp
+  cat /proc/net/tcp6
 
 build-go09:
   stage: build
@@ -66,6 +79,7 @@ build-go11:
 test-go09:
   stage: test
   script:
+    - *openTestPorts
     - export GOPATH=/go && go09 get ./...
     - go09 test -v -cover ./tests/ci/...
     - go09 test -race ./tests/ci/...
@@ -73,6 +87,7 @@ test-go09:
 test-go10:
   stage: test
   script:
+    - *openTestPorts
     - export GOPATH=/go && go10 get ./...
     - go10 test -v -cover ./tests/ci/...
     - go10 test -race ./tests/ci/...
@@ -80,6 +95,7 @@ test-go10:
 test-go11:
   stage: test
   script:
+    - *openTestPorts
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
 

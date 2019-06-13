@@ -1,26 +1,20 @@
 package filehandler
 
 import (
-	"bufio"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ReadAllLinesFromFile : Reads all lines from a file into a string array
 func ReadAllLinesFromFile(path string) (lines []string, err error) {
-	file, err := os.Open(path)
+	c, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	defer func() {err = file.Close()}()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	err = scanner.Err()
-	return lines, err
+	return strings.Split(string(c), "\n"), nil
 }
 
 // ReadFirstLineFromFile : Reads the first line from a file
