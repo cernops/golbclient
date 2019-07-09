@@ -1,5 +1,5 @@
 ---
-image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+image: gitlab-registry.cern.ch/linuxsupport/cc7-base:20181210
 stages:
   - build
   - test
@@ -80,7 +80,6 @@ test-go09:
   stage: test
   script:
     - *openTestPorts
-    - sleep 90000
     - export GOPATH=/go && go09 get ./...
     - go09 test -v -cover ./tests/ci/...
     - go09 test -race ./tests/ci/...
