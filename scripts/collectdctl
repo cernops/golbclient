@@ -55,10 +55,10 @@ IFS=$'\n'
 
 if [[ ${1} == "listval" ]]; then
     case "${2:6:10}" in
-        "UNKNOWN") find_in_array metric db_unknown[*] all ;;
-        "OKAY") find_in_array metric db_okay[*] all ;;
-        "ERROR") find_in_array metric db_error[*] all ;;
-        "WARNING") find_in_array metric db_warning[*] all ;;
+        "UNKNOWN"|"unknown") find_in_array metric db_unknown[*] all ;;
+        "OKAY"|"okay") find_in_array metric db_okay[*] all ;;
+        "ERROR"|"error") find_in_array metric db_error[*] all ;;
+        "WARNING"|"warning") find_in_array metric db_warning[*] all ;;
     esac
 else
     find_in_array metric db[*]

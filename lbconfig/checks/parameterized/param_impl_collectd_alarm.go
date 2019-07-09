@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
-	"reflect"
 	"strings"
 )
 
@@ -25,7 +24,7 @@ type alarmsParsingSchema struct {
 
 type alarmState struct {
 	State   string   `json:"state"`
-	Names 	[]string `json:"names"`
+	Name 	string 	 `json:"name"`
 }
 
 func (userAlarm alarmState) equivalentAlarmState(cacheState string) bool {
@@ -75,6 +74,8 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		logger.Trace("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
 			ci.CommandPath)
 
+		logger.Trace("Expecting [%d] metrics", len(userRequiredAlarms))
+
 		// Run the CLI for all the wanted states
 		for _, alarmState := range userRequiredAlarms {
 			go func(state string) {
@@ -89,7 +90,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 
 				if err != nil {
 					resultsCh <-fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
-					close(resultsCh)
+					return
 				}
 
 				logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
@@ -117,7 +118,8 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		}
 
 		// Wait for all the metrics to be cached
-		for i := 0; i <= len(userRequiredAlarms); i++ {
+		for i := 0; i < len(userRequiredAlarms); i++ {
+			logger.Trace("Waiting for alarm lookup...")
 			r := <-resultsCh
 			if result, ok := r.(error); ok {
 				return result
@@ -127,16 +129,27 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 
 	// Check that all the desired metrics have been found and have the desired state
 	for _, al := range parsingContainer.Alarm {
+		logger.Trace("Checking that the desired metric [%+v] exists in the cached output [%+v]", al, ci.cache.alarms)
+
 		cachedAlarmNames, stateFound := ci.cache.alarms[al.State]
 		if !stateFound {
 			return fmt.Errorf("the metric names [%v] was nout found with the desired state [%s]",
-				al.Names, al.State)
+				al.Name, al.State)
 		}
 
 		// @TODO possibly find a better way?
-		if !reflect.DeepEqual(cachedAlarmNames, al.Names) {
+		found := false
+		for _, name := range cachedAlarmNames {
+			if name == al.Name {
+				logger.Trace("Found desired metric [%v]...", al)
+				found = true
+				break
+			}
+		}
+		
+		if !found {
 			return fmt.Errorf("failed to find a matching alarm state [%s] for the metrics [%v]",
-				al.State, al.Names)
+				al.State, al.Name)
 		}
 	}
 
