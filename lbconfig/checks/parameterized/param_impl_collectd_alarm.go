@@ -106,6 +106,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 					logger.Trace("Attempting to cache metric...")
 					if slice, exists := ci.cache.alarms[state]; exists {
 						slice = append(slice, line)
+						ci.cache.alarms[state] = slice
 					} else {
 						ci.cache.alarms[state] = []string{line}
 					}
@@ -146,7 +147,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				break
 			}
 		}
-		
+
 		if !found {
 			return fmt.Errorf("failed to find a matching alarm state [%s] for the metrics [%v]",
 				al.State, al.Name)
