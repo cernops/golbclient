@@ -97,6 +97,11 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				// @TODO find way to abort faster (i.e. avoid n) ...?
 				cacheAllTheOutput := strings.Split(rawOutput, "\n")
 				for _, line := range cacheAllTheOutput {
+					if len(strings.TrimSpace(line)) == 0 {
+						logger.Debug("No metrics found for the state [%s]...", state)
+						continue
+					}
+
 					logger.Trace("Attempting to cache metric...")
 					if slice, exists := ci.cache.alarms[state]; exists {
 						slice = append(slice, line)
