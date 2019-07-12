@@ -6,6 +6,7 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"strings"
+	"sync"
 )
 
 type CollectdAlarmImpl struct {
@@ -13,6 +14,8 @@ type CollectdAlarmImpl struct {
 	cache *alarmMetricCache
 }
 
+// Needed for eventual concurrent map access
+var alarmsMutex = &sync.RWMutex{}
 
 type alarmMetricCache struct {
 	alarms map[string][]string
@@ -104,12 +107,14 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 					}
 
 					logger.Trace("Attempting to cache metric...")
+					alarmsMutex.Lock()
 					if slice, exists := ci.cache.alarms[state]; exists {
 						slice = append(slice, line)
 						ci.cache.alarms[state] = slice
 					} else {
 						ci.cache.alarms[state] = []string{line}
 					}
+					alarmsMutex.Unlock()
 					logger.Trace("Cached value for metric [%s] with state [%s]...", line, state)
 				}
 
@@ -132,13 +137,14 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 	for _, al := range parsingContainer.Alarm {
 		logger.Trace("Checking that the desired metric [%+v] exists in the cached output [%+v]", al, ci.cache.alarms)
 
+		alarmsMutex.RLock()
 		cachedAlarmNames, stateFound := ci.cache.alarms[al.State]
+		alarmsMutex.RUnlock()
 		if !stateFound {
 			return fmt.Errorf("the metric names [%v] was nout found with the desired state [%s]",
 				al.Name, al.State)
 		}
 
-		// @TODO possibly find a better way?
 		found := false
 		for _, name := range cachedAlarmNames {
 			if name == al.Name {
