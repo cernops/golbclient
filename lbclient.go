@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/jessevdk/go-flags"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
 )
 
@@ -29,7 +29,7 @@ func main() {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
-			logger.Error("A fatal error occurred when attempting to parse the application arguments. Error [%s]",
+			logger.Errorf("A fatal error occurred when attempting to parse the application arguments. Error [%s]",
 				err.Error())
 			os.Exit(1)
 		}
@@ -44,7 +44,7 @@ func main() {
 	// Apply the logger settings
 	err = launcher.ApplyLoggerSettings()
 	if err != nil {
-		logger.Error("A fatal error occurred when attempting to apply the logger settings. Error [%s]",
+		logger.Errorf("A fatal error occurred when attempting to apply the logger settings. Error [%s]",
 			err.Error())
 		os.Exit(1)
 	}
@@ -52,7 +52,7 @@ func main() {
 	// Run the launcher
 	err = launcher.Run()
 	if err != nil {
-		logger.Error("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
+		logger.Errorf("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
 		os.Exit(1)
 	}
 	if len(launcher.AppOptions.ExecutionConfiguration.CheckConfigFilePath) != 0 {

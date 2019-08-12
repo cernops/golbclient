@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 )
 
 type NoLogin struct {
@@ -18,7 +18,7 @@ func (nl NoLogin) Run(args ...interface{}) (int, error) {
 	}
 
 	lbaliasNames, ok := args[1].([]string)
-	logger.Trace("Supplied alias [%v], default value [%v]", lbaliasNames, args[2])
+	logger.Tracef("Supplied alias [%v], default value [%v]", lbaliasNames, args[2])
 	if !ok {
 		return -1, fmt.Errorf("wrong type given as the alias name, please use the [string] type")
 	}
@@ -37,7 +37,7 @@ func (nl NoLogin) Run(args ...interface{}) (int, error) {
 		_, err := os.Stat(file)
 
 		if err == nil {
-			logger.Error("File [%s] is present", file)
+			logger.Errorf("File [%s] is present", file)
 			return -1, nil
 		}
 	}

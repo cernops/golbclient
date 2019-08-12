@@ -3,7 +3,7 @@ package checks
 import (
 	"os"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 )
 
 const afsDir = "/afs/cern.ch/user/"

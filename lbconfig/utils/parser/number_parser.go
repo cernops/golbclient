@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"math"
 	"strconv"
 	"strings"
@@ -14,7 +14,7 @@ func ParseSciNumber(str string, logErrors bool) (float64, error) {
 	if logErrors {
 		defer func() {
 			if err != nil {
-				logger.Error("Failed to parse value [%s] with the error [%s]", str, err.Error())
+				logger.Errorf("Failed to parse value [%s] with the error [%s]", str, err.Error())
 			}
 		}()
 	}
@@ -50,7 +50,7 @@ func ParseInterfaceAsBool(obj interface{}) bool {
 	// Prevent the panic
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Debug("Recovered from an unexpected exception when trying to parse a boolean from the value [%s]", obj)
+			logger.Debugf("Recovered from an unexpected exception when trying to parse a boolean from the value [%s]", obj)
 			result = false
 		}
 	}()
@@ -112,7 +112,7 @@ func ParseInterfaceAsInteger(obj interface{}) int32 {
 	// Prevent the panic
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Debug("Recovered from an unexpected exception when trying to parse an integer from the value [%s]", obj)
+			logger.Debugf("Recovered from an unexpected exception when trying to parse an integer from the value [%s]", obj)
 			result = -1
 		}
 	}()
@@ -176,7 +176,7 @@ func ParseInterfaceAsFloat(obj interface{}) float32 {
 	// Prevent the panic
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Debug("Recovered from an unexpected exception when trying to parse an integer from the value [%s]", obj)
+			logger.Debugf("Recovered from an unexpected exception when trying to parse an integer from the value [%s]", obj)
 			result = -1
 		}
 	}()
@@ -243,7 +243,7 @@ func ParseInterfaceAsType(obj interface{}, t func(interface{}) interface{}) (int
 	// Prevent the panic
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Debug("Recovered from an unexpected exception when trying to parse the type [%T] from the value [%s]", t, obj)
+			logger.Debugf("Recovered from an unexpected exception when trying to parse the type [%T] from the value [%s]", t, obj)
 			result = -1
 		}
 	}()
@@ -297,7 +297,7 @@ func ParseInterfaceAsType(obj interface{}, t func(interface{}) interface{}) (int
 		}
 	} else {
 		// Return the same value if it could not be parsed
-		logger.Error("Failed to parse the interface of type [%T] from the value [%v]", t, obj)
+		logger.Errorf("Failed to parse the interface of type [%T] from the value [%v]", t, obj)
 		err = fmt.Errorf("failed to parse the interface of type [%T] from the value [%v]", t, obj)
 		result = obj
 	}

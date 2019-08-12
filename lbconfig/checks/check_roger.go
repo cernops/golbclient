@@ -5,7 +5,7 @@ import (
 	"os"
 	"regexp"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 )
 
 const rogerCurrentFile = "/etc/roger/current.yaml"
@@ -33,13 +33,13 @@ func (rogerState RogerState) Run(a ...interface{}) (int, error) {
 		}
 	}
 
-	logger.Trace("Roger appstate [%s]", myState)
+	logger.Tracef("Roger appstate [%s]", myState)
 
 	if myState == "production" || myState == "ignore_roger" {
 		return 1, nil
 	}
 
-	logger.Error("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
+	logger.Errorf("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
 	return -1, nil
 
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Knetic/govaluate"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	param "gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 )
@@ -38,7 +38,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 
 	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
 	// Log
-	logger.Debug("Adding [%s] metric [%s]", g.Impl.Name(), line)
+	logger.Debugf("Adding [%s] metric [%s]", g.Impl.Name(), line)
 
 	// Support unintentional errors => e.g., [loadcheck collectd], panics if the regex cannot be compiled
 	found := regexp.MustCompile("(?i)(((check)( )+(collectd_alarms))|(check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
@@ -52,7 +52,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 
 	rawExpression := found[1]
 	// Log
-	logger.Trace("Found expression [%s]", rawExpression)
+	logger.Tracef("Found expression [%s]", rawExpression)
 
 	// If no expression was given, fail the whole expression
 	if len(strings.TrimSpace(rawExpression)) == 0 {
@@ -71,7 +71,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 		metrics = []string{regexp.MustCompile(`{.*}`).FindString(rawExpression)}
 	}
 
-	logger.Trace("Found metrics [%v], len [%d]", metrics, len(metrics))
+	logger.Tracef("Found metrics [%v], len [%d]", metrics, len(metrics))
 	parameters := make(map[string]interface{}, len(metrics))
 
 	// Run command with a list of all the metrics found and return a key/value map
@@ -100,13 +100,13 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 	}
 
 	// Debug
-	logger.Debug("Expression returned result [%+v]", result)
+	logger.Debugf("Expression returned result [%+v]", result)
 	return intResult, nil
 }
 
 // compatibilityProcess : Processes the metric line so that all the metrics found (_metric) are ported to the new format ([metric])
 func (g ParamCheck) compatibilityProcess(metric *string) {
-	logger.Trace("Processing metric [%s]", *metric)
+	logger.Tracef("Processing metric [%s]", *metric)
 
 	*metric = regexp.MustCompile(`([]0-9][ ]*)[=]([ ]*[0-9\[])`).ReplaceAllString(*metric, "$1==$2")
 
@@ -119,5 +119,5 @@ func (g ParamCheck) compatibilityProcess(metric *string) {
 		*metric = fmt.Sprintf("%s[%s]%s", (*metric)[:arrI[0]+c], (*metric)[arrI[0]+c+1:arrI[1]+c], (*metric)[arrI[1]+c:])
 	}
 
-	logger.Trace("Processed metric [%s]", *metric)
+	logger.Tracef("Processed metric [%s]", *metric)
 }

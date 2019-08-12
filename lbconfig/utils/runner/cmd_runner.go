@@ -3,7 +3,7 @@ package runner
 import (
 	"bytes"
 	"context"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"os/exec"
 	"strings"
 	"time"
@@ -16,7 +16,7 @@ func Run(pathToCommand string, printRuntime bool, timeout time.Duration, v ...st
 		now = time.Now().UnixNano() / int64(time.Millisecond)
 		defer func() {
 			newNow := time.Now().UnixNano() / int64(time.Millisecond)
-			logger.Debug("Runtime: %dms", newNow-now)
+			logger.Debugf("Runtime: %dms", newNow-now)
 		}()
 	}
 

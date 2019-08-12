@@ -5,7 +5,7 @@ package lbconfig
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
@@ -53,7 +53,7 @@ var allLBExpressions = map[string]ExpressionCode{
 
 // Evaluate : Evaluates a [lbalias] entry
 func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConfig bool) error {
-	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
+	logger.Debugf("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
 
 	// Create a string array containing all the checksToExecute to be performed
 	var checksToExecute []string
@@ -67,11 +67,11 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 
 	lines, err := filehandler.ReadAllLinesFromFile(cm.ConfigFilePath)
 	if err != nil {
-		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
+		logger.Errorf("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
 		return err
 	}
 	// Read the configuration file using the scanner API
-	logger.Debug("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
+	logger.Debugf("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
 
 	// Detect all comments
 	comment := regexp.MustCompile("^[ \t]*(#.*)?$")
@@ -118,27 +118,27 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 	}
 
 	if cm.MetricValue == 0 {
-		logger.Info("No metric value was found. Defaulting to the generic load calculation")
+		logger.Infof("No metric value was found. Defaulting to the generic load calculation")
 		cm.MetricValue = defaultLoad()
 	}
 
 	// Log
-	logger.Trace("Final metric value [%d]", cm.MetricValue)
+	logger.Tracef("Final metric value [%d]", cm.MetricValue)
 
 	return nil
 }
 
 func defaultLoad() int {
 	swap := swapFree()
-	logger.Debug("Result of swap formula = %f", swap)
+	logger.Debugf("Result of swap formula = %f", swap)
 	cpuLoad := cpuLoad()
-	logger.Debug("Result of cpu formula = %f", cpuLoad)
+	logger.Debugf("Result of cpu formula = %f", cpuLoad)
 	swapping := float32(0)
 	fSm, nbProcesses, users := sessionManager()
-	logger.Debug("Number of processes = %d", int(nbProcesses))
-	logger.Debug("Number of users logged in = %d ", int(users))
+	logger.Debugf("Number of processes = %d", int(nbProcesses))
+	logger.Debugf("Number of users logged in = %d ", int(users))
 	myLoad := (((swap + users/25.) / 2.) + (2. * swapping) + (3. * cpuLoad) + (2. * fSm)) / 6.
-	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, "+
+	logger.Debugf("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, "+
 		"cpuLoad = %.3f, f_sm = %.3f", myLoad, swap, users, swapping, cpuLoad, fSm)
 	return int(myLoad * 1000)
 
@@ -147,7 +147,7 @@ func defaultLoad() int {
 func swapFree() float32 {
 	lines, err := filehandler.ReadAllLinesFromFile("/proc/meminfo")
 	if err != nil {
-		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/meminfo", err.Error())
+		logger.Errorf("Error opening the file [%s]. Error [%s]", "/proc/meminfo", err.Error())
 		return -2
 	}
 	memoryMap := map[string]int{}
@@ -158,7 +158,7 @@ func swapFree() float32 {
 			memoryMap[match[1]], _ = strconv.Atoi(match[8])
 		}
 	}
-	logger.Debug("Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
+	logger.Debugf("Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
 		memoryMap["MemTotal"], memoryMap["MemFree"], memoryMap["CommitLimit"],
 		memoryMap["Committed_AS"], memoryMap["SwapTotal"], memoryMap["SwapFree"])
 
@@ -181,7 +181,7 @@ func swapFree() float32 {
 func cpuLoad() float32 {
 	line, err := filehandler.ReadFirstLineFromFile("/proc/loadavg")
 	if err != nil {
-		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/loadavg", err.Error())
+		logger.Errorf("Error opening the file [%s]. Error [%s]", "/proc/loadavg", err.Error())
 		return -2
 	}
 	cpu := strings.Split(line, " ")
@@ -192,7 +192,7 @@ func cpuLoad() float32 {
 func sessionManager() (float32, float32, float32) {
 	out, err := exec.Command("/bin/ps", "auxw").Output()
 	if err != nil {
-		logger.Error("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
+		logger.Errorf("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
 		return -10, -10, -10
 	}
 
