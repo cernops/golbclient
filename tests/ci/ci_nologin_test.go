@@ -5,12 +5,12 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 )
 
 func createNoLogin(t *testing.T) {
 	path := "/etc/nologin"
-	logger.Debug("Creating the [nologin] file [%s]", path)
+	logger.Debugf("Creating the [nologin] file [%s]", path)
 
 	if err := ioutil.WriteFile(path, []byte("Hello"), 0755); err != nil {
 		t.Fatalf("Unable to write file: %v", err)
@@ -18,7 +18,7 @@ func createNoLogin(t *testing.T) {
 }
 func removeNoLogin(t *testing.T) {
 	path := "/etc/nologin"
-	logger.Debug("Removing the [nologin] file [%s]", path)
+	logger.Debugf("Removing the [nologin] file [%s]", path)
 
 	if err := os.Remove(path); err != nil {
 		t.Fatalf("Failed to remove the file %v", err)

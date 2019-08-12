@@ -2,7 +2,7 @@ package param
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"regexp"
@@ -25,7 +25,7 @@ func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) 
 
 	// Run the CLI for each metric found
 	for _, metric := range metrics {
-		logger.Trace("Looking for the collectd metric [%v]", metric)
+		logger.Tracef("Looking for the collectd metric [%v]", metric)
 		// Remove square-brackets from metric
 		metric := regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
 		metricName := regexp.MustCompile("[a-zA-Z-_0-9]*([/][a-zA-Z_-]*)?([:][a-zA-Z-_0-9]+)?").FindAllString(metric, 1)[0]
@@ -42,7 +42,7 @@ func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) 
 			slice = int(parser.ParseInterfaceAsInteger(secondPart)) - 1
 			// if it does not parse as an integer
 			if slice == -2 {
-				logger.Trace("The anchor is not an integer [%v]", secondPart)
+				logger.Tracef("The anchor is not an integer [%v]", secondPart)
 				if secondPart == "" {
 					return fmt.Errorf("empty anchor in the metric [%v:]", metric)
 				} else {
@@ -52,9 +52,9 @@ func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) 
 			}
 		}
 
-		logger.Debug("Running the [collectd] path [%s] cli for the metric [%s]", ci.CommandPath, metricName)
+		logger.Debugf("Running the [collectd] path [%s] cli for the metric [%s]", ci.CommandPath, metricName)
 		rawOutput, err := runner.Run(ci.CommandPath, true, 0, "getval", metric)
-		logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
+		logger.Tracef("Raw output from [collectdctl] [%v]", rawOutput)
 		if err != nil {
 			return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
 		}
@@ -93,7 +93,7 @@ func (ci CollectdImpl) Run(metrics []string, valueList *map[string]interface{}) 
 
 		(*valueList)[metricName] = value
 		// Log
-		logger.Trace("Result of the collectd command: [%v]", (*valueList)[metricName])
+		logger.Tracef("Result of the collectd command: [%v]", (*valueList)[metricName])
 	}
 	return nil
 }

@@ -3,7 +3,7 @@ package checks
 import (
 	"syscall"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,11 +24,11 @@ func (tmpFull TmpFull) Run(...interface{}) (int, error) {
 	blockLevel := 1 - (float64(stat.Bavail) / float64(stat.Blocks))
 	iNodeLevel := 1 - (float64(stat.Ffree) / float64(stat.Files))
 
-	logger.Debug("Blocks occupancy [%.2f%%], inodes occupancy [%.2f%%]", blockLevel*100, iNodeLevel*100)
+	logger.Debugf("Blocks occupancy [%.2f%%], inodes occupancy [%.2f%%]", blockLevel*100, iNodeLevel*100)
 	if (blockLevel < acceptableBlockRate) && (iNodeLevel < acceptableINodeRate) {
 		return 1, nil
 	}
-	logger.Error("The tmp directory is full: [%.2f%%] (bigger than [%.2f%%])", blockLevel*100, acceptableBlockRate*100)
+	logger.Errorf("The tmp directory is full: [%.2f%%] (bigger than [%.2f%%])", blockLevel*100, acceptableBlockRate*100)
 	return -1, nil
 
 }

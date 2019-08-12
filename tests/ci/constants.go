@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 )
@@ -46,7 +46,7 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 		}
 		defer func() {
 			if err := os.Remove(file.Name()); err != nil {
-				logger.Warn("An error occurred when attempting to remove the temporary test file [%s]. " +
+				logger.Warnf("An error occurred when attempting to remove the temporary test file [%s]. " +
 					"Error [%s]", file.Name(), err.Error())
 			}
 		}()
@@ -73,7 +73,7 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 		}
 	}
 	if cfg.MetricValue != test.expectedMetricValue {
-		logger.Error("Received the metric value [%d] when expecting [%d] instead. Failing the test...",
+		logger.Errorf("Received the metric value [%d] when expecting [%d] instead. Failing the test...",
 			cfg.MetricValue, test.expectedMetricValue)
 		t.FailNow()
 		return false
@@ -82,16 +82,16 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 }
 
 func runMultipleTests(t *testing.T, myTests []lbTest) {
-	logger.SetLevel(logger.FATAL)
+	logger.SetLevel(logger.FatalLevel)
 	for _, myTest := range myTests {
-		logger.Info("Running the test [%v]", myTest.title)
+		logger.Infof("Running the test [%v]", myTest.title)
 		if t.Run(myTest.title, func(t *testing.T) {
 			runEvaluate(t, myTest)
 		}) != true {
-			logger.Error("The command [%v] failed. Repeating with [TRACE] verbose level...", myTest.title)
-			logger.SetLevel(logger.TRACE)
+			logger.Errorf("The command [%v] failed. Repeating with [TRACE] verbose level...", myTest.title)
+			logger.SetLevel(logger.TraceLevel)
 			runEvaluate(t, myTest)
-			logger.SetLevel(logger.ERROR)
+			logger.SetLevel(logger.ErrorLevel)
 		}
 	}
 }

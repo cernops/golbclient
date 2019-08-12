@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 )
 
@@ -15,7 +15,7 @@ import (
 func ExecuteWithTimeoutR(timeout time.Duration, f interface{}, args ...interface{}) (ret interface{}, err error) {
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 	fnName := getFunctionName(f)
-	logger.Debug("Executing function [%s] with max timeout value of [%s]", fnName, timeout.String())
+	logger.Debugf("Executing function [%s] with max timeout value of [%s]", fnName, timeout.String())
 
 	r := make(chan interface{}, 1)
 	e := make(chan error, 1)
@@ -23,7 +23,7 @@ func ExecuteWithTimeoutR(timeout time.Duration, f interface{}, args ...interface
 	select {
 	case res := <-r:
 		newNow := time.Now().UnixNano()/int64(time.Millisecond) - now
-		logger.Debug("Function [%s] :: Runtime: %dms", fnName, newNow)
+		logger.Debugf("Function [%s] :: Runtime: %dms", fnName, newNow)
 		return res, <-e
 	case <-time.After(timeout):
 		return nil, fmt.Errorf("the function [%s] has reached the timeout value of [%s]",

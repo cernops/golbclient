@@ -3,7 +3,7 @@ package param
 import (
 	"encoding/json"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"strings"
 	"sync"
@@ -37,7 +37,7 @@ func (userAlarm alarmState) equivalentAlarmState(cacheState string) bool {
 	}
 
 	if userAlarm.State != cacheState {
-		logger.Trace("Expected the alarm state to be [%s] but found [%s]. Returning [false]...",
+		logger.Tracef("Expected the alarm state to be [%s] but found [%s]. Returning [false]...",
 			userAlarm.State, cacheState)
 		return false
 	}
@@ -74,15 +74,15 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		ci.cache = &alarmMetricCache{alarms:make(map[string][]string)}
 		resultsCh := make(chan error)
 
-		logger.Trace("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
+		logger.Tracef("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
 			ci.CommandPath)
 
-		logger.Trace("Expecting [%d] metrics", len(userRequiredAlarms))
+		logger.Tracef("Expecting [%d] metrics", len(userRequiredAlarms))
 
 		// Run the CLI for all the wanted states
 		for _, alarmState := range userRequiredAlarms {
 			go func(state string) {
-				logger.Debug("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
+				logger.Debugf("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
 				rawOutput, err := runner.Run(
 					ci.CommandPath,
 					true,
@@ -96,13 +96,13 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 					return
 				}
 
-				logger.Trace("Raw output from [collectdctl] [%v]", rawOutput)
+				logger.Tracef("Raw output from [collectdctl] [%v]", rawOutput)
 
 				// @TODO find way to abort faster (i.e. avoid n) ...?
 				cacheAllTheOutput := strings.Split(rawOutput, "\n")
 				for _, line := range cacheAllTheOutput {
 					if len(strings.TrimSpace(line)) == 0 {
-						logger.Debug("No metrics found for the state [%s]...", state)
+						logger.Debugf("No metrics found for the state [%s]...", state)
 						continue
 					}
 
@@ -115,17 +115,17 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 						ci.cache.alarms[state] = []string{line}
 					}
 					alarmsMutex.Unlock()
-					logger.Trace("Cached value for metric [%s] with state [%s]...", line, state)
+					logger.Tracef("Cached value for metric [%s] with state [%s]...", line, state)
 				}
 
-				logger.Trace("Cached all the metrics for state [%s]...", state)
+				logger.Tracef("Cached all the metrics for state [%s]...", state)
 				resultsCh <-nil
 			}(alarmState)
 		}
 
 		// Wait for all the metrics to be cached
 		for i := 0; i < len(userRequiredAlarms); i++ {
-			logger.Trace("Waiting for alarm lookup...")
+			logger.Tracef("Waiting for alarm lookup...")
 			r := <-resultsCh
 			if result, ok := r.(error); ok {
 				return result
@@ -135,7 +135,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 
 	// Check that all the desired metrics have been found and have the desired state
 	for _, al := range parsingContainer.Alarm {
-		logger.Trace("Checking that the desired metric [%+v] exists in the cached output [%+v]", al, ci.cache.alarms)
+		logger.Tracef("Checking that the desired metric [%+v] exists in the cached output [%+v]", al, ci.cache.alarms)
 
 		alarmsMutex.RLock()
 		cachedAlarmNames, stateFound := ci.cache.alarms[al.State]
@@ -148,7 +148,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		found := false
 		for _, name := range cachedAlarmNames {
 			if name == al.Name {
-				logger.Trace("Found desired metric [%v]...", al)
+				logger.Tracef("Found desired metric [%v]...", al)
 				found = true
 				break
 			}
@@ -160,6 +160,6 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		}
 	}
 
-	logger.Debug("Metric [%s] requirements successfully validated...", metrics[0])
+	logger.Debugf("Metric [%s] requirements successfully validated...", metrics[0])
 	return nil
 }

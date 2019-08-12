@@ -3,9 +3,10 @@ package lbconfig
 import (
 	"bytes"
 	"fmt"
+	"os"
 
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 )
 
@@ -31,25 +32,23 @@ func (l *AppLauncher) ParseApplicationArguments(args []string) error {
 // 		If the console debug level cannot be parsed, the default value of INFO will be used instead
 //		If the file debug level cannot be parsed, the default value of TRACE will be used instead
 func (l *AppLauncher) ApplyLoggerSettings() error {
-	if err := logger.SetupConsoleLogger(l.AppOptions.ConsoleDebugLevel); err != nil {
-		logger.Error("An error occurred when attempting to parse the given console debug level - defaulting to"+
-			" [FATAL]. Error [%s]", err.Error())
-		_ = logger.SetupConsoleLogger("FATAL")
+	logger.SetFormatter(&logger.TextFormatter{
+		ForceColors: true,
+		FullTimestamp: true,
+		DisableLevelTruncation: true,
+		QuoteEmptyFields: true})
+
+	logger.SetOutput(os.Stdout)
+	logger.SetReportCaller(true)
+	level, err := logger.ParseLevel(l.AppOptions.DebugLevel)
+	if err == nil {
+		logger.SetLevel(level)
+	} else {
+		logger.
+			WithError(err).
+			WithField("logger_level", l.AppOptions.DebugLevel).Error("Unable to parse thr desired logger level")
 	}
 
-	// The file logger is disabled by default
-	if l.AppOptions.FileLoggingEnabled {
-		if err := logger.SetupFileLogger(l.AppOptions.LogFileLocation, l.AppOptions.FileDebugLevel,
-			l.AppOptions.LogAutoFileRotation); err != nil {
-			logger.Error("An error occurred when attempting to parse the given console debug level - defaulting to"+
-				" [TRACE]. Error [%s]", err.Error())
-			err = logger.SetupFileLogger(l.AppOptions.LogFileLocation, "TRACE", l.AppOptions.LogAutoFileRotation)
-			// If with a valid logger level the FileLogger cannot be created, return the generated error
-			if err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 
@@ -68,19 +67,19 @@ func (l *AppLauncher) Run() error {
 	var returnCode error
 	// Evaluate for each of the configuration files found
 	for _, confMapping := range lbConfMappings {
-		logger.Trace("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
+		logger.Tracef("Processing configuration file [%s] for aliases [%v]", confMapping.ConfigFilePath, confMapping.AliasNames)
 		err := Evaluate(confMapping,
 			l.AppOptions.ExecutionConfiguration.MetricTimeout, len(l.AppOptions.ExecutionConfiguration.CheckConfigFilePath) != 0)
 		/* Abort if an error occurs */
 		if err != nil {
-			logger.Warn("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)
+			logger.Warnf("The evaluation of configuration file [%s] failed.", confMapping.ConfigFilePath)
 			returnCode = err
 		}
 		appOutput.WriteString(confMapping.String() + ",")
 	}
 
 	l.MetricType, l.MetricValue = mapping.GetReturnCode(appOutput, lbConfMappings)
-	logger.Debug("metric = [%s]", l.MetricValue)
+	logger.Debugf("metric = [%s]", l.MetricValue)
 
 	return returnCode
 }

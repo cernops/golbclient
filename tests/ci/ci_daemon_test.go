@@ -52,10 +52,14 @@ func TestDaemonCheck(t *testing.T) {
 			configurationContent: "check daemon {\"port\":202, \"host\":\"127.0.0.1\", \"ip\":\"ipv6\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
 		{title: "Localhost_202_IPv4_fail",
 			configurationContent: "check daemon {\"port\":202, \"host\":\"::1\", \"ip\":\"ipv4\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
+		/*
+			INC2031907
+
 		{title: "Localhost_202_IPv6",
 			configurationContent: "check daemon {\"port\":202, \"host\":\"::1\", \"ip\":\"ipv6\"}\nload constant 37", expectedMetricValue: 37},
 		{title: "Localhost_202_Ipv4or6",
 			configurationContent: "check daemon {\"port\":202, \"host\":\"::1\", \"ip\":[\"4\", \"ipv6\"]}\nload constant 37", expectedMetricValue: 37},
+		*/
 		{title: "Localhost_202_Host_fail",
 			configurationContent: "check daemon {\"port\":202, \"host\":\"127.0.0\"}\nload constant 37", shouldFail: true, expectedMetricValue: -17},
 		{title: "Localhost_202_Host_not_found",

@@ -15,8 +15,8 @@ func init() {
 func BenchmarkLauncherParsing(b *testing.B) {
 	args1 := []string{""}
 	args2 := []string{"-v"}
-	args3 := []string{"--rotatecfg.enabled", "-d DEBUG", "-v"}
-	args4 := []string{"--rotatecfg.enabled", "-d DEBUG", "-v", "-d FATAL", "-l log/app.log"}
+	args3 := []string{"-d DEBUG", "-v"}
+	args4 := []string{"-d DEBUG", "-v", "-d FATAL"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

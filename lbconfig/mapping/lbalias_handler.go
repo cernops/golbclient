@@ -11,7 +11,7 @@ import (
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 )
 
 // ConfigurationMapping : object with the config
@@ -70,13 +70,13 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 			if info == nil || info.IsDir() || err != nil {
 				return nil
 			}
-			logger.Debug("Checking the file [%v]", path)
+			logger.Debugf("Checking the file [%v]", path)
 			if info.Name() ==  options.LbMetricDefaultFileName {
 				defaultMapping = NewConfiguration(path)
 				logger.Trace("Added the default")
 			} else if strings.HasSuffix(info.Name(), ".cern.ch") && strings.HasPrefix(info.Name(), "lbclient.conf") {
 				aliasName := strings.TrimSpace(strings.Split(path, "lbclient.conf.")[1])
-				logger.Trace("Added config for %v", aliasName)
+				logger.Tracef("Added config for %v", aliasName)
 				confFiles = append(confFiles, NewConfiguration(path, aliasName))
 				tmpConfMap[aliasName] = true
 			}
@@ -91,7 +91,7 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 	/* Read the aliases */
 	lbAliasesFileContent, err := filehandler.ReadAllLinesFromFile(options.LbAliasFile)
 	if err != nil {
-		logger.Debug("There is no lbalias configuration file [%v]", options.LbAliasFile)
+		logger.Debugf("There is no lbalias configuration file [%v]", options.LbAliasFile)
 		return nil, err
 	}
 
@@ -100,19 +100,19 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 	for _, alias := range lbAliasesFileContent {
 		formatLbLine.Match([]byte(alias))
 		if !formatLbLine.Match([]byte(alias)) {
-			logger.Trace("Ignoring the line [%v]", alias)
+			logger.Tracef("Ignoring the line [%v]", alias)
 			continue
 		}
 
 		/* Abort if a malformed alias is found */
 		aliasName := formatLbLine.FindStringSubmatch(alias)[1]
-		logger.Trace("Looking for alias [%s]...", aliasName)
+		logger.Tracef("Looking for alias [%s]...", aliasName)
 
 		if _, found := tmpConfMap[aliasName]; found {
 			logger.Trace("Found configuration file... Skipping...")
 			continue
 		}
-		logger.Trace("Failed to find a configuration file... Adding alias to the generic metric...")
+		logger.Tracef("Failed to find a configuration file... Adding alias to the generic metric...")
 		/* Add the stranded alias to the default configuration file */
 		if defaultMapping == nil {
 			return nil, fmt.Errorf(" [%v/%v] file  not found, and the alias [%v]"+

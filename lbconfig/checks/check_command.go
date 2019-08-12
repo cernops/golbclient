@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
@@ -22,14 +22,14 @@ func (command Command) Run(args ...interface{}) (int, error) {
 
 	if len(found) > 1 {
 		usrCmd := strings.TrimSpace(found[1])
-		logger.Trace("Attempting to run command [%s]", usrCmd)
+		logger.Tracef("Attempting to run command [%s]", usrCmd)
 		out, err := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
-			logger.Error("The command [%s] failed", usrCmd)
+			logger.Errorf("The command [%s] failed", usrCmd)
 			return -1, err
 		}
 
-		logger.Debug("Command output [%s]", out)
+		logger.Debugf("Command output [%s]", out)
 		return 1, nil
 	}
 
