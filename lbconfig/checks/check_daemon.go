@@ -266,12 +266,13 @@ func (daemon *DaemonListening) isListening() (int, error) {
 		}
 
 		if foundLines >= 1 {
-			logger.Trace("Found the required ports [%s] listening on [%s]", daemon.Ports, cfp.filepath)
+			logger.Trace("Found the required ports [%v] listening on [%s]", daemon.Ports, cfp.filepath)
 			return 1, nil
 		}
 	}
 
-	return -1, fmt.Errorf("failed to find the required open ports [%v]", daemon.Ports)
+	logger.Error("Failed to find the required open ports [%v]", daemon.Ports)
+	return -1, nil
 }
 
 // getHostRegexFormat : Helper function that creates a regex-ready string from all the found [daemon.Hosts] entries

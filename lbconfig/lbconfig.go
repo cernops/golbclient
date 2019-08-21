@@ -73,8 +73,8 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 	// Detect all comments
 	comment := regexp.MustCompile("^[ \t]*(#.*)?$")
 	// Detect all actions (checks or loads) to be made
-	checksFormat := "^CHECK (" + strings.Join(checksToExecute, "|") + ")"
-	loadsFormat := "^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)"
+	checksFormat := "^[ ]*CHECK (" + strings.Join(checksToExecute, "|") + ")"
+	loadsFormat := "^[ ]*LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)"
 	actions := regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))`, checksFormat, loadsFormat))
 
 	// Read the configuration file line-by-line
