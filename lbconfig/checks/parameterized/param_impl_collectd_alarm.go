@@ -55,7 +55,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 	}
 
 	// Only run collectdctl for the user defined states
-	var userRequiredAlarms []string
+	userRequiredAlarms := make(map[string]interface{})
 	for _, userAlarm := range parsingContainer.Alarm {
 		userRequiredAlarms = append(userRequiredAlarms, userAlarm.State)
 	}
