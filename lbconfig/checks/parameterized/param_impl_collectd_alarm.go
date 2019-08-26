@@ -130,15 +130,6 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				al.Name, al.State)
 		}
 
-		found := false
-		for _, name := range cachedAlarmNames {
-			if name == al.Name {
-				logger.Tracef("Found desired metric [%v]...", al)
-				found = true
-				break
-			}
-		}
-
 		if !found {
 			return fmt.Errorf("failed to find a matching alarm state [%s] for the metrics [%v]",
 				al.State, al.Name)
