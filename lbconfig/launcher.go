@@ -46,7 +46,7 @@ func (l *AppLauncher) ApplyLoggerSettings() error {
 	} else {
 		logger.
 			WithError(err).
-			WithField("logger_level", l.AppOptions.DebugLevel).Error("Unable to parse thr desired logger level")
+			WithField("logger_level", l.AppOptions.DebugLevel).Error("Unable to parse the desired logger level")
 	}
 
 	return nil
