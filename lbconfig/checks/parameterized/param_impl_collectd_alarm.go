@@ -129,9 +129,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 	for _, al := range parsingContainer.Alarm {
 		logger.Tracef("Checking that the desired metric [%+v] exists in the cached output [%+v]", al, ci.cache.alarms)
 
-		alarmsMutex.RLock()
-		cachedAlarmNames, stateFound := ci.cache.alarms[al.State]
-		alarmsMutex.RUnlock()
+                alarmState, metricFound := ci.cache.alarms[al.Name]
 		if !stateFound {
 			return fmt.Errorf("the metric names [%v] was nout found with the desired state [%s]",
 				al.Name, al.State)
