@@ -100,12 +100,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 
 					logger.Trace("Attempting to cache metric...")
 					alarmsMutex.Lock()
-					if slice, exists := ci.cache.alarms[state]; exists {
-						slice = append(slice, line)
-						ci.cache.alarms[state] = slice
-					} else {
-						ci.cache.alarms[state] = []string{line}
-					}
+					ci.cache.alarms[line] = state
 					alarmsMutex.Unlock()
 					logger.Tracef("Cached value for metric [%s] with state [%s]...", line, state)
 				}
