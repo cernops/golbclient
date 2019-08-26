@@ -130,7 +130,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				al.Name, al.State)
 		}
 
-		if !found {
+		if alarmState != al.State {
 			return fmt.Errorf("failed to find a matching alarm state [%s] for the metrics [%v]",
 				al.State, al.Name)
 		}
