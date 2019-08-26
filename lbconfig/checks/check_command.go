@@ -45,7 +45,6 @@ func (command Command) Run(args ...interface{}) (int, error) {
 					return -1, nil
 				}
 			}
-
 			return -1, err
 		}
 

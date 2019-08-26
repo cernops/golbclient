@@ -3,11 +3,10 @@ package lbconfig
 import (
 	"bytes"
 	"fmt"
-	"os"
-
 	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
+	"os"
 )
 
 // AppLauncher : Helper struct that encapsulates the logic of running [lbclient]
@@ -15,6 +14,22 @@ type AppLauncher struct {
 	AppOptions              appSettings.Options
 	lbConfMappings          []*mapping.ConfigurationMapping
 	MetricType, MetricValue string
+}
+
+
+func init() {
+	//logger.SetReportCaller(true)
+	//logger.SetFormatter(&logger.JSONFormatter{
+	//	PrettyPrint: true,
+	//
+	//})
+	logger.SetFormatter(&logger.TextFormatter{
+		ForceColors: true,
+		FullTimestamp: true,
+		DisableLevelTruncation: true,
+		EnvironmentOverrideColors: true,
+		QuoteEmptyFields: true})
+	logger.SetOutput(os.Stdout)
 }
 
 // NewAppLauncher : Factory-pattern function that creates and returns a new @see AppLauncher struct instance pointer
@@ -32,14 +47,6 @@ func (l *AppLauncher) ParseApplicationArguments(args []string) error {
 // 		If the console debug level cannot be parsed, the default value of INFO will be used instead
 //		If the file debug level cannot be parsed, the default value of TRACE will be used instead
 func (l *AppLauncher) ApplyLoggerSettings() error {
-	logger.SetFormatter(&logger.TextFormatter{
-		ForceColors: true,
-		FullTimestamp: true,
-		DisableLevelTruncation: true,
-		QuoteEmptyFields: true})
-
-	logger.SetOutput(os.Stdout)
-	logger.SetReportCaller(true)
 	level, err := logger.ParseLevel(l.AppOptions.DebugLevel)
 	if err == nil {
 		logger.SetLevel(level)

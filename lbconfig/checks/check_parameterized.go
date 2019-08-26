@@ -68,7 +68,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 		metrics = regexp.MustCompile(`\[([^\[\]]*)]`).FindAllString(rawExpression, -1)
 	} else {
 		// Extract everything between curly brackets (JSON) and send it down to the impl
-		metrics = []string{regexp.MustCompile(`{.*}`).FindString(rawExpression)}
+		metrics = []string{regexp.MustCompile(`\[.*]`).FindString(rawExpression)}
 	}
 
 	logger.Tracef("Found metrics [%v], len [%d]", metrics, len(metrics))
