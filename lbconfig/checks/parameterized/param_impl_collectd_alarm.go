@@ -18,6 +18,7 @@ type CollectdAlarmImpl struct {
 var alarmsMutex = &sync.RWMutex{}
 
 type alarmMetricCache struct {
+        // This is a map from the state to the metrics in that state
 	alarms map[string][]string
 }
 
