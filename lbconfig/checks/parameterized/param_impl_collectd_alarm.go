@@ -22,15 +22,6 @@ type alarmMetricCache struct {
 	alarms map[string][]string
 }
 
-type alarmsParsingSchema struct {
-	Alarm []alarmState `json:"alarms"`
-}
-
-type alarmState struct {
-	State   string   `json:"state"`
-	Name 	string 	 `json:"name"`
-}
-
 func (userAlarm alarmState) equivalentAlarmState(cacheState string) bool {
 	if len(userAlarm.State) == 0 && cacheState == "UNKNOWN" || cacheState == "OKAY" {
 		logger.Trace("Found matching metric state [UNKNOWN|OKAY]. Returning [true]...")
