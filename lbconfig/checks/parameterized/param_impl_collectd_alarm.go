@@ -25,7 +25,7 @@ func (ci CollectdAlarmImpl) Name() string {
 }
 
 // Run : Runs the [collectdctl] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
-func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interface{}) error {
+func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, valueList *map[string]interface{}) error {
 	if len(ci.CommandPath) == 0 {
 		ci.CommandPath = "/usr/bin/collectdctl"
 	}
@@ -40,7 +40,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 	// Only run collectdctl for the user defined states
 	userRequiredStates := make(map[string]interface{})
 	for metric, rawStates := range parsingContainer[0] {
-		logger.Tracef("Processing metric [%s] with desired states [%v]...", metric, rawStates)
+		contextLogger.Tracef("Processing metric [%s] with desired states [%v]...", metric, rawStates)
 		requiredStates, err := ci.parseStates(rawStates)
 		if err != nil {
 			return err
@@ -57,15 +57,15 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		ci.cache = make(map[string]string)
 		resultsCh := make(chan error)
 
-		logger.Tracef("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
+		contextLogger.Tracef("No cache found for previous [collectd] alarm cli [%s]. Running the [collectd] cli...",
 			ci.CommandPath)
 
-		logger.Tracef("Expecting [%d] states", len(userRequiredStates))
+		contextLogger.Tracef("Expecting [%d] states", len(userRequiredStates))
 
 		// Run the CLI for all the wanted states
 		for alarmState := range userRequiredStates {
 			go func(state string) {
-				logger.Debugf("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
+				contextLogger.Debugf("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
 				rawOutput, err := runner.Run(
 					ci.CommandPath,
 					true,
@@ -79,30 +79,30 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 					return
 				}
 
-				logger.Tracef("Raw output from [collectdctl] [%v]",
+				contextLogger.Tracef("Raw output from [collectdctl] [%v]",
 					strings.Replace(rawOutput, "\n", " ", -1))
 				cacheAllTheOutput := strings.Split(rawOutput, "\n")
 				for _, line := range cacheAllTheOutput {
 					if len(strings.TrimSpace(line)) == 0 {
-						logger.Debugf("No metrics found for the state [%s]...", state)
+						contextLogger.Debugf("No metrics found for the state [%s]...", state)
 						continue
 					}
 
-					logger.Trace("Attempting to cache state...")
+					contextLogger.Trace("Attempting to cache state...")
 					alarmsMutex.Lock()
 					ci.cache[line] = state
 					alarmsMutex.Unlock()
-					logger.Tracef("Cached value for state [%s] with state [%s]...", line, state)
+					contextLogger.Tracef("Cached value for state [%s] with state [%s]...", line, state)
 				}
 
-				logger.Tracef("Cached all the metrics for state [%s]...", state)
+				contextLogger.Tracef("Cached all the metrics for state [%s]...", state)
 				resultsCh <-nil
 			}(alarmState)
 		}
 
 		// Wait for all the metrics to be cached
 		for i := 0; i < len(userRequiredStates); i++ {
-			logger.Tracef("Waiting for alarm lookup...")
+			contextLogger.Tracef("Waiting for alarm lookup...")
 			r := <-resultsCh
 			if result, ok := r.(error); ok {
 				return result
@@ -112,18 +112,18 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 
 	// Check that all the desired metrics have been found and have the desired state
 	for metric, desiredStates := range parsingContainer[0] {
-		logger.Debugf("Checking that the desired [metric:states] pair [%v:%v] exists in the cached output [%+v]",
+		contextLogger.Debugf("Checking that the desired [metric:states] pair [%v:%v] exists in the cached output [%+v]",
 			metric, desiredStates, ci.cache)
 		// Check that at least one state was found
 		parsedStates, _ := ci.parseStates(desiredStates)
-		if ci.alarmWasFoundInCache(metric, parsedStates) {
+		if ci.alarmWasFoundInCache(contextLogger.WithField("cache", fmt.Sprintf("%v", ci.cache)), metric, parsedStates) {
 			continue
 		}
 
 		return fmt.Errorf("the desired [metric:states] pair [%v:%v] was not found", metric, desiredStates)
 	}
 
-	logger.Debugf("Metric [%s] requirements successfully validated...", metrics[0])
+	contextLogger.Debugf("Metric [%s] requirements successfully validated...", metrics[0])
 	return nil
 }
 
@@ -150,11 +150,11 @@ func (ci CollectdAlarmImpl) parseStates(states interface{}) (out []string, err e
 	return
 }
 
-func (ci CollectdAlarmImpl) alarmWasFoundInCache(metric string, desiredStates []string) bool {
+func (ci CollectdAlarmImpl) alarmWasFoundInCache(contextLogger *logger.Entry, metric string, desiredStates []string) bool {
 	if alarmState, alarmFound := ci.cache[metric]; alarmFound {
 		for _, desiredState := range desiredStates {
 			if alarmState == desiredState {
-				logger.Tracef("Metric [%s] found with the state [%s]...", metric, desiredState)
+				contextLogger.Tracef("Metric [%s] found with the state [%s]...", metric, desiredState)
 				return true
 			}
 		}

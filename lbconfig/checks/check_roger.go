@@ -13,7 +13,7 @@ const rogerCurrentFile = "/etc/roger/current.yaml"
 type RogerState struct {
 }
 
-func (rogerState RogerState) Run(a ...interface{}) (int, error) {
+func (rogerState RogerState) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
 
 	f, err := os.Open(rogerCurrentFile)
 	if err != nil {
@@ -23,7 +23,7 @@ func (rogerState RogerState) Run(a ...interface{}) (int, error) {
 
 	scanner := bufio.NewScanner(f)
 	myState := ""
-	logger.Trace("Checking the roger facts...")
+	contextLogger.Trace("Checking the roger facts...")
 	state, _ := regexp.Compile("^appstate: *([^ \t\n]+)")
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -33,13 +33,13 @@ func (rogerState RogerState) Run(a ...interface{}) (int, error) {
 		}
 	}
 
-	logger.Tracef("Roger appstate [%s]", myState)
+	contextLogger.Tracef("Roger appstate [%s]", myState)
 
 	if myState == "production" || myState == "ignore_roger" {
 		return 1, nil
 	}
 
-	logger.Errorf("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
+	contextLogger.Errorf("The node will not be included in the LB alias since the roger appstate is [%s] instead of [production]", myState)
 	return -1, nil
 
 }

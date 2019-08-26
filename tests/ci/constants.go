@@ -3,6 +3,7 @@ package ci
 import (
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -24,11 +25,21 @@ type lbTest struct {
 	timeout              time.Duration
 	setup                func(*testing.T)
 	cleanup              func(*testing.T)
+	contextLogger		 *logger.Entry
 }
 
 
 
 func runEvaluate(t *testing.T, test lbTest) bool {
+	if test.contextLogger == nil {
+		test.contextLogger = logger.WithFields(logger.Fields{
+			"TEST":			test.title,
+			"SHOULD_FAIL":	strconv.FormatBool(test.shouldFail),
+			"SETUP":		test.setup,
+			"CLEANUP":		test.cleanup,
+		})
+	}
+
 	if test.setup != nil {
 		test.setup(t)
 	}
@@ -46,7 +57,7 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 		}
 		defer func() {
 			if err := os.Remove(file.Name()); err != nil {
-				logger.Warnf("An error occurred when attempting to remove the temporary test file [%s]. " +
+				test.contextLogger.Warnf("An error occurred when attempting to remove the temporary test file [%s]. " +
 					"Error [%s]", file.Name(), err.Error())
 			}
 		}()
@@ -63,18 +74,22 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 	}
 	if test.shouldFail {
 		if err == nil {
-			t.Fatal("A null error was received when an evaluation error was expected. Failing the test...")
+			test.contextLogger.Fatal("A null error was received when an evaluation error was expected. Failing the test...")
+			t.FailNow()
 			return false
 		}
 	} else {
 		if err != nil {
-			t.Fatalf("An unexpected error was received during the evaluation. Error [%s] ", err.Error())
+			test.contextLogger.WithError(err).Fatal("An unexpected error was received during the evaluation.")
+			t.FailNow()
 			return false
 		}
 	}
 	if cfg.MetricValue != test.expectedMetricValue {
-		logger.Errorf("Received the metric value [%d] when expecting [%d] instead. Failing the test...",
-			cfg.MetricValue, test.expectedMetricValue)
+		test.contextLogger.WithFields(logger.Fields{
+			"RECEIVED": cfg.MetricValue,
+			"EXPECTED": test.expectedMetricValue,
+		}).Error("Failed to receive the expected metric value. Failing the test...")
 		t.FailNow()
 		return false
 	}

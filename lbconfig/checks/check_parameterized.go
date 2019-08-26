@@ -26,7 +26,7 @@ func (g ParamCheck) isAlarm() bool {
 	return strings.TrimSpace(strings.ToLower(g.Type)) == ALARM
 }
 
-func (g ParamCheck) Run(args ...interface{}) (int, error) {
+func (g ParamCheck) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
 	var rVal interface{}
 	line := args[0].(string)
 	isCheck := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "check")
@@ -38,7 +38,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 
 	isLoad := strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "load")
 	// Log
-	logger.Debugf("Adding [%s] metric [%s]", g.Impl.Name(), line)
+	contextLogger.Debugf("Adding [%s] metric [%s]", g.Impl.Name(), line)
 
 	// Support unintentional errors => e.g., [loadcheck collectd], panics if the regex cannot be compiled
 	found := regexp.MustCompile("(?i)(((check)( )+(collectd_alarms))|(check|load)( )+(collectd|lemon))").Split(strings.TrimSpace(line), -1)
@@ -52,7 +52,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 
 	rawExpression := found[1]
 	// Log
-	logger.Tracef("Found expression [%s]", rawExpression)
+	contextLogger.Tracef("Found expression [%s]", rawExpression)
 
 	// If no expression was given, fail the whole expression
 	if len(strings.TrimSpace(rawExpression)) == 0 {
@@ -62,7 +62,7 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 	var metrics []string
 	if !g.isAlarm() {
 		// Backwards compatible (remove unnecessary underscores from the expression)
-		g.compatibilityProcess(&rawExpression)
+		g.compatibilityProcess(contextLogger, &rawExpression)
 
 		// Discover all the metrics found in the expression
 		metrics = regexp.MustCompile(`\[([^\[\]]*)]`).FindAllString(rawExpression, -1)
@@ -71,11 +71,11 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 		metrics = []string{regexp.MustCompile(`\[.*]`).FindString(rawExpression)}
 	}
 
-	logger.Tracef("Found metrics [%v], len [%d]", metrics, len(metrics))
+	contextLogger.Tracef("Found metrics [%v], len [%d]", metrics, len(metrics))
 	parameters := make(map[string]interface{}, len(metrics))
 
 	// Run command with a list of all the metrics found and return a key/value map
-	err := g.Impl.Run(metrics, &parameters)
+	err := g.Impl.Run(contextLogger.WithField("TYPE", strings.ToUpper(g.Impl.Name())), metrics, &parameters)
 	if err != nil {
 		return -1, err
 	}
@@ -100,13 +100,13 @@ func (g ParamCheck) Run(args ...interface{}) (int, error) {
 	}
 
 	// Debug
-	logger.Debugf("Expression returned result [%+v]", result)
+	contextLogger.Debugf("Expression returned result [%+v]", result)
 	return intResult, nil
 }
 
 // compatibilityProcess : Processes the metric line so that all the metrics found (_metric) are ported to the new format ([metric])
-func (g ParamCheck) compatibilityProcess(metric *string) {
-	logger.Tracef("Processing metric [%s]", *metric)
+func (g ParamCheck) compatibilityProcess(contextLogger *logger.Entry, metric *string) {
+	contextLogger.Tracef("Processing metric [%s]", *metric)
 
 	*metric = regexp.MustCompile(`([]0-9][ ]*)[=]([ ]*[0-9\[])`).ReplaceAllString(*metric, "$1==$2")
 

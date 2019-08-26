@@ -10,7 +10,7 @@ import (
 type NoLogin struct {
 }
 
-func (nl NoLogin) Run(args ...interface{}) (int, error) {
+func (nl NoLogin) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
 	// Abort execution if the caller does not fulfill the contract
 	if args == nil || len(args) < 2 {
 		return -1, fmt.Errorf("wrong number or arguments supplied. Please supply an alias name [string] and " +
@@ -18,7 +18,7 @@ func (nl NoLogin) Run(args ...interface{}) (int, error) {
 	}
 
 	lbaliasNames, ok := args[1].([]string)
-	logger.Tracef("Supplied alias [%v], default value [%v]", lbaliasNames, args[2])
+	contextLogger.Tracef("Supplied alias [%v], default value [%v]", lbaliasNames, args[2])
 	if !ok {
 		return -1, fmt.Errorf("wrong type given as the alias name, please use the [string] type")
 	}
@@ -37,11 +37,11 @@ func (nl NoLogin) Run(args ...interface{}) (int, error) {
 		_, err := os.Stat(file)
 
 		if err == nil {
-			logger.Errorf("File [%s] is present", file)
+			contextLogger.Errorf("File [%s] is present", file)
 			return -1, nil
 		}
 	}
 
-	logger.Debug("Users are allowed to log in")
+	contextLogger.Debug("Users are allowed to log in")
 	return 1, nil
 }

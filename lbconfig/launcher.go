@@ -3,10 +3,13 @@ package lbconfig
 import (
 	"bytes"
 	"fmt"
+	nested "github.com/antonfisher/nested-logrus-formatter"
+	fluentd "github.com/joonix/log"
 	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
 	"os"
+	"strings"
 )
 
 // AppLauncher : Helper struct that encapsulates the logic of running [lbclient]
@@ -16,20 +19,11 @@ type AppLauncher struct {
 	MetricType, MetricValue string
 }
 
-
 func init() {
-	//logger.SetReportCaller(true)
-	//logger.SetFormatter(&logger.JSONFormatter{
-	//	PrettyPrint: true,
-	//
-	//})
-	logger.SetFormatter(&logger.TextFormatter{
-		ForceColors: true,
-		FullTimestamp: true,
-		DisableLevelTruncation: true,
-		EnvironmentOverrideColors: true,
-		QuoteEmptyFields: true})
-	logger.SetOutput(os.Stdout)
+	logger.SetFormatter(&nested.Formatter{
+		ShowFullLevel: 	true,
+		FieldsOrder:	[]string{"EVALUATION", "CLI"},
+	})
 }
 
 // NewAppLauncher : Factory-pattern function that creates and returns a new @see AppLauncher struct instance pointer
@@ -54,6 +48,20 @@ func (l *AppLauncher) ApplyLoggerSettings() error {
 		logger.
 			WithError(err).
 			WithField("logger_level", l.AppOptions.DebugLevel).Error("Unable to parse the desired logger level")
+	}
+
+	logger.SetReportCaller(true)
+	logger.SetOutput(os.Stdout)
+
+	switch strings.ToLower(l.AppOptions.LoggerMode) {
+	case "fluentd":
+		logger.SetFormatter(fluentd.NewFormatter())
+	case "fluentd_pretty":
+		logger.SetFormatter(fluentd.NewFormatter(fluentd.PrettyPrintFormat))
+	default:
+		logger.WithFields(logger.Fields{"LOG_MODE": l.AppOptions.LoggerMode}).
+			Errorf("Unable to set logger format from the given value [%s]", l.AppOptions.LoggerMode)
+		logger.Exit(1)
 	}
 
 	return nil

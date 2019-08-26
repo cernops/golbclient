@@ -15,7 +15,8 @@ type ExecutionConf struct {
 // Options : Supported application flags
 type Options struct {
 	/* Logging */
-	DebugLevel 				string `short:"d" long:"loglevel" default:"FATAL" description:"Console debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]"`
+	LoggerMode				string `short:"m" long:"logMode" default:"" description:"Logger mode [fluentd, fluentd_pretty]"`
+	DebugLevel 				string `short:"d" long:"loglevel" default:"FATAL" description:"Logger level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]"`
 	/* Configuration files */
 	LbMetricConfDir         string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
 	LbAliasFile             string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`

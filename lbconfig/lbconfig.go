@@ -53,7 +53,14 @@ var allLBExpressions = map[string]ExpressionCode{
 
 // Evaluate : Evaluates a [lbalias] entry
 func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConfig bool) error {
-	logger.Debugf("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
+	contextLogger := logger.WithFields(logger.Fields{
+		"EVALUATION": 	"LOADING",
+		"CFG_PATH": 	cm.ConfigFilePath,
+		"MAX_TIMEOUT": 	timeout.String(),
+		"CHECK_CONFIG": strconv.FormatBool(checkConfig),
+	})
+
+	contextLogger.Debug("Started the evaluation of the the configuration file...")
 
 	// Create a string array containing all the checksToExecute to be performed
 	var checksToExecute []string
@@ -67,11 +74,11 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 
 	lines, err := filehandler.ReadAllLinesFromFile(cm.ConfigFilePath)
 	if err != nil {
-		logger.Errorf("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
+		contextLogger.Errorf("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
 		return err
 	}
 	// Read the configuration file using the scanner API
-	logger.Debugf("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
+	contextLogger.Debugf("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
 
 	// Detect all comments
 	comment := regexp.MustCompile("^[ \t]*(#.*)?$")
@@ -95,7 +102,10 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 			isLoad := regexp.MustCompile(`(?i)^LOAD`).MatchString(line)
 			negRet := -allLBExpressions[myAction].code
 			ret, err := timer.ExecuteWithTimeoutRInt(timeout, allLBExpressions[myAction].cli.Run,
-				line, cm.AliasNames, cm.Default)
+				contextLogger.WithFields(logger.Fields{
+					"CLI": 			myAction,
+					"EVALUATION": 	"ONGOING",
+				}), line, cm.AliasNames, cm.Default)
 
 			if err != nil {
 				cm.MetricValue = negRet
@@ -118,12 +128,12 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 	}
 
 	if cm.MetricValue == 0 {
-		logger.Infof("No metric value was found. Defaulting to the generic load calculation")
+		contextLogger.Infof("No metric value was found. Defaulting to the generic load calculation")
 		cm.MetricValue = defaultLoad()
 	}
 
 	// Log
-	logger.Tracef("Final metric value [%d]", cm.MetricValue)
+	contextLogger.WithField("EVALUATION", "FINISHED").Tracef("Final metric value [%d]", cm.MetricValue)
 
 	return nil
 }

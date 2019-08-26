@@ -22,17 +22,17 @@ const (
 	CommandNotExecutable 	= 126
 )
 
-func (command Command) Run(args ...interface{}) (int, error) {
+func (command Command) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
 	cmd, _ := regexp.Compile("(?i)(^check[ ]+command)")
 	line := args[0].(string)
 	found := cmd.Split(line, -1)
 
 	if len(found) > 1 {
 		usrCmd := strings.TrimSpace(found[1])
-		logger.Tracef("Attempting to run command [%s]", usrCmd)
+		contextLogger.Tracef("Attempting to run command [%s]", usrCmd)
 		out, err := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
-			logger.Errorf("The command [%s] failed. Error [%v]", usrCmd, err)
+			contextLogger.Errorf("The command [%s] failed. Error [%v]", usrCmd, err)
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if exitErr.Exited() {
 					if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
@@ -48,7 +48,7 @@ func (command Command) Run(args ...interface{}) (int, error) {
 			return -1, err
 		}
 
-		logger.Debugf("Command output [%s]", out)
+		contextLogger.Debugf("Command output [%s]", out)
 		return 1, nil
 	}
 

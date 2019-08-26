@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"context"
+	"fmt"
 	logger "github.com/sirupsen/logrus"
 	"os/exec"
 	"strings"
@@ -16,7 +17,10 @@ func Run(pathToCommand string, printRuntime bool, timeout time.Duration, v ...st
 		now = time.Now().UnixNano() / int64(time.Millisecond)
 		defer func() {
 			newNow := time.Now().UnixNano() / int64(time.Millisecond)
-			logger.Debugf("Runtime: %dms", newNow-now)
+			logger.WithFields(logger.Fields{
+				"COMMAND": pathToCommand,
+				"RUNTIME": fmt.Sprintf("Runtime: %dms", newNow-now),
+			}).Debug("")
 		}()
 	}
 
