@@ -80,7 +80,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 				}
 
 				logger.Tracef("Raw output from [collectdctl] [%v]",
-					strings.ReplaceAll(rawOutput, "\n", " "))
+					strings.Replace(rawOutput, "\n", " ", -1))
 				cacheAllTheOutput := strings.Split(rawOutput, "\n")
 				for _, line := range cacheAllTheOutput {
 					if len(strings.TrimSpace(line)) == 0 {
