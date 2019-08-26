@@ -72,7 +72,7 @@ func (ci CollectdAlarmImpl) Run(metrics []string, valueList *map[string]interfac
 		logger.Tracef("Expecting [%d] metrics", len(userRequiredAlarms))
 
 		// Run the CLI for all the wanted states
-		for _, alarmState := range userRequiredAlarms {
+		for alarmState := range userRequiredAlarms {
 			go func(state string) {
 				logger.Debugf("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
 				rawOutput, err := runner.Run(
