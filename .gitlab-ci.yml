@@ -102,6 +102,7 @@ test-go11:
 bench-go09:
   stage: benchmark
   script:
+    - *openTestPorts
     - export GOPATH=/go && go09 get ./...
     - go09 test ./tests/... -bench=. -benchmem
     - go09 test ./tests/... -bench=. -benchmem -race
@@ -109,6 +110,7 @@ bench-go09:
 bench-go10:
   stage: benchmark
   script:
+    - *openTestPorts
     - export GOPATH=/go && go10 get ./...
     - go10 test ./tests/... -bench=. -benchmem
     - go10 test ./tests/... -bench=. -benchmem -race
@@ -116,6 +118,7 @@ bench-go10:
 bench-go11:
   stage: benchmark
   script:
+    - *openTestPorts
     - go11 test ./tests/... -bench=. -benchmem
     - go11 test ./tests/... -bench=. -benchmem -race
 
