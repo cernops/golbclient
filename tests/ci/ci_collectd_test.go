@@ -4,23 +4,23 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
 // TestCICollectdCLI : checks if the alternative [collectd] used in the CI pipeline is OK
 func TestCICollectdCLI(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
+	logger.SetLevel(logger.ErrorLevel)
 	output, err := runner.Run("/usr/bin/collectdctl",
 		true, defaultTimeout, "getval", "test")
 	if err != nil {
-		logger.Error("An error was detected when running the CI [collectdctl]. Error [%s]", err.Error())
+		logger.Errorf("An error was detected when running the CI [collectdctl]. Error [%s]", err.Error())
 		t.FailNow()
 	} else if len(strings.TrimSpace(output)) == 0 {
-		logger.Error("The CI [collectdctl] failed to return a row value for a pre-defined metric")
+		logger.Errorf("The CI [collectdctl] failed to return a row value for a pre-defined metric")
 		t.FailNow()
 	}
-	logger.Trace("CI [collectdctl] output [%s]", output)
+	logger.Tracef("CI [collectdctl] output [%s]", output)
 }
 
 func TestCollectd(t *testing.T) {

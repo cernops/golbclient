@@ -9,9 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/network"
-
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
 )
 
 // DaemonListening : struct responsible for all the daemon check slices
@@ -23,6 +22,7 @@ type DaemonListening struct {
 	Hosts []string
 	// Backwards compatibility
 	Metric string
+	contextLogger *logger.Entry
 }
 
 // Configuration file socks
@@ -47,15 +47,16 @@ type condFilePair struct {
 	filepath string
 }
 
-func (daemon DaemonListening) Run(args ...interface{}) (int, error) {
+func (daemon DaemonListening) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
+	daemon.contextLogger = contextLogger
 	metric := args[0].(string)
 
 	// Log
-	logger.Trace("Processing daemon check on Metric line [%s]", metric)
+	contextLogger.Tracef("Processing daemon check on Metric line [%s]", metric)
 	// Process the daemon Metric & abort if an error was detected
 	err := daemon.processMetricLine(metric)
 	if err != nil {
-		logger.Error(err.Error())
+		contextLogger.Error(err)
 		return -1, err
 	}
 
@@ -76,7 +77,7 @@ func (daemon *DaemonListening) parseMetricLineJSON(line string) (err error) {
 	}
 
 	// Detect duplicated keys
-	validateUniqueKeys(line)
+	daemon.validateUniqueKeys(line)
 
 	// Container variable
 	transformationContainer := new([]interface{})
@@ -196,14 +197,14 @@ func pipelineTransform(arg *interface{}, container **[]interface{}) {
 
 // validateUniqueKeys : checks if more than one entry for the same key was detected. If so, present a warning message
 // 	to the user
-func validateUniqueKeys(line interface{}) {
+func (daemon *DaemonListening) validateUniqueKeys(line interface{}) {
 	foundKeys := regexp.MustCompile(`("\w+" *:)`).FindAllString(line.(string), -1)
 	foundKeyMap := make(map[string]bool, len(foundKeys))
 	for _, key := range foundKeys {
 		key := strings.Replace(key, " ", "", -1)
 		keyA := []rune(key)
 		if _, exists := foundKeyMap[key]; exists {
-			logger.Warn("The key [%s] was found multiple times. Note that only the last declared key-value pair"+
+			daemon.contextLogger.Warnf("The key [%s] was found multiple times. Note that only the last declared key-value pair"+
 				"will be used.", string(keyA[1:len(keyA)-2]))
 		} else {
 			foundKeyMap[key] = true
@@ -214,7 +215,7 @@ func validateUniqueKeys(line interface{}) {
 // processMetricLine : this function is responsible for the extraction of the JSON Metric string from the
 // 	configuration line. Attempt to parse the extracted JSON or use the hardcoded Metric line if provided
 //	(backwards-compatibility) process. Fetch the required amount of lines that need to be seen in the output of netstat.
-func (daemon *DaemonListening) processMetricLine(metric string) error {
+func (daemon *DaemonListening) processMetricLine( metric string) error {
 	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
 	// 	For more information, see: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 	if len(daemon.Metric) != 0 {
@@ -234,7 +235,7 @@ func (daemon *DaemonListening) processMetricLine(metric string) error {
 		return fmt.Errorf("a port needs to be specified in a daemon check in the format `{port : <val>}`")
 	}
 
-	logger.Trace("Finished processing Metric file [%#v]", daemon)
+	daemon.contextLogger.Tracef("Finished processing Metric file [%#v]", daemon)
 	return nil
 }
 
@@ -249,7 +250,7 @@ func (daemon *DaemonListening) isListening() (int, error) {
 	// Get all the Ports combination
 	regex := regexp.MustCompile(
 		fmt.Sprintf(`[0-9]+: (%s):(%s)`, hostsFormat, portsFormat))
-	logger.Trace("Looking with regex [%s] for open ports...", regex.String())
+	daemon.contextLogger.Tracef("Looking with regex [%s] for open ports...", regex.String())
 
 	// Conditions & file-lookup map
 	condFilePairList := []condFilePair{
@@ -260,18 +261,18 @@ func (daemon *DaemonListening) isListening() (int, error) {
 	}
 
 	for _, cfp := range condFilePairList {
-		foundLines, err := matchIfRequired(cfp.cond, cfp.filepath, regex)
+		foundLines, err := daemon.matchIfRequired(cfp.cond, cfp.filepath, regex)
 		if err != nil {
 			return -1, err
 		}
 
 		if foundLines >= 1 {
-			logger.Trace("Found the required ports [%v] listening on [%s]", daemon.Ports, cfp.filepath)
+			daemon.contextLogger.Tracef("Found the required ports [%v] listening on [%s]", daemon.Ports, cfp.filepath)
 			return 1, nil
 		}
 	}
 
-	logger.Error("Failed to find the required open ports [%v]", daemon.Ports)
+	daemon.contextLogger.Errorf("Failed to find the required open ports [%v]", daemon.Ports)
 	return -1, nil
 }
 
@@ -293,7 +294,7 @@ func (daemon *DaemonListening) getHostRegexFormat() (string, error) {
 			return "", err
 		}
 
-		logger.Trace("Scanning host [%s] with HEX [%s]", h, hostHex)
+		daemon.contextLogger.Tracef("Scanning host [%s] with HEX [%s]", h, hostHex)
 		hostsFormat.WriteString(fmt.Sprintf("(%s)", hostHex))
 	}
 	return hostsFormat.String(), nil
@@ -309,7 +310,7 @@ func (daemon *DaemonListening) getPortsRegexFormat() string {
 		}
 
 		portHex := strings.ToUpper(fmt.Sprintf("%04x", p))
-		logger.Trace("Scanning port [%d] with HEX [%s]", p, portHex)
+		daemon.contextLogger.Tracef("Scanning port [%d] with HEX [%s]", p, portHex)
 		portsFormat.WriteString(fmt.Sprintf("(%s)", portHex))
 	}
 	return portsFormat.String()
@@ -318,16 +319,16 @@ func (daemon *DaemonListening) getPortsRegexFormat() string {
 // matchIfRequired : Helper function that only executed if the given condition evaluates to [true]. If so,
 // the file contents of @arg sockPath will be read and matched against the given @arg regex. The amount of matches
 // will then be added to the given counter
-func matchIfRequired(cond bool, sockPath string, regex *regexp.Regexp) (foundLines int, err error) {
+func (daemon *DaemonListening) matchIfRequired(cond bool, sockPath string, regex *regexp.Regexp) (foundLines int, err error) {
 	if cond {
-		logger.Trace("Looking for regex in sock file [%s]...", sockPath)
+		daemon.contextLogger.Tracef("Looking for regex in sock file [%s]...", sockPath)
 
 		fileContent, err := ioutil.ReadFile(sockPath)
 		if err != nil {
 			return foundLines, fmt.Errorf("unable to open the file [%s]. Error [%s]", sockPath, err)
 		}
 		foundLines = len(regex.FindStringSubmatch(string(fileContent)))
-		logger.Debug("Found [%d] matching lines in sock file [%s]...", foundLines, sockPath)
+		daemon.contextLogger.Debugf("Found [%d] matching lines in sock file [%s]...", foundLines, sockPath)
 	}
 	return
 }
