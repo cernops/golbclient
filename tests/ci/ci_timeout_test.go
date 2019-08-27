@@ -1,15 +1,24 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"testing"
 	"time"
 )
 
-func TestTimeOut(t *testing.T) {
-	myTests := []lbTest{
-		{title: "TimeoutNotKillExecution", configuration: "../test/lbclient_timeout_6s.conf", expectedMetricValue: 15},
-		{title: "TimeoutKillExecution", configuration: "../test/lbclient_timeout_6s.conf", expectedMetricValue: -14, shouldFail: true, timeout: time.Second * 3},
-	}
+var timeoutTests []tests.LbTest
 
-	runMultipleTests(t, myTests)
+func init() {
+	timeoutTests = []tests.LbTest{
+		{Title: "TimeoutNotKillExecution", Configuration: "../test/lbclient_timeout_6s.conf", ExpectedMetricValue: 15},
+		{Title: "TimeoutKillExecution", Configuration: "../test/lbclient_timeout_6s.conf", ExpectedMetricValue: -14, ShouldFail: true, Timeout: time.Second * 3},
+	}
+}
+
+func TestTimeOut(t *testing.T) {
+	tests.RunMultipleTests(t, timeoutTests)
+}
+
+func BenchmarkTimeOut(b *testing.B) {
+	tests.RunMultipleTests(b, timeoutTests)
 }

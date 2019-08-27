@@ -3,6 +3,7 @@ package param
 import (
 	"fmt"
 	logger "github.com/sirupsen/logrus"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/native"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"regexp"
@@ -36,16 +37,17 @@ func (li LemonImpl) Run(contextLogger *logger.Entry, metrics []string, valueList
 	metric = regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
 	// Create the slices map
 	contextLogger.Tracef("Metric [%s]", metric)
-	slicesMap := map[int]sliceEntry{}
+	slicesMap := make(map[int]sliceEntry)
 	slices := regexp.MustCompile("[0-9]{2,}[:][0-9]").FindAllString(metric, -1)
 	contextLogger.Tracef("Found slices [%v]", slices)
 
 	for i, slice := range slices {
-		slice = regexp.MustCompile("[ ]").ReplaceAllString(slice, "")
+		slice = native.RemoveAllWhitespaces(slice)
 		contextLogger.Tracef("Processing slice [%s]", slice)
 		ps := strings.Split(slice, ":")
 		slicesMap[i] = sliceEntry{fmt.Sprintf("[%s]", ps[0]), parser.ParseInterfaceAsInteger(ps[1]), slice}
 	}
+
 	// Log
 	contextLogger.Debugf("Slices map [%v]", slicesMap)
 	// Remove the slice from the metric
@@ -53,7 +55,6 @@ func (li LemonImpl) Run(contextLogger *logger.Entry, metrics []string, valueList
 	// Run the CLI with all the metrics found
 	contextLogger.Debugf("Running the [lemon] cli path [%s] for the metrics [%s]", li.CommandPath, metric)
 	// Add the [lemon-cli] arguments
-
 	output, err := runner.Run(li.CommandPath, true, 0, "--script", "-m", metric)
 	if err != nil {
 		return fmt.Errorf("failed to run the [lemon] cli with the error [%s]", err.Error())

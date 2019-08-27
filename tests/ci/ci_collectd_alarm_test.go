@@ -1,22 +1,31 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"testing"
 )
 
-func TestCollectdAlarms(t *testing.T) {
-	myTests := []lbTest{
-		{title: "CollectdAlarmFunctionality",
-			configuration: "../test/lbclient_collectd_alarm_check_single.conf", expectedMetricValue: 2},
-		{title: "CollectdAlarmFunctionalityMultipleAndInverted",
-			configuration: "../test/lbclient_collectd_alarm_check_multiple.conf", expectedMetricValue: 3},
-		{title: "CollectdAlarmFunctionalityMultipleAllStates",
-			configuration: "../test/lbclient_collectd_alarm_check_all_states.conf", expectedMetricValue: 4},
-		{title: "CollectdAlarmFunctionalityFailSingle",
-			configuration: "../test/lbclient_collectd_alarm_check_fail_single.conf", expectedMetricValue: -15, shouldFail: true},
-		{title: "CollectdAlarmFunctionalityFailMultiple",
-			configuration: "../test/lbclient_collectd_alarm_check_fail_multiple.conf", expectedMetricValue: -15, shouldFail: true},
-	}
+var collectdAlarmTests []tests.LbTest
 
-	runMultipleTests(t, myTests)
+func init() {
+	collectdAlarmTests = []tests.LbTest{
+		{Title: "CollectdAlarmFunctionality",
+			Configuration: "../test/lbclient_collectd_alarm_check_single.conf", ExpectedMetricValue: 2},
+		{Title: "CollectdAlarmFunctionalityMultipleAndInverted",
+			Configuration: "../test/lbclient_collectd_alarm_check_multiple.conf", ExpectedMetricValue: 3},
+		{Title: "CollectdAlarmFunctionalityMultipleAllStates",
+			Configuration: "../test/lbclient_collectd_alarm_check_all_states.conf", ExpectedMetricValue: 4},
+		{Title: "CollectdAlarmFunctionalityFailSingle",
+			Configuration: "../test/lbclient_collectd_alarm_check_fail_single.conf", ExpectedMetricValue: -15, ShouldFail: true},
+		{Title: "CollectdAlarmFunctionalityFailMultiple",
+			Configuration: "../test/lbclient_collectd_alarm_check_fail_multiple.conf", ExpectedMetricValue: -15, ShouldFail: true},
+	}
+}
+
+func TestCollectdAlarms(t *testing.T) {
+	tests.RunMultipleTests(t, collectdAlarmTests)
+}
+
+func BenchmarkCollectdAlarms(b *testing.B) {
+	tests.RunMultipleTests(b, collectdAlarmTests)
 }

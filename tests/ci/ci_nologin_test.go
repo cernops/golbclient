@@ -1,6 +1,7 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -8,31 +9,42 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-func createNoLogin(t *testing.T) {
+var noLoginTests []tests.LbTest
+
+func init() {
+	noLoginTests = []tests.LbTest{
+		{Title: "noLoginWorks",
+			Configuration: "../test/lbclient_nologin.conf", ExpectedMetricValue: 5},
+		{Title: "noLoginFails",
+			Configuration: "../test/lbclient_nologin.conf", ExpectedMetricValue: -1,
+			Setup: createNoLogin, Cleanup: removeNoLogin},
+	}
+}
+
+func createNoLogin(t testing.TB) {
 	path := "/etc/nologin"
 	logger.Debugf("Creating the [nologin] file [%s]", path)
 
 	if err := ioutil.WriteFile(path, []byte("Hello"), 0755); err != nil {
-		t.Fatalf("Unable to write file: %v", err)
+		t.Logf("Unable to write file: %v", err)
+		t.Fail()
 	}
 }
-func removeNoLogin(t *testing.T) {
+
+func removeNoLogin(t testing.TB) {
 	path := "/etc/nologin"
 	logger.Debugf("Removing the [nologin] file [%s]", path)
 
 	if err := os.Remove(path); err != nil {
-		t.Fatalf("Failed to remove the file %v", err)
+		t.Logf("Failed to remove the file %v", err)
+		t.Fail()
 	}
 }
 
-func TestNologin(t *testing.T) {
-	myTests := []lbTest{
-		{title: "noLoginWorks",
-			configuration: "../test/lbclient_nologin.conf", expectedMetricValue: 5},
-		{title: "noLoginFails",
-			configuration: "../test/lbclient_nologin.conf", expectedMetricValue: -1,
-			setup: createNoLogin, cleanup: removeNoLogin},
-	}
+func TestNoLogin(t *testing.T) {
+	tests.RunMultipleTests(t, noLoginTests)
+}
 
-	runMultipleTests(t, myTests)
+func BenchmarkNoLogin(b *testing.B) {
+	tests.RunMultipleTests(b, noLoginTests)
 }

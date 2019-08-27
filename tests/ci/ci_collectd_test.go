@@ -1,6 +1,7 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"strings"
 	"testing"
 
@@ -8,11 +9,41 @@ import (
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
+var collectdTests, collectdLoadTests []tests.LbTest
+
+func init() {
+	collectdTests = []tests.LbTest{
+		{Title: "CollectdFunctionality",
+			Configuration: "../test/lbclient_collectd_check_single.conf", ExpectedMetricValue: 5},
+		{Title: "ConfigurationFile",
+			Configuration: "../test/lbclient_collectd_check.conf", ExpectedMetricValue: 3},
+		{Title: "ConfigurationFileWithKeys",
+			Configuration: "../test/lbclient_collectd_check_with_keys.conf", ExpectedMetricValue: 7},
+		{Title: "FailedConfigurationFile",
+			Configuration: "../test/lbclient_collectd_check_fail.conf", ShouldFail: true, ExpectedMetricValue: -15},
+		{Title: "FailedConfigurationFileWithWrongKey",
+			Configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf",
+			ShouldFail: true, ExpectedMetricValue: -15},
+		{Title: "FailedConfigurationFileWithEmptyKey",
+			Configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf",
+			ShouldFail: true, ExpectedMetricValue: -15},
+	}
+
+	collectdLoadTests = []tests.LbTest{
+		{Title: "CollectdLoad",
+			Configuration: "../test/lbclient_collectd_load_single.conf", ExpectedMetricValue: 98},
+		{Title: "LoadConfigurationFile",
+			Configuration: "../test/lbclient_collectd_load.conf", ExpectedMetricValue: 72},
+		{Title: "LoadFailedConfigurationFile",
+			Configuration: "../test/lbclient_collectd_load_fail.conf", ShouldFail: true, ExpectedMetricValue: -15},
+	}
+}
+
 // TestCICollectdCLI : checks if the alternative [collectd] used in the CI pipeline is OK
 func TestCICollectdCLI(t *testing.T) {
 	logger.SetLevel(logger.ErrorLevel)
 	output, err := runner.Run("/usr/bin/collectdctl",
-		true, defaultTimeout, "getval", "test")
+		true, tests.DefaultTimeout, "getval", "test")
 	if err != nil {
 		logger.Errorf("An error was detected when running the CI [collectdctl]. Error [%s]", err.Error())
 		t.FailNow()
@@ -24,35 +55,17 @@ func TestCICollectdCLI(t *testing.T) {
 }
 
 func TestCollectd(t *testing.T) {
-	myTests := []lbTest{
-		{title: "CollectdFunctionality",
-			configuration: "../test/lbclient_collectd_check_single.conf", expectedMetricValue: 5},
-		{title: "ConfigurationFile",
-			configuration: "../test/lbclient_collectd_check.conf", expectedMetricValue: 3},
-		{title: "ConfigurationFileWithKeys",
-			configuration: "../test/lbclient_collectd_check_with_keys.conf", expectedMetricValue: 7},
-		{title: "FailedConfigurationFile",
-			configuration: "../test/lbclient_collectd_check_fail.conf", shouldFail: true, expectedMetricValue: -15},
-		{title: "FailedConfigurationFileWithWrongKey",
-			configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf",
-			shouldFail: true, expectedMetricValue: -15},
-		{title: "FailedConfigurationFileWithEmptyKey",
-			configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf",
-			shouldFail: true, expectedMetricValue: -15},
-	}
+	tests.RunMultipleTests(t, collectdTests)
+}
 
-	runMultipleTests(t, myTests)
+func BenchmarkCollectd(b *testing.B) {
+	tests.RunMultipleTests(b, collectdTests)
 }
 
 func TestCollectdLoad(t *testing.T) {
-	myTests := []lbTest{
-		{title: "CollectdLoad",
-			configuration: "../test/lbclient_collectd_load_single.conf", expectedMetricValue: 98},
-		{title: "LoadConfigurationFile",
-			configuration: "../test/lbclient_collectd_load.conf", expectedMetricValue: 72},
-		{title: "LoadFailedConfigurationFile",
-			configuration: "../test/lbclient_collectd_load_fail.conf", shouldFail: true, expectedMetricValue: -15},
-	}
+	tests.RunMultipleTests(t, collectdLoadTests)
+}
 
-	runMultipleTests(t, myTests)
+func BenchmarkCollectdLoad(b *testing.B) {
+	tests.RunMultipleTests(b, collectdLoadTests)
 }

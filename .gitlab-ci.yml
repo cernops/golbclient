@@ -103,21 +103,21 @@ bench-go09:
   stage: benchmark
   script:
     - export GOPATH=/go && go09 get ./...
-    - go09 test ./tests/benchmarking/... -bench=. -benchmem
-    - go09 test ./tests/benchmarking/... -bench=. -benchmem -race
+    - go09 test ./tests/... -bench=. -benchmem
+    - go09 test ./tests/... -bench=. -benchmem -race
 
 bench-go10:
   stage: benchmark
   script:
     - export GOPATH=/go && go10 get ./...
-    - go10 test ./tests/benchmarking/... -bench=. -benchmem
-    - go10 test ./tests/benchmarking/... -bench=. -benchmem -race
+    - go10 test ./tests/... -bench=. -benchmem
+    - go10 test ./tests/... -bench=. -benchmem -race
 
 bench-go11:
   stage: benchmark
   script:
-    - go11 test ./tests/benchmarking/... -bench=. -benchmem
-    - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
+    - go11 test ./tests/... -bench=. -benchmem
+    - go11 test ./tests/... -bench=. -benchmem -race
 
 build_rpm:
   stage: build_rpm

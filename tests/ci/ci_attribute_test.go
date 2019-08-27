@@ -1,16 +1,25 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"testing"
 )
 
-func TestAttributest(t *testing.T) {
-	myTests := []lbTest{
-		{title: "TestXsessions", configurationContent: "check xsessions\nload constant 34", expectedMetricValue: 34},
-		{title: "TestSwapping", configurationContent: "check swapping\nload constant 35", expectedMetricValue: 35},
-		{title: "TestSwapping_backwards_compatible", configurationContent: "check swaping\nload constant 36", expectedMetricValue: 36},
-		{title: "TestAttributeBroken", configurationContent: "check bbswapping\nload constant 35", expectedMetricValue: -1, shouldFail: true},
-	}
+var attributeTests []tests.LbTest
 
-	runMultipleTests(t, myTests)
+func init() {
+	attributeTests = []tests.LbTest{
+		{Title: "TestXsessions", ConfigurationContent: "check xsessions\nload constant 34", ExpectedMetricValue: 34},
+		{Title: "TestSwapping", ConfigurationContent: "check swapping\nload constant 35", ExpectedMetricValue: 35},
+		{Title: "TestSwapping_backwards_compatible", ConfigurationContent: "check swaping\nload constant 36", ExpectedMetricValue: 36},
+		{Title: "TestAttributeBroken", ConfigurationContent: "check bbswapping\nload constant 35", ExpectedMetricValue: -1, ShouldFail: true},
+	}
+}
+
+func TestAttribute(t *testing.T) {
+	tests.RunMultipleTests(t, attributeTests)
+}
+
+func BenchmarkAttribute(b *testing.B) {
+	tests.RunMultipleTests(b, attributeTests)
 }

@@ -2,6 +2,7 @@ package ci
 
 import (
 	"bytes"
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
@@ -48,7 +49,7 @@ func TestMissingConfigurationFile(t *testing.T) {
 	logger.SetLevel(logger.FatalLevel)
 	cfg := mapping.NewConfiguration("../test/lbtest.conf_does_not_exist", "myTest")
 
-	err := lbconfig.Evaluate(cfg, defaultTimeout, false)
+	err := lbconfig.Evaluate(cfg, tests.DefaultTimeout, false)
 	if err == nil {
 		logger.Errorf("Expected an error when attempting to read the non-existent file [%s]", cfg.ConfigFilePath)
 		t.Fail()
@@ -72,7 +73,7 @@ func TestOneConfigFileMultipleAliases(t *testing.T) {
 		t.Fail()
 	}
 	var appOutput bytes.Buffer
-	err = lbconfig.Evaluate(lbAliasesMappings[0], defaultTimeout, false)
+	err = lbconfig.Evaluate(lbAliasesMappings[0], tests.DefaultTimeout, false)
 	appOutput.WriteString(lbAliasesMappings[0].String() + ",")
 	if err != nil {
 		logger.Errorf("We got an error evaluating the alias [%v]", err)
@@ -104,7 +105,7 @@ func TestOneConfigFileMultipleAliasesString(t *testing.T) {
 	}
 	var appOutput bytes.Buffer
 	for _, value := range lbAliasesMappings {
-		err = lbconfig.Evaluate(value, defaultTimeout, false)
+		err = lbconfig.Evaluate(value, tests.DefaultTimeout, false)
 		appOutput.WriteString(value.String() + ",")
 		if err != nil {
 			logger.Errorf("We got an error evaluating the alias [%v]", err)

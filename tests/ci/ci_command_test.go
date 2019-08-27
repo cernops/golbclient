@@ -1,36 +1,45 @@
 package ci
 
 import (
+	"gitlab.cern.ch/lb-experts/golbclient/tests"
 	"testing"
 )
 
-func TestCommand(t *testing.T) {
-	myTests := []lbTest{
-		{title: "Command",
-			configuration: "../test/lbclient_command.conf",
-			expectedMetricValue: 53},
-		{title: "CommandDoesNotExist",
-			configuration: "../test/lbclient_failed_command.conf",
-			shouldFail: true,
-			expectedMetricValue: -14},
-		{title: "CommandFail",
-			configuration: "../test/lbclient_command_failed.conf",
-			shouldFail: true,
-			expectedMetricValue: -14},
-		{title: "NotZeroButNoError",
-			configurationContent: "check command false",
-			expectedMetricValue: -14},
-		{title: "BinaryNotExecutable",
-			configurationContent: "check command ../test/command/commandNotExecutable",
-			expectedMetricValue: -14,
-			shouldFail: true},
-		{title: "BinaryExecutableButExitNotZero",
-			configurationContent: "check command ../test/command/commandExecutableButExitNotZero",
-			expectedMetricValue: -14},
-		{title: "BinaryExecutableExitZero",
-			configurationContent: "check command ../test/command/commandExecutableAndExitZero\nload constant 99",
-			expectedMetricValue: 99},
-	}
+var commandTests []tests.LbTest
 
-	runMultipleTests(t, myTests)
+func init() {
+	commandTests = []tests.LbTest{
+		{Title: "Command",
+			Configuration: "../test/lbclient_command.conf",
+			ExpectedMetricValue: 53},
+		{Title: "CommandDoesNotExist",
+			Configuration: "../test/lbclient_failed_command.conf",
+			ShouldFail: true,
+			ExpectedMetricValue: -14},
+		{Title: "CommandFail",
+			Configuration: "../test/lbclient_command_failed.conf",
+			ShouldFail: true,
+			ExpectedMetricValue: -14},
+		{Title: "NotZeroButNoError",
+			ConfigurationContent: "check command false",
+			ExpectedMetricValue: -14},
+		{Title: "BinaryNotExecutable",
+			ConfigurationContent: "check command ../test/command/commandNotExecutable",
+			ExpectedMetricValue: -14,
+			ShouldFail: true},
+		{Title: "BinaryExecutableButExitNotZero",
+			ConfigurationContent: "check command ../test/command/commandExecutableButExitNotZero",
+			ExpectedMetricValue: -14},
+		{Title: "BinaryExecutableExitZero",
+			ConfigurationContent: "check command ../test/command/commandExecutableAndExitZero\nload constant 99",
+			ExpectedMetricValue: 99},
+	}
+}
+
+func TestCommand(t *testing.T) {
+	tests.RunMultipleTests(t, commandTests)
+}
+
+func BenchmarkCommand(b *testing.B) {
+	tests.RunMultipleTests(b, commandTests)
 }
