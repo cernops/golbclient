@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
 // TestCILemonCLI : checks if the alternative [lemon-cli] used in the CI pipeline is OK
 func TestCILemonCLI(t *testing.T) {
-	logger.SetLevel(logger.ERROR)
+	logger.SetLevel(logger.ErrorLevel)
 	output, err := runner.Run("/usr/sbin/lemon-cli",
 		true, defaultTimeout, "--script", "-m", "13163")
 	if err != nil {
@@ -18,7 +18,7 @@ func TestCILemonCLI(t *testing.T) {
 	} else if len(strings.TrimSpace(output)) == 0 {
 		t.Fatal("The CI [lemon-cli] failed to return a row value for a pre-defined metric")
 	}
-	logger.Trace("CI [lemon-cli] output [%s]", output)
+	logger.Tracef("CI [lemon-cli] output [%s]", output)
 }
 
 func TestLemon(t *testing.T) {
