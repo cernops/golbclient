@@ -22,3 +22,4 @@ func TestTimeOut(t *testing.T) {
 func BenchmarkTimeOut(b *testing.B) {
 	tests.RunMultipleTests(b, timeoutTests)
 }
+
