@@ -15,7 +15,7 @@ type ExecutionConf struct {
 // Options : Supported application flags
 type Options struct {
 	/* Logging */
-	LoggerMode				string `short:"m" long:"logMode" default:"" description:"Logger mode [fluentd, fluentd_pretty]"`
+	LoggerMode				string `short:"m" long:"logMode" default:"nested" description:"Logger mode [fluentd, fluentd_pretty, nested]"`
 	DebugLevel 				string `short:"d" long:"loglevel" default:"FATAL" description:"Logger level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]"`
 	/* Configuration files */
 	LbMetricConfDir         string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
