@@ -58,6 +58,8 @@ func (l *AppLauncher) ApplyLoggerSettings() error {
 		logger.SetFormatter(fluentd.NewFormatter())
 	case "fluentd_pretty":
 		logger.SetFormatter(fluentd.NewFormatter(fluentd.PrettyPrintFormat))
+	case "nested":
+		return nil
 	default:
 		logger.WithFields(logger.Fields{"LOG_MODE": l.AppOptions.LoggerMode}).
 			Errorf("Unable to set logger format from the given value [%s]", l.AppOptions.LoggerMode)
