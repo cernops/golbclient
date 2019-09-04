@@ -76,6 +76,11 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Wed Sep 04 2019 Paulo Canilho <paulo.canilho@cern.ch>     - 2.1.0
+- Fixed the [command] check returned errors to prevent failures during the [-t] puppet install
+- Added a test to check the executable output format
+- Implemented the [collectd_alarms] as a type of check
+- Implemented a new logger; now using [logrus]
 * Fri Mar 08 2019 Paulo Canilho <paulo.canilho@cern.ch>     - 2.0.8
 - File logger
 - Generilized the parameterized checks
