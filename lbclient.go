@@ -29,9 +29,8 @@ func main() {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
-			logger.Errorf("A fatal error occurred when attempting to parse the application arguments. Error [%s]",
+			logger.Fatalf("A fatal error occurred when attempting to parse the application arguments. Error [%s]",
 				err.Error())
-			os.Exit(1)
 		}
 	}
 
@@ -44,16 +43,14 @@ func main() {
 	// Apply the logger settings
 	err = launcher.ApplyLoggerSettings()
 	if err != nil {
-		logger.Errorf("A fatal error occurred when attempting to apply the logger settings. Error [%s]",
+		logger.Fatalf("A fatal error occurred when attempting to apply the logger settings. Error [%s]",
 			err.Error())
-		os.Exit(1)
 	}
 
 	// Run the launcher
 	err = launcher.Run()
 	if err != nil {
-		logger.Errorf("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
-		os.Exit(1)
+		logger.Fatalf("A fatal error occurred when attempting to run the application. Error [%s]", err.Error())
 	}
 	if len(launcher.AppOptions.ExecutionConfiguration.CheckConfigFilePath) != 0 {
 		logger.Info("The configuration file is correct")

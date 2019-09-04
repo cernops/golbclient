@@ -4,6 +4,7 @@ stages:
   - build
   - test
   - benchmark
+  - binary
   - build_rpm
   - koji_scratch
   - koji
@@ -118,6 +119,17 @@ bench-go11:
   script:
     - go11 test ./tests/benchmarking/... -bench=. -benchmem
     - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
+
+test-lbclient-binary:
+  stage: binary
+  script:
+    - echo "load constant 50000" > /usr/local/etc/lbclient.conf
+    - echo "lbalias=test.cern.ch" > /usr/local/etc/lbaliases
+    - cd /builds/lb-experts/golbclient
+    - go11 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)integer(\n)50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
+    - echo "lbalias=test2.cern.ch" >> /usr/local/etc/lbaliases
+    - echo "load constant 40000" >> /usr/local/etc/lbclient.conf.test2.cern.ch
+    - go11 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
 
 build_rpm:
   stage: build_rpm
