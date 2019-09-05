@@ -76,6 +76,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Thu Sep 05 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.1
+- Generic check daemons check tcp4 and tcp6
 * Wed Sep 04 2019 Paulo Canilho <paulo.canilho@cern.ch>     - 2.1.0
 - Fixed the [command] check returned errors to prevent failures during the [-t] puppet install
 - Added a test to check the executable output format
