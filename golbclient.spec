@@ -8,18 +8,18 @@
 %global gopath		%{_datadir}/gocode
 %global debug_package	%{nil}
 
-Name:		lbclient
-Version:	#REPLACE_BY_VERSION#
-Release:	#REPLACE_BY_RELEASE#%{?dist}
+Name: lbclient
+Version: #REPLACE_BY_VERSION#
+Release: #REPLACE_BY_RELEASE#%{?dist}
 
-Summary:	CERN DNS Load Balancer Client
-License:	ASL 2.0
-URL:		https://%{import_path}
-Source:		%{name}-%{version}.tgz
-BuildRequires:	golang >= 1.5
-BuildRequires:  checkpolicy
-BuildRequires:  policycoreutils-python
-ExclusiveArch:	x86_64
+Summary: CERN DNS Load Balancer Client
+License: ASL 2.0
+URL: https://%{import_path}
+Source: %{name}-%{version}.tgz
+BuildRequires: golang >= 1.5
+BuildRequires: checkpolicy
+BuildRequires: policycoreutils-python
+ExclusiveArch: x86_64
 Requires: net-snmp
 
 %description
@@ -58,11 +58,11 @@ GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 
 %install
 # main package binary
-install -d -p %{buildroot}/usr/sbin/  %{buildroot}/usr/share/selinux/targeted/  %{buildroot}/usr/local/etc %{buildroot}/usr/local/sbin/
+install -d -p %{buildroot}/usr/sbin/ %{buildroot}/usr/share/selinux/targeted/ %{buildroot}/usr/local/etc %{buildroot}/usr/local/sbin/
 install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
 cd %{buildroot}/usr/local/sbin && ln -s ../../sbin/lbclient
-echo "" >  %{buildroot}/usr/local/etc/lbclient.conf
+echo "load constant -1" >  %{buildroot}/usr/local/etc/lbclient.conf
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
@@ -76,6 +76,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Tue Oct 08 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.2
+- Adding a default configuration to disable lbclient
 * Thu Sep 05 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.1
 - Generic check daemons check tcp4 and tcp6
 * Wed Sep 04 2019 Paulo Canilho <paulo.canilho@cern.ch>     - 2.1.0
