@@ -36,6 +36,7 @@ before_script:
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
   - klist
   - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
