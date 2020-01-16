@@ -36,6 +36,7 @@ before_script:
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
   - klist
   - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
@@ -142,6 +143,7 @@ build_rpm:
     - rm -rf SOURCES/$PKG.tg
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC
   artifacts:
     paths:
       - SRPMS/
@@ -158,18 +160,20 @@ kojicheck:
 kojiscratch:
   stage: koji_scratch
   script:
-    - echo "koji build --wait --scratch $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm"
-    - koji --config=.koji build --wait --scratch $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm
-    - echo "Building on ai6"
-    -  koji --config=.koji build --wait --scratch ai6 SRPMS/${PKG_REL6}.src.rpm
+    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
+      do my_array=($data);
+      echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
+      koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
+      done
 
 koji:
   stage: koji
   script:
-    - echo "koji build --wait $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm"
-    - koji --config=.koji build --wait $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm
-    - echo "Building also on ai6 SRPMS/${PKG_REL6}.src.rpm"
-    - koji --config=.koji build --wait ai6 SRPMS/${PKG_REL6}.src.rpm
+    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
+      do my_array=($data);
+      echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
+      koji --config=.koji build --wait ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
+      done
   only:
     - tags
 
@@ -181,6 +185,7 @@ tag_qa:
   script:
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL7}
     - koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}
+    - koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}
   allow_failure: false
 
 tag_prod:
@@ -191,4 +196,7 @@ tag_prod:
   script:
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL7}
     - koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}
+    - koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}
+
+
 
