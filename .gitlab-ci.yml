@@ -160,7 +160,7 @@ kojicheck:
 kojiscratch:
   stage: koji_scratch
   script:
-    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "c8 ${PKG_REL8}";
+    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
       do my_array=($data);
       echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
       koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
@@ -169,13 +169,11 @@ kojiscratch:
 koji:
   stage: koji
   script:
-    - echo "koji build --wait $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm"
-    - koji --config=.koji build --wait $KOJI_TARGET SRPMS/${PKG_REL7}.src.rpm
-    - echo "Building also on ai6 SRPMS/${PKG_REL6}.src.rpm"
-    - koji --config=.koji build --wait ai6 SRPMS/${PKG_REL6}.src.rpm
-    - echo "Builing for c8"
-    - koji --config=.koji build --wait lb8 SRPMS/${PKG_REL8}.src.rpm
-
+    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
+      do my_array=($data);
+      echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
+      koji --config=.koji build --wait ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
+      done
   only:
     - tags
 
