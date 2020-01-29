@@ -28,9 +28,9 @@ before_script:
   - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
- # [lemon-cli]
+  # [lemon-cli]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
- # [collectdctl]
+  # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 .installGo09: &installGo09 |
@@ -164,9 +164,9 @@ build_rpm:
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
     - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
     - rm -rf SOURCES/$PKG.tg
-    - [ "${PKG_REL6}" != "" ] && rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
-    - [ "${PKG_REL7}" != "" ] && rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
-    - [ "${PKG_REL8}" != "" ] && rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC
+    - if [ "${PKG_REL6}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC; fi
+    - if [ "${PKG_REL7}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC; fi
+    - if [ "${PKG_REL8}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC; fi
   artifacts:
     paths:
       - SRPMS/
@@ -210,9 +210,9 @@ tag_qa:
     - tags
   script:
     - *installKoji
-    - [ "${PKG_REL7}" != "" ] && koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL7}
-    - [ "${PKG_REL6}" != "" ] && koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}
-    - [ "${PKG_REL8}" != "" ] && koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}
+    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-qa ${PKG_REL7}; fi
+    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}; fi
+    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}; fi
   allow_failure: false
 
 tag_prod:
@@ -222,9 +222,8 @@ tag_prod:
     - tags
   script:
     - *installKoji
-    - [ "${PKG_REL7}" != "" ] && koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL7}
-    - [ "${PKG_REL6}" != "" ] && koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}
-    - [ "${PKG_REL8}" != "" ] && koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}
-
+    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-stable ${PKG_REL7}; fi
+    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}; fi
+    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}; fi
 
 
