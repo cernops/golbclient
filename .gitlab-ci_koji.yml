@@ -10,13 +10,6 @@ stages:
   - deploy_qa
   - deploy_prod
 
-.installGo11: &installGo11 |
-  mkdir /go11
-  curl https://dl.google.com/go/go1.11.12.linux-amd64.tar.gz  | tar -zxC /go11
-  ln -s /go11/go/bin/go /usr/bin/go11
-  export GOPATH=/go
-  go11 get ./...
-
 .installKoji: &installKoji |
   yum -y install koji
   echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
@@ -26,25 +19,6 @@ stages:
   [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6 ${PKG_REL6}"
   [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7}"
   [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
-
-build_rpm:
-  stage: build_rpm
-  script:
-    - *installGo11
-    - go11 mod vendor
-    - mkdir SOURCES version
-    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
-    - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
-    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
-    - rm -rf SOURCES/$PKG.tg
-    - if [ "${PKG_REL6}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC; fi
-    - if [ "${PKG_REL7}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC; fi
-    - if [ "${PKG_REL8}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC; fi
-  artifacts:
-    paths:
-      - SRPMS/
-    expire_in: 1 week
-
 
 kojicheck:
   stage: koji_scratch

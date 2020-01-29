@@ -83,3 +83,24 @@ test-lbclient-binary:
     - echo "lbalias=test2.cern.ch" >> /usr/local/etc/lbaliases
     - echo "load constant 40000" >> /usr/local/etc/lbclient.conf.test2.cern.ch
     - go11 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
+
+build_rpm:
+  stage: build_rpm
+  script:
+    - *installGo11
+    - cd $PREFIX/lb-experts/golbclient
+    - go11 mod vendor
+    - mkdir SOURCES version
+    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
+    - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
+    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
+    - rm -rf SOURCES/$PKG.tg
+    - if [ "${PKG_REL6}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC; fi
+    - if [ "${PKG_REL7}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC; fi
+    - if [ "${PKG_REL8}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC; fi
+  artifacts:
+    paths:
+      - SRPMS/
+    expire_in: 1 week
+
+
