@@ -27,27 +27,6 @@ stages:
   [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7}"
   [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
 
-
-build-go11:
-  stage: build
-  script:
-    - *installGo11
-    - go11 build -race ./...
-
-test-go11:
-  stage: test
-  script:
-    - *installGo11
-    - go11 test -v -cover ./tests/ci/...
-    - go11 test -race ./tests/ci/...
-
-bench-go11:
-  stage: test
-  script:
-    - *installGo11
-    - go11 test ./tests/benchmarking/... -bench=. -benchmem
-    - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
-
 build_rpm:
   stage: build_rpm
   script:
