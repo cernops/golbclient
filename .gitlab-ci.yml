@@ -42,12 +42,6 @@ before_script:
   cat /proc/net/tcp
   cat /proc/net/tcp6
 
-build-go11:
-  stage: build
-  script:
-    - *installGo11
-    - go11 build -race ./...
-
 test-go11:
   stage: test
   script:
