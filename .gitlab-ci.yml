@@ -59,7 +59,10 @@ before_script:
   echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
   klist
   printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
-
+  ALL_TARGETS=()
+  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6 ${PKG_REL6}"
+  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7}"
+  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
 
 
 .openTestPorts: &openTestPorts |
@@ -161,9 +164,9 @@ build_rpm:
     - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
     - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
     - rm -rf SOURCES/$PKG.tg
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC
+    - [ "${PKG_REL6}" != "" ] && rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
+    - [ "${PKG_REL7}" != "" ] && rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
+    - [ "${PKG_REL8}" != "" ] && rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC
   artifacts:
     paths:
       - SRPMS/
@@ -182,7 +185,7 @@ kojiscratch:
   stage: koji_scratch
   script:
     - *installKoji
-    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
+    - for data in "${ALL_TARGETS[@]}";
       do my_array=($data);
       echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
       koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
@@ -192,7 +195,7 @@ koji:
   stage: koji
   script:
     - *installKoji
-    - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
+    - for data in "${ALL_TARGETS[@]}";
       do my_array=($data);
       echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
       koji --config=.koji build --wait ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
@@ -207,9 +210,9 @@ tag_qa:
     - tags
   script:
     - *installKoji
-    - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL7}
-    - koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}
-    - koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}
+    - [ "${PKG_REL7}" != "" ] && koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL7}
+    - [ "${PKG_REL6}" != "" ] && koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}
+    - [ "${PKG_REL8}" != "" ] && koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}
   allow_failure: false
 
 tag_prod:
@@ -219,9 +222,9 @@ tag_prod:
     - tags
   script:
     - *installKoji
-    - koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL7}
-    - koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}
-    - koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}
+    - [ "${PKG_REL7}" != "" ] && koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL7}
+    - [ "${PKG_REL6}" != "" ] && koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}
+    - [ "${PKG_REL8}" != "" ] && koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}
 
 
 
