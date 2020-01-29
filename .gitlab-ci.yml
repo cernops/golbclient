@@ -13,7 +13,7 @@ stages:
 
 
 before_script:
-  - yum -y install --exclude python2-libcomps gcc krb5-workstation rpm-build rpmdevtools
+  - yum -y install --exclude python2-libcomps gcc krb5-workstation
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
@@ -49,7 +49,7 @@ before_script:
 
 .installGo11: &installGo11 |
   mkdir /go11
-  curl https://dl.google.com/go/go1.9.7.linux-amd64.tar.gz  | tar -zxC /go11
+  curl https://dl.google.com/go/go1.11.12.linux-amd64.tar.gz  | tar -zxC /go11
   ln -s /go11/go/bin/go /usr/bin/go11
   export GOPATH=/go
   go11 get ./...
@@ -155,6 +155,7 @@ build_rpm:
   stage: build_rpm
   script:
     - *installGo11
+    - yum -y install rpm-build rpmdevtools
     - cd $PREFIX/lb-experts/golbclient
     - go11 mod vendor
     - mkdir SOURCES version
