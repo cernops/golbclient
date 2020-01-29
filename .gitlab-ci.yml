@@ -13,7 +13,7 @@ stages:
 
 
 before_script:
-  - yum -y install --exclude python2-libcomps gcc krb5-workstation koji rpm-build rpmdevtools
+  - yum -y install --exclude python2-libcomps gcc krb5-workstation rpm-build rpmdevtools
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
   - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
@@ -28,9 +28,6 @@ before_script:
   - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
-  - klist
-  - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
  # [lemon-cli]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
  # [collectdctl]
@@ -50,6 +47,12 @@ before_script:
   mkdir /go11
   curl https://dl.google.com/go/go1.9.7.linux-amd64.tar.gz  | tar -zxC /go11
   ln -s /go11/go/bin/go /usr/bin/go11
+
+.installKoji: &installKoji |
+  yum -y install koji
+  echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+  klist
+  printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
 
 
 
@@ -172,6 +175,7 @@ build_rpm:
 kojicheck:
   stage: koji_scratch
   script:
+    - *installKoji
     - echo "Checking if $PKG_REL exists"
     - if koji --config=.koji search -r build $PKG | egrep  "$PKG_REL6|$PKG_REL7" ; then exit 1; fi
   allow_failure: true
@@ -179,6 +183,7 @@ kojicheck:
 kojiscratch:
   stage: koji_scratch
   script:
+    - *installKoji
     - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
       do my_array=($data);
       echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
@@ -188,6 +193,7 @@ kojiscratch:
 koji:
   stage: koji
   script:
+    - *installKoji
     - for data in "$KOJI_TARGET ${PKG_REL7}" "ai6 ${PKG_REL6}" "lb8 ${PKG_REL8}";
       do my_array=($data);
       echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
@@ -202,6 +208,7 @@ tag_qa:
   only:
     - tags
   script:
+    - *installKoji
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL7}
     - koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}
     - koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}
@@ -213,6 +220,7 @@ tag_prod:
   only:
     - tags
   script:
+    - *installKoji
     - koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL7}
     - koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}
     - koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}
