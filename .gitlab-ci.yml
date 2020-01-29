@@ -95,9 +95,9 @@ build_rpm:
     - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
     - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
     - rm -rf SOURCES/$PKG.tg
-    - if [ "${PKG_REL6}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC; fi
-    - if [ "${PKG_REL7}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC; fi
-    - if [ "${PKG_REL8}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC; fi
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC
   artifacts:
     paths:
       - SRPMS/
