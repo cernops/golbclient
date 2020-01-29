@@ -6,17 +6,6 @@ include:
     ref: psaiz_devel
     file: .gitlab-ci_common.yml
 
-stages:
-  - build
-  - test
-  - benchmark
-  - binary
-  - build_rpm
-  - koji_scratch
-  - koji
-  - deploy_qa
-  - deploy_prod
-
 
 before_script:
   - yum -y install --exclude python2-libcomps gcc krb5-workstation rpm-build rpmdevtools
@@ -38,24 +27,6 @@ before_script:
   - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
   # [collectdctl]
   - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
-
-.installGo11: &installGo11 |
-  mkdir /go11
-  curl https://dl.google.com/go/go1.11.12.linux-amd64.tar.gz  | tar -zxC /go11
-  ln -s /go11/go/bin/go /usr/bin/go11
-  export GOPATH=/go
-  go11 get ./...
-
-.installKoji: &installKoji |
-  yum -y install koji
-  echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
-  klist
-  printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
-  ALL_TARGETS=()
-  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6 ${PKG_REL6}"
-  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7}"
-  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
-
 
 .openTestPorts: &openTestPorts |
   yum install iproute nmap-ncat -y
@@ -85,15 +56,8 @@ test-go11:
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
 
-bench-go11:
-  stage: benchmark
-  script:
-    - *installGo11
-    - go11 test ./tests/benchmarking/... -bench=. -benchmem
-    - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
-
 test-lbclient-binary:
-  stage: binary
+  stage: test
   script:
     - *installGo11
     - echo "load constant 50000" > /usr/local/etc/lbclient.conf
@@ -103,77 +67,4 @@ test-lbclient-binary:
     - echo "lbalias=test2.cern.ch" >> /usr/local/etc/lbaliases
     - echo "load constant 40000" >> /usr/local/etc/lbclient.conf.test2.cern.ch
     - go11 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
-
-build_rpm:
-  stage: build_rpm
-  script:
-    - *installGo11
-    - cd $PREFIX/lb-experts/golbclient
-    - go11 mod vendor
-    - mkdir SOURCES version
-    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
-    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
-    - rm -rf SOURCES/$PKG.tg
-    - if [ "${PKG_REL6}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC; fi
-    - if [ "${PKG_REL7}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC; fi
-    - if [ "${PKG_REL8}" != "" ] ; then rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC; fi
-  artifacts:
-    paths:
-      - SRPMS/
-    expire_in: 1 week
-
-
-kojicheck:
-  stage: koji_scratch
-  script:
-    - *installKoji
-    - echo "Checking if $PKG_REL exists"
-    - if koji --config=.koji search -r build $PKG | egrep  "$PKG_REL6|$PKG_REL7" ; then exit 1; fi
-  allow_failure: true
-
-kojiscratch:
-  stage: koji_scratch
-  script:
-    - *installKoji
-    - for data in "${ALL_TARGETS[@]}";
-      do my_array=($data);
-      echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
-      koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
-      done
-
-koji:
-  stage: koji
-  script:
-    - *installKoji
-    - for data in "${ALL_TARGETS[@]}";
-      do my_array=($data);
-      echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
-      koji --config=.koji build --wait ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
-      done
-  only:
-    - tags
-
-tag_qa:
-  stage: deploy_qa
-  when: manual
-  only:
-    - tags
-  script:
-    - *installKoji
-    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-qa ${PKG_REL7}; fi
-    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}; fi
-    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}; fi
-  allow_failure: false
-
-tag_prod:
-  stage: deploy_prod
-  when: manual
-  only:
-    - tags
-  script:
-    - *installKoji
-    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-stable ${PKG_REL7}; fi
-    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}; fi
-    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}; fi
-
 

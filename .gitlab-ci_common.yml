@@ -38,7 +38,6 @@ test-go11:
   stage: test
   script:
     - *installGo11
-    - *openTestPorts
     - go11 test -v -cover ./tests/ci/...
     - go11 test -race ./tests/ci/...
 
