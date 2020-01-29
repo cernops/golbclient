@@ -1,43 +1,14 @@
 ---
 image: gitlab-registry.cern.ch/linuxsupport/cc7-base:20180516
 
-include:
-  - project: lb-experts/golbclient
-    ref: psaiz_devel
-    file: .gitlab-ci_common.yml
-
 stages:
   - build
   - test
-  - benchmark
-  - binary
   - build_rpm
   - koji_scratch
   - koji
   - deploy_qa
   - deploy_prod
-
-
-before_script:
-  - yum -y install --exclude python2-libcomps gcc krb5-workstation rpm-build rpmdevtools
-  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
-  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
-  - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
-  - yum -y install git
-  - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
-  - export SPEC=$(ls *spec)
-  - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
-  - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
-  - cat $SPEC | sed "s/#REPLACE_BY_VERSION#/$VERSION/" > $SPEC.tmp
-  - cat $SPEC.tmp | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > $SPEC
-  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
-  - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  # [lemon-cli]
-  - ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
-  # [collectdctl]
-  - ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
 .installGo11: &installGo11 |
   mkdir /go11
@@ -57,20 +28,6 @@ before_script:
   [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
 
 
-.openTestPorts: &openTestPorts |
-  yum install iproute nmap-ncat -y
-  nc -l      -p           22        &
-  nc -l      -p           21        &
-  nc -l      -p           2811      &
-  nc -l      -p           80        &
-  nc -l      -p           922       &
-  nc -l -u   -p           922       &
-  nc -l  127.0.0.1 202              &
-  nc -l  ::1 202               -6   &
-  sleep 1
-  cat /proc/net/tcp
-  cat /proc/net/tcp6
-
 build-go11:
   stage: build
   script:
@@ -86,23 +43,11 @@ test-go11:
     - go11 test -race ./tests/ci/...
 
 bench-go11:
-  stage: benchmark
+  stage: test
   script:
     - *installGo11
     - go11 test ./tests/benchmarking/... -bench=. -benchmem
     - go11 test ./tests/benchmarking/... -bench=. -benchmem -race
-
-test-lbclient-binary:
-  stage: binary
-  script:
-    - *installGo11
-    - echo "load constant 50000" > /usr/local/etc/lbclient.conf
-    - echo "lbalias=test.cern.ch" > /usr/local/etc/lbaliases
-    - cd /builds/lb-experts/golbclient
-    - go11 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)integer(\n)50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
-    - echo "lbalias=test2.cern.ch" >> /usr/local/etc/lbaliases
-    - echo "load constant 40000" >> /usr/local/etc/lbclient.conf.test2.cern.ch
-    - go11 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
 
 build_rpm:
   stage: build_rpm
