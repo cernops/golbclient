@@ -16,9 +16,9 @@ stages:
   klist
   printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
   ALL_TARGETS=()
-  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6 ${PKG_REL6}"
-  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7}"
-  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
+  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6 ${PKG_REL6} "
+  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7} "
+  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8} "
   echo "Building for $ALL_TARGETS (and ${ALL_TARGETS[@]})@"
 
 kojicheck:
