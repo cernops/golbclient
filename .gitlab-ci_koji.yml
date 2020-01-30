@@ -19,8 +19,7 @@ stages:
   [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6_${PKG_REL6}"
   [ "${PKG_REL7}" != "" ] && ALL_TARGETS+=" ai7_${PKG_REL7}"
   [ "${PKG_REL8}" != "" ] && ALL_TARGETS+=" lb8_${PKG_REL8}"
-  echo "Building for $ALL_TARGETS (and ${ALL_TARGETS[@]})"
-  for a in ${ALL_TARGETS[@]} ; do echo "WE HAVE $a"; done
+  echo "Building for $ALL_TARGETS"
 
 kojicheck:
   stage: koji_scratch
@@ -41,7 +40,7 @@ kojiscratch:
     - *installKoji
     - for data in ${ALL_TARGETS[@]};
       do my_array=(${data//_/ });
-      echo "Ready to do $data"
+      echo "Ready to do $data";
       echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
       koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
       done
