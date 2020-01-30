@@ -19,6 +19,7 @@ stages:
   [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6 ${PKG_REL6}"
   [ "${PKG_REL7}" != "" ] && ALL_TARGETS+="ai7 ${PKG_REL7}"
   [ "${PKG_REL8}" != "" ] && ALL_TARGETS+="lb8 ${PKG_REL8}"
+  echo "Building for $ALL_TARGETS (and ${ALL_TARGETS[@]})@"
 
 kojicheck:
   stage: koji_scratch
