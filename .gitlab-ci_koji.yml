@@ -1,0 +1,83 @@
+---
+image: gitlab-registry.cern.ch/linuxsupport/cc7-base:20180516
+
+stages:
+  - build
+  - test
+  - build_rpm
+  - koji_scratch
+  - koji
+  - deploy_qa
+  - deploy_prod
+
+.installKoji: &installKoji |
+  yum -y install koji
+  echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+  klist
+  printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
+  ALL_TARGETS=""
+  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6_${PKG_REL6}"
+  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+=" ai7_${PKG_REL7}"
+  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+=" lb8_${PKG_REL8}"
+  echo "Building for $ALL_TARGETS"
+
+kojicheck:
+  stage: koji_scratch
+  script:
+    - *installKoji
+    - CHECK=""
+    - if [ "${PKG_REL6}" != "" ] ; then CHECK="${PKG_REL6}|"; fi
+    - if [ "${PKG_REL7}" != "" ] ; then CHECK+="${PKG_REL7}|"; fi
+    - if [ "${PKG_REL8}" != "" ] ; then CHECK+="${PKG_REL8}|"; fi
+    - if [ "$CHECK" != "" ] ; then CHECK=${CHECK%?}
+    - echo "Checking if $CHECK exists"
+    - if koji --config=.koji search -r build $PKG | egrep  "$CHECK" ; then exit 1; fi
+  allow_failure: true
+
+kojiscratch:
+  stage: koji_scratch
+  script:
+    - *installKoji
+    - for data in ${ALL_TARGETS[@]};
+      do my_array=(${data//_/ });
+      echo "Ready to do $data";
+      echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
+      koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
+      done
+
+koji:
+  stage: koji
+  script:
+    - *installKoji
+    - for data in ${ALL_TARGETS[@]};
+      do my_array=(${data//_/ });
+      echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
+      koji --config=.koji build --wait ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
+      done
+  only:
+    - tags
+
+tag_qa:
+  stage: deploy_qa
+  when: manual
+  only:
+    - tags
+  script:
+    - *installKoji
+    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-qa ${PKG_REL7}; fi
+    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}; fi
+    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}; fi
+  allow_failure: false
+
+tag_prod:
+  stage: deploy_prod
+  when: manual
+  only:
+    - tags
+  script:
+    - *installKoji
+    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-stable ${PKG_REL7}; fi
+    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}; fi
+    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}; fi
+
+
