@@ -26,8 +26,13 @@ kojicheck:
   stage: koji_scratch
   script:
     - *installKoji
-    - echo "Checking if $PKG_REL exists"
-    - if koji --config=.koji search -r build $PKG | egrep  "$PKG_REL6|$PKG_REL7" ; then exit 1; fi
+    - CHECK=""
+    - if [ "${PKG_REL6}" != "" ] ; then CHECK="${PKG_REL6}|"; fi
+    - if [ "${PKG_REL7}" != "" ] ; then CHECK+="${PKG_REL7}|"; fi
+    - if [ "${PKG_REL8}" != "" ] ; then CHECK+="${PKG_REL8}|"; fi
+    - if [ "$CHECK" != "" ] ; then CHECK=${CHECK%?}
+    - echo "Checking if $CHECK exists"
+    - if koji --config=.koji search -r build $PKG | egrep  "$CHECK" ; then exit 1; fi
   allow_failure: true
 
 kojiscratch:
