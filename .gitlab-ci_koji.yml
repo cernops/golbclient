@@ -24,7 +24,7 @@ stages:
 rpmlint:
   stage: build_rpm
   script:
-    - yum -y install rpm-build
+    - yum -y install rpmlint
     - rpmlint *.spec
   allow_failure: true
 
