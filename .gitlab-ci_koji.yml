@@ -21,6 +21,13 @@ stages:
   [ "${PKG_REL8}" != "" ] && ALL_TARGETS+=" lb8_${PKG_REL8}"
   echo "Building for $ALL_TARGETS"
 
+rpmlint:
+  stage: build_rpm
+  script:
+    - yum -y install rpmlint
+    - rpmlint *.spec
+  allow_failure: true
+
 kojicheck:
   stage: koji_scratch
   script:
