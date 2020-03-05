@@ -46,7 +46,7 @@ kojiscratch:
   script:
     - *installKoji
     - for data in ${ALL_TARGETS[@]};
-      do my_array=(${data//_/ });
+      do my_array=(${data/_/ });
       echo "Ready to do $data";
       echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
       koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
