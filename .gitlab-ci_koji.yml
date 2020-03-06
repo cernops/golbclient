@@ -46,6 +46,7 @@ kojiscratch:
   stage: koji_scratch
   script:
     - *installKoji
+    - mkdir -p logs
     - for data in ${ALL_TARGETS[@]};
       do my_array=(${data/_/ });
       echo "Ready to do $data";
