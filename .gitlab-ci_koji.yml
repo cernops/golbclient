@@ -63,10 +63,11 @@ kojiinstall:
   script:
     - *installKoji
     - for file in $(ls logs/);
-      do echo "Checking $file"
+      do echo "Checking $file";
       line=$(cat logs/$file | grep "Created task:" );
-      kojiId=$(cat logs/$file | grep "Created task:" | awk '{print $4}' );
-      echo "This is koji ${kojiId}i (from ${line})"
+      kojiId=$(cat logs/$file | grep "Created task:" | awk '{print $3}' );
+      echo "This is koji ${kojiId} (from ${line})";
+      koji download-task $kojiId
       done
 
 koji:
