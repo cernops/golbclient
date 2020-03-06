@@ -6,6 +6,7 @@ stages:
   - test
   - build_rpm
   - koji_scratch
+  - koji_install
   - koji
   - deploy_qa
   - deploy_prod
@@ -49,7 +50,22 @@ kojiscratch:
       do my_array=(${data/_/ });
       echo "Ready to do $data";
       echo "koji build --wait --scratch ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
-      koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
+      koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm | tee logs/koji_${my_array[0]};
+      done
+  artifacts:
+    paths:
+      - logs/
+    expire_in: 1 week
+
+kojiinstall:
+  stage: koji_install
+  script:
+    - *installKoji
+    - for file in $(ls logs/);
+      do echo "Checking $file"
+      line=$(cat logs/$file | grep "Created task:" );
+      kojiId=$(cat logs/$file | grep "Created task:" | awk '{print $4}' );
+      echo "This is koji ${kojiId}i (from ${line})"
       done
 
 koji:
