@@ -66,7 +66,7 @@ kojiinstall:
       do echo "Checking $file";
       kojiId=$(cat logs/$file | grep "Created task:" | awk '{print $3}' );
       echo "This is koji ${kojiId} (from ${line})";
-      koji download-task $kojiId;
+      koji --config=.koji download-task $kojiId;
       done
     - for file in $(ls *.rpm); do echo $file; rpm -ql -p $file; done
 
