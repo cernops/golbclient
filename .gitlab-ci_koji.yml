@@ -58,17 +58,45 @@ kojiscratch:
       - logs/
     expire_in: 1 week
 
-kojiinstall:
+
+kojiinstall6:
+  image: gitlab-registry.cern.ch/linuxsupport/slc6-base
   stage: koji_install
   script:
     - *installKoji
-    - for file in $(ls logs/);
-      do echo "Checking $file";
-      kojiId=$(cat logs/$file | grep "Created task:" | awk '{print $3}' );
-      echo "This is koji ${kojiId} (from ${line})";
-      koji --config=.koji download-task $kojiId;
-      done
-    - for file in $(ls *.rpm); do echo $file; rpm -ql -p $file; done
+    - if [ "${PKG_REL6}" != "" ] ; then
+        echo "Installing on 6 (${PKG_REL6})";
+        kojiId=$(cat logs/koji_ai6 | grep "Created task:" | awk '{print $3}' );
+        koji --config=.koji download-task ${kojiId};
+        ls *.rpm;
+        rpm -Uvh *.rpm;
+      fi
+
+kojiinstall7:
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  stage: koji_install
+  script:
+    - *installKoji
+    - if [ "${PKG_REL7}" != "" ] ; then
+        echo "Installing on 7 (${PKG_REL7})";
+        kojiId=$(cat logs/koji_ai7 | grep "Created task:" | awk '{print $3}' );
+        koji --config=.koji download-task ${kojiId};
+        ls *.rpm;
+        rpm -Uvh *.rpm;
+      fi
+
+kojiinstall8:
+  image: gitlab-registry.cern.ch/linuxsupport/c8-base
+  stage: koji_install
+  script:
+    - *installKoji
+    - if [ "${PKG_REL8}" != "" ] ; then
+        echo "Installing on 8 (${PKG_REL8})";
+        kojiId=$(cat logs/koji_lb8 | grep "Created task:" | awk '{print $3}' );
+        koji --config=.koji download-task ${kojiId};
+        ls *.rpm;
+        rpm -Uvh *.rpm;
+      fi
 
 koji:
   stage: koji
