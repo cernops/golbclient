@@ -98,7 +98,7 @@ koji:
   script:
     - *installKoji
     - for data in ${ALL_TARGETS[@]};
-      do my_array=(${data//_/ });
+      do my_array=(${data/_/ });
       echo "koji build --wait ${my_array[0]} SRPMS/${my_array[1]}.src.rpm";
       koji --config=.koji build --wait ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm ;
       done
