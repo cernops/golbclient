@@ -68,7 +68,8 @@ kojiinstall6:
   script:
     - if [ "${PKG_REL6}" != "" ] ; then
         echo "Installing on 6 (${PKG_REL6})";
-        rpm -Uvh RPMS/${PKG_REL6}*.rpm;
+        ls  RPMS/${PKG_REL6}*.rpm;
+        yum install -y RPMS/${PKG_REL6}*.rpm;
       fi
 
 kojiinstall7:
@@ -77,7 +78,8 @@ kojiinstall7:
   script:
     - if [ "${PKG_REL7}" != "" ] ; then
         echo "Installing on 7 (${PKG_REL7})";
-        rpm -Uvh RPMS/${PKG_REL7}*.rpm;
+        ls  RPMS/${PKG_REL7}*.rpm;
+        yum install -y RPMS/${PKG_REL7}*.rpm;
       fi
 
 kojiinstall8:
@@ -86,7 +88,8 @@ kojiinstall8:
   script:
     - if [ "${PKG_REL8}" != "" ] ; then
         echo "Installing on 8 (${PKG_REL8})";
-        rpm -Uvh RPMS/${PKG_REL8}*.rpm;
+        ls  RPMS/${PKG_REL8}*.rpm;
+        yum install -y RPMS/${PKG_REL8}*.rpm;
       fi
 
 koji:
