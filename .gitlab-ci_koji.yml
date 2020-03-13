@@ -54,6 +54,7 @@ kojiscratch:
       koji --config=.koji build --wait --scratch ${my_array[0]}  SRPMS/${my_array[1]}.src.rpm | tee logs/koji_${my_array[0]};
       kojiId=$(cat logs/koji_${my_array[0]} | grep "Created task:" | awk '{print $3}' );
       koji --config=.koji download-task ${kojiId};
+      rm -f *.src.rpm;
       mv *.rpm RPMS/;
       done
   artifacts:
