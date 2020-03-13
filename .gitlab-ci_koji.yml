@@ -1,5 +1,5 @@
 ---
-image: gitlab-registry.cern.ch/linuxsupport/cc7-base:20180516
+image: gitlab-registry.cern.ch/linuxsupport/cc7-base:latest
 
 stages:
   - build
