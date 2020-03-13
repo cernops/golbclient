@@ -1,0 +1,61 @@
+---
+image: gitlab-registry.cern.ch/linuxsupport/cc7-base:latest
+
+
+.installGo12: &installGo12 |
+  mkdir /go12
+  yum -y install git gcc 
+  curl https://dl.google.com/go/go1.12.17.linux-amd64.tar.gz  | tar -zxC /go12
+  ln -s /go12/go/bin/go /usr/bin/go12
+  export GOPATH=/go
+  go12 get ./...
+
+build-go12:
+  stage: build
+  script:
+    - *installGo12
+    - go12 build -race ./...
+
+test-go12:
+  stage: test
+  script:
+    - *installGo12
+    - go12 test -v -cover ./tests/ci/...
+    - go12 test -race ./tests/ci/...
+
+bench-go12:
+  stage: test
+  script:
+    - *installGo12
+    - go12 test ./tests/benchmarking/... -bench=. -benchmem
+    - go12 test ./tests/benchmarking/... -bench=. -benchmem -race
+
+
+.installGo13: &installGo13 |
+  mkdir /go13
+  yum install -y gcc
+  curl https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz  | tar -zxC /go13
+  ln -s /go13/go/bin/go /usr/bin/go13
+  export GOPATH=/go
+  go13 get ./...
+
+build-go13:
+  stage: build
+  script:
+    - *installGo13
+    - go13 build -race ./...
+
+test-go13:
+  stage: test
+  script:
+    - *installGo13
+    - go13 test -v -cover ./tests/ci/...
+    - go13 test -race ./tests/ci/...
+
+bench-go13:
+  stage: test
+  script:
+    - *installGo13
+    - go13 test ./tests/benchmarking/... -bench=. -benchmem
+    - go13 test ./tests/benchmarking/... -bench=. -benchmem -race
+
