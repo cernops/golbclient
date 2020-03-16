@@ -22,7 +22,7 @@ before_script:
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
   - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL8=$(rpm -q --define "dist .el8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
 
 .installGo12: &installGo12 |
   mkdir /go12
@@ -83,7 +83,7 @@ build_rpm:
     - rm -rf SOURCES/$PKG.tg
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .lb8" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .el8" $SPEC
   artifacts:
     paths:
       - SRPMS/
