@@ -111,7 +111,7 @@ tag_qa:
   only:
     - tags
   script:
-    - *installKoj
+    - *installKoji
     - for data in ${ALL_TARGETS[@]};
       do my_array=(${data/_/ });
       echo "koji --config=.koji tag-pkg ${my_array[0]}-qa  ${my_array[1]}";
@@ -128,7 +128,7 @@ tag_prod:
     - *installKoji
     - for data in ${ALL_TARGETS[@]};
       do my_array=(${data/_/ });
-      echo "koji --config=.koji tag-pkg ${my_array[0]}-qa  ${my_array[1]}";
-      koji --config=.koji tag-pkg ${my_array[0]}-qa  ${my_array[1]} ;
+      echo "koji --config=.koji tag-pkg ${my_array[0]}-stable  ${my_array[1]}";
+      koji --config=.koji tag-pkg ${my_array[0]}-stable  ${my_array[1]} ;
       done
 
