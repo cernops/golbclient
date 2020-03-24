@@ -114,9 +114,11 @@ tag_qa:
     - tags
   script:
     - *installKoji
-    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-qa ${PKG_REL7}; fi
-    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-qa ${PKG_REL6}; fi
-    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-qa ${PKG_REL8}; fi
+    - for data in ${ALL_TARGETS[@]};
+      do my_array=(${data/_/ });
+      echo "koji --config=.koji tag-pkg ${my_array[0]}-qa  ${my_array[1]}";
+      koji --config=.koji tag-pkg ${my_array[0]}-qa  ${my_array[1]} ;
+      done
   allow_failure: false
 
 tag_prod:
@@ -126,8 +128,9 @@ tag_prod:
     - tags
   script:
     - *installKoji
-    - if [ "${PKG_REL7}" != "" ] ; then koji --config=.koji tag-pkg ai7-stable ${PKG_REL7}; fi
-    - if [ "${PKG_REL6}" != "" ] ; then koji --config=.koji tag-pkg ai6-stable ${PKG_REL6}; fi
-    - if [ "${PKG_REL8}" != "" ] ; then koji --config=.koji tag-pkg lb8-stable ${PKG_REL8}; fi
-
+    - for data in ${ALL_TARGETS[@]};
+      do my_array=(${data/_/ });
+      echo "koji --config=.koji tag-pkg ${my_array[0]}-stable  ${my_array[1]}";
+      koji --config=.koji tag-pkg ${my_array[0]}-stable  ${my_array[1]} ;
+      done
 
