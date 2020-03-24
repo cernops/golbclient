@@ -16,10 +16,12 @@ stages:
   echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
   klist
   printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
+  export KOJI_TAG6=${KOJI_TAG6:-ai6} KOJI_TAG7=${KOJI_TAG7:-ai7} KOJI_TAG8=${KOJI_TAG8:-lb8}
+
   ALL_TARGETS=""
-  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="ai6_${PKG_REL6}"
-  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+=" ai7_${PKG_REL7}"
-  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+=" lb8_${PKG_REL8}"
+  [ "${PKG_REL6}" != "" ] && ALL_TARGETS+="${KOJI_TAG6}_${PKG_REL6}"
+  [ "${PKG_REL7}" != "" ] && ALL_TARGETS+=" ${KOJI_TAG7}_${PKG_REL7}"
+  [ "${PKG_REL8}" != "" ] && ALL_TARGETS+=" ${KOJI_TAG8}_${PKG_REL8}"
   echo "Building for $ALL_TARGETS"
 
 rpmlint:
