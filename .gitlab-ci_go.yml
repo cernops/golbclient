@@ -23,6 +23,14 @@ test-go12:
     - go12 test -v -cover ./tests/ci/...
     - go12 test -race ./tests/ci/...
 
+fmt-my-project:
+  stage: build
+  script:
+    - *installGo12
+    - MOD_FILES=$(find . -name "*.go"  -exec /go12/go/bin/go fmt {} \;)
+    - echo "FILES MODIFIED $MOD_FILES"
+    - if [ "$MOD_FILES" != "" ]; then false; fi
+
 bench-go12:
   stage: test
   script:
