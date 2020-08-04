@@ -4,9 +4,9 @@ SPECFILE ?= golbclient.spec
 installgo:
 	mkdir -p /go13
 	yum -y install git gcc
-	curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go12
+	curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
 	ln -s /go12/go/bin/go /usr/bin/go13
-	export GOPATH=./go
+	export GOPATH=/go13
 	go13 get ./...
 
 srpm: installgo
