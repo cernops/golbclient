@@ -19,18 +19,28 @@ variables:
   DIST_7: .ai7
   DIST_6: .ai6
 
-before_script:
-  - yum -y install rpm-build rpmdevtools
-  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
-  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
-  - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
-  - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
-  - export SPEC=$(ls *spec)
-  - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
-  - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
-  - cat $SPEC | sed "s/#REPLACE_BY_VERSION#/$VERSION/" > $SPEC.tmp
-  - cat $SPEC.tmp | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > $SPEC
-  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
+
+    
+.rpm_deps:
+  before_script:
+    - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
+    - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
+
+    - cat golbclient.spec.tpl  | sed "s/#REPLACE_BY_VERSION#/$VERSION/" | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > golbclient.spec
+    - yum-builddep -y *.spec
+
+#before_script:
+#  - yum -y install rpm-build rpmdevtools
+#  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
+#  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
+#  - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
+#  - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
+#  - export SPEC=$(ls *spec)
+#  - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
+#  - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
+#  - cat $SPEC | sed "s/#REPLACE_BY_VERSION#/$VERSION/" > $SPEC.tmp
+#  - cat $SPEC.tmp | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > $SPEC
+#  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
 #  - export PKG_REL6=$(rpm -q --define "dist .ai6" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
 #  - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
 #  - export PKG_REL8=$(rpm -q --define "dist .el8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
