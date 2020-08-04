@@ -82,22 +82,22 @@ test-lbclient-binary:
     - echo "load constant 40000" >> /usr/local/etc/lbclient.conf.test2.cern.ch
     - go12 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
 
-build_rpm:
-  stage: rpm
-  script:
-    - *installGo12
-    - cd $PREFIX/lb-experts/golbclient
-    - go12 mod vendor
-    - mkdir SOURCES version
-    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
-    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
-    - rm -rf SOURCES/$PKG.tg
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .el8" $SPEC
-  artifacts:
-    paths:
-      - SRPMS/
-    expire_in: 1 week
+#build_rpm:
+#  stage: rpm
+#  script:
+#    - *installGo12
+#    - cd $PREFIX/lb-experts/golbclient
+#    - go12 mod vendor
+#    - mkdir SOURCES version
+#    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
+#    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
+#    - rm -rf SOURCES/$PKG.tg
+#    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai6" $SPEC
+#    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
+#    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .el8" $SPEC
+#  artifacts:
+#    paths:
+#      - SRPMS/
+#    expire_in: 1 week
 
 

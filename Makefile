@@ -1,18 +1,18 @@
 DIST ?= $(shell rpm --eval %{dist})
 SPECFILE ?= golbclient.spec
 
-installgo12:
-	mkdir -p /go12
+installgo:
+	mkdir -p /go13
 	yum -y install git gcc
-	curl https://dl.google.com/go/go1.12.17.linux-amd64.tar.gz  | tar -zxC /go12
-	ln -s /go12/go/bin/go /usr/bin/go12
+	curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go12
+	ln -s /go12/go/bin/go /usr/bin/go13
 	export GOPATH=./go
-	go12 get ./...
+	go13 get ./...
 
-srpm: installgo12
+srpm: installgo
 	echo "Creating the source rpm"
 	mkdir -p SOURCES version
-	go12 mod vendor
+	go13 mod vendor
 #	go mod vendor
 	tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
 	gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
