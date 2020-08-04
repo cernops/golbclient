@@ -59,10 +59,10 @@ before_script:
   ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
   ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
-test-go12:
-  stage: test
-  before_script:
-    - *openTestPorts
+#test-go12:
+#  stage: test
+#  before_script:
+#    - *openTestPorts
 
 test-go13:
   stage: test
