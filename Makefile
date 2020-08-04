@@ -1,5 +1,9 @@
 DIST ?= $(shell rpm --eval %{dist})
 SPECFILE ?= golbclient.spec
+RELEASE ?= $(shell grep 'Release = "' lbclient.go | cut -f 2 -d \")
+VERSION ?= $(shell grep 'Version = "' lbclient.go | cut -f 2 -d \")
+ 
+PKG ?= $(shell rpm -q --specfile $(SPECFILE).tmp --queryformat "%{name}-%{version}\n" | head -n 1)
 
 installgo:
 	mkdir -p /go13
@@ -12,13 +16,11 @@ installgo:
 srpm: installgo
 	echo "Creating the source rpm"
 	mkdir -p SOURCES version
+	cat $(SPECFILE) | sed "s/#REPLACE_BY_VERSION#/$(VERSION)/" | sed "s/#REPLACE_BY_RELEASE#/$(RELEASE)/" > $(SPECFILE).tmp
 	go13 mod vendor
-#	go mod vendor
-	tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$PKG/|" .
-	gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
-	rm -rf SOURCES/$PKG.tg
-	rpmbuild -bs --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE)
+	tar zcvf SOURCES/$(PKG).tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$(PKG)/|" .
+	rpmbuild -bs --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE).tmp
 
 rpm: srpm
 	echo "Creating the rpm"
-	rpmbuild -bb --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE)
+	rpmbuild -bb --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE).tmp
