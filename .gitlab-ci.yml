@@ -78,7 +78,7 @@ test-lbclient-binary:
     - go12 run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
 
 build_rpm:
-  stage: build_rpm
+  stage: rpm
   script:
     - *installGo12
     - cd $PREFIX/lb-experts/golbclient
