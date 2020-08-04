@@ -7,7 +7,7 @@ include:
 #    file: .gitlab-ci_koji.yml
   - project: lb-experts/golbclient
     file: .gitlab-ci_go.yml
-    ref: gitlab_go
+    ref: rpmci
 
 variables:
   KOJI_TAG_8: .el8
