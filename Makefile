@@ -3,9 +3,9 @@ SPECFILE ?= golbclient.spec
 RELEASE ?= $(shell grep 'Release = "' lbclient.go | cut -f 2 -d \")
 VERSION ?= $(shell grep 'Version = "' lbclient.go | cut -f 2 -d \")
 
-COPY ?= $(shell  cat $(SPECFILE) | sed "s/\#REPLACE_BY_VERSION\#/$(VERSION)/" | sed "s/\#REPLACE_BY_RELEASE\#/$(RELEASE)/"  > $(SPECFILE).tmp )
+COPY ?= $(shell cat $(SPECFILE) | sed "s/\#REPLACE_BY_VERSION\#/$(VERSION)/" | sed "s/\#REPLACE_BY_RELEASE\#/$(RELEASE)/"  > $(SPECFILE).tmp )
  
-PKG ?= $(shell echo $(COPY) ; rpm -q --specfile $(SPECFILE).tmp --queryformat "%{name}-%{version}\n" | head -n 1)
+PKG ?= $(shell $(COPY) rpm -q --specfile $(SPECFILE).tmp --queryformat "%{name}-%{version}\n" | head -n 1)
 
 installgo:
 	mkdir -p /go13
