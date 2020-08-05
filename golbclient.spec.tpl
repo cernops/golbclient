@@ -73,11 +73,10 @@ GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 
 %install
 # main package binary
-install -d -p %{buildroot}/usr/sbin/ %{buildroot}/usr/share/selinux/targeted/ %{buildroot}/usr/local/etc %{buildroot}/usr/local/sbin/
+install -d -p %{buildroot}/usr/sbin/ %{buildroot}/usr/share/selinux/targeted/ %{buildroot}/etc/lbclient/ %{buildroot}/usr/sbin/
 install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
-cd %{buildroot}/usr/local/sbin && ln -s ../../sbin/lbclient
-echo "load constant -1" >  %{buildroot}/usr/local/etc/lbclient.conf
+echo "load constant -1" >  %{buildroot}/etc/lbclient/lbclient.conf
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
@@ -85,12 +84,13 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 %files
 %doc LICENSE COPYING README.md
 /usr/sbin/lbclient
-/usr/local/sbin/lbclient
 /usr/share/selinux/targeted/lbclient.pp
-%config(noreplace) /usr/local/etc/lbclient.conf
+%config(noreplace) /etc/lbclient/lbclient.conf
 
 
 %changelog
+* Wed Aug 05 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3-1.ai7
+- Move away from /usr/local/ 
 * Tue Oct 08 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.2
 - Adding a default configuration to disable lbclient
 * Thu Sep 05 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.1
