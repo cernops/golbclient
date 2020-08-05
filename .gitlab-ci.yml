@@ -41,14 +41,6 @@ build_rpm7:
     - *patch_version
     - yum-builddep -y --disableplugin=protectbase,priorities *.spec
 
-.installGo12: &installGo12 |
-  mkdir /go12
-  yum -y install git gcc
-  curl https://dl.google.com/go/go1.12.17.linux-amd64.tar.gz  | tar -zxC /go12
-  ln -s /go12/go/bin/go /usr/bin/go12
-  export GOPATH=/go
-  go12 get ./...
-
 .openTestPorts: &openTestPorts |
   yum install iproute nmap-ncat git gcc -y
   nc -l      -p           22        &
@@ -73,7 +65,7 @@ test-go13:
 test-lbclient-binary:
   stage: test
   script:
-#    - *installGo12
+    - yum -y install golang
     - mkdir -p /etc/lbclient/
     - echo "load constant 50000" > /etc/lbclient/lbclient.conf
     - echo "lbalias=test.cern.ch" > /etc/lbclient/lbaliases
