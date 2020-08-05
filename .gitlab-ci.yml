@@ -29,6 +29,23 @@ variables:
     - cat golbclient.spec.tpl  | sed "s/#REPLACE_BY_VERSION#/$VERSION/" | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > golbclient.spec
     - yum-builddep -y *.spec
 
+build_srpm7:
+  before_script:
+    - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
+    - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
+
+    - cat golbclient.spec.tpl  | sed "s/#REPLACE_BY_VERSION#/$VERSION/" | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > golbclient.spec
+
+    - yum-builddep -y --disableplugin=protectbase,priorities *.spec
+
+build_rpm7:
+  before_script:
+    - RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
+    - VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
+
+    - cat golbclient.spec.tpl  | sed "s/#REPLACE_BY_VERSION#/$VERSION/" | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > golbclient.spec
+    - yum-builddep -y --disableplugin=protectbase,priorities *.spec
+
 #before_script:
 #  - yum -y install rpm-build rpmdevtools
 #  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
