@@ -1,12 +1,12 @@
-%global provider	gitlab
-%global provider_tld	cern.ch
-%global project		lb-experts
+%global provider      gitlab
+%global provider_tld  cern.ch
+%global project       lb-experts
 %global provider_full %{provider}.%{provider_tld}/%{project}
-%global repo		golbclient
+%global repo          golbclient
 
-%global import_path	%{provider_full}/%{repo}
-%global gopath		%{_datadir}/gocode
-%global debug_package	%{nil}
+%global import_path   %{provider_full}/%{repo}
+%global gopath        %{_datadir}/gocode
+%global debug_package %{nil}
 
 Name: lbclient
 Version: #REPLACE_BY_VERSION#
@@ -31,15 +31,24 @@ Requires: net-snmp
 
 This is a concurrent implementation of the CERN LB client.
 
-The load balancing daemon dynamically handles the list of machines behind a given DNS alias to allow scaling and improve availability.
+The load balancing daemon dynamically handles the list of machines behind a
+given DNS alias to allow scaling and improve availability.
 
-The Domain Name System (DNS), the defacto standard for name resolution and esential for the network, is an open standard based protocol which allows the use of names instead of IP addresses on the network.
-Load balancing is an advanced function that can be provided by DNS, to load balance requests across several machines running the same service by using the same DNS name.
+The Domain Name System (DNS), the defacto standard for name resolution and
+esential for the network, is an open standard based protocol which allows
+the use of names instead of IP addresses on the network.
+
+Load balancing is an advanced function that can be provided by DNS, to load
+balance requests across several machines running the same service by using
+the same DNS name.
 
 The load balancing server requests each machine for its load status.
-The SNMP daemon, gets the request and calls the locally installed metric program, which delivers the load value in SNMP syntax to STDOUT. The SNMP daemon then passes this back to the load balancing server.
-The lowest loaded machine names are updated on the DNS servers via the DynDNS mechanism.
+The SNMP daemon, gets the request and calls the locally installed metric
+program, which delivers the load value in SNMP syntax to STDOUT. The SNMP
+daemon then passes this back to the load balancing server.
 
+The lowest loaded machine names are updated on the DNS servers via the
+DynDNS mechanism.
 
 %prep
 %setup -n %{name}-%{version} -q
