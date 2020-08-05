@@ -14,7 +14,6 @@ Release: #REPLACE_BY_RELEASE#%{?dist}
 
 Summary: CERN DNS Load Balancer Client
 License: ASL 2.0
-#URL: https://%{import_path}
 URL: https://github.com/cernops/%{repo}
 
 Source: %{name}-%{version}.tgz

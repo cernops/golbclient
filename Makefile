@@ -1,5 +1,5 @@
 DIST ?= $(shell rpm --eval %{dist})
-SPECFILE ?= golbclient.spec
+SPECFILE ?= lbclient.spec
 
  
 PKG ?= $(shell rpm -q --specfile $(SPECFILE) --queryformat "%{name}-%{version}\n" | head -n 1)
