@@ -7,15 +7,15 @@ COPY ?= $(shell cat $(SPECFILE) | sed "s/\#REPLACE_BY_VERSION\#/$(VERSION)/" | s
  
 PKG ?= $(shell $(COPY) rpm -q --specfile $(SPECFILE).tmp --queryformat "%{name}-%{version}\n" | head -n 1)
 
-installgo:
-	mkdir -p /go13
-	yum -y install git gcc
-	curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
-	ln -s /go13/go/bin/go /usr/bin/go
-	export GOPATH=/go13
-	go get ./...
+#installgo:
+#	mkdir -p /go13
+#	yum -y install git gcc
+#	curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
+#	ln -s /go13/go/bin/go /usr/bin/go
+#	export GOPATH=/go13
+#	go get ./...
 
-srpm: installgo
+srpm: 
 	echo "Creating the source rpm"
 	mkdir -p SOURCES version
 	go mod vendor
