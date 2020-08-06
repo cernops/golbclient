@@ -88,8 +88,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
-* Wed Aug 05 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3-1.ai7
-- Move away from /usr/local/ 
+* Wed Aug 05 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.2-2
+- Move to rpmci
 * Tue Oct 08 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.2
 - Adding a default configuration to disable lbclient
 * Thu Sep 05 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.1
