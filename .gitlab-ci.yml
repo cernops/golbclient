@@ -66,12 +66,12 @@ test-lbclient-binary:
   stage: test
   script:
     - yum -y install golang
-    - mkdir -p /etc/lbclient/
-    - echo "load constant 50000" > /etc/lbclient/lbclient.conf
-    - echo "lbalias=test.cern.ch" > /etc/lbclient/lbaliases
+    - mkdir -p /usr/local/etc/
+    - echo "load constant 50000" > /usr/local/etc/lbclient.conf
+    - echo "lbalias=test.cern.ch" > /usr/local/etc/lbaliases
     - cd /builds/lb-experts/golbclient
     - go run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)integer(\n)50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
-    - echo "lbalias=test2.cern.ch" >> /etc/lbclient/lbaliases
-    - echo "load constant 40000" >> /etc/lbclient/lbclient.conf.test2.cern.ch
+    - echo "lbalias=test2.cern.ch" >> /usr/local/etc/lbclient/lbaliases
+    - echo "load constant 40000" >> /usr/local/etc/lbclient/lbclient.conf.test2.cern.ch
     - go run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
 
