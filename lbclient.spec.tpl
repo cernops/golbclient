@@ -75,7 +75,7 @@ GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 install -d -p %{buildroot}/usr/sbin/ %{buildroot}/usr/share/selinux/targeted/ %{buildroot}/usr/local/etc/ %{buildroot}/usr/sbin/
 install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
-echo "load constant -1" >  %{buildroot}/etc/lbclient/lbclient.conf
+echo "load constant -1" >  %{buildroot}/usr/local/etc/lbclient.conf
 
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
