@@ -68,6 +68,12 @@ install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.
 cd %{buildroot}/usr/local/sbin && ln -s ../../sbin/lbclient
 echo "load constant -1" >  %{buildroot}/usr/local/etc/lbclient.conf
 
+%preun
+# remove all the files if this is the last package removed (not upgraded)
+if [ "$1" == 0 ] ; then
+  semodule -r lbclient
+fi
+
 %post
 semodule -i /usr/share/selinux/targeted/lbclient.pp
 
@@ -80,6 +86,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Mon Jul 06 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3
+- Removal of the selinux when the rpm is removed
 * Tue Oct 08 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.2
 - Adding a default configuration to disable lbclient
 * Thu Sep 05 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.1
