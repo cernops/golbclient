@@ -10,45 +10,37 @@ image: gitlab-registry.cern.ch/linuxsupport/cc7-base:latest
   export GOPATH=/go
   go12 get ./...
 
-build-go12:
-  stage: build
-  script:
-    - *installGo12
-    - go12 build -race ./...
+#build-go12:
+#  stage: prebuild
+#  script:
+#    - *installGo12
+#    - go12 build -race ./...
 
-test-go12:
-  stage: test
-  script:
-    - *installGo12
-    - go12 test -v -cover ./tests/ci/...
-    - go12 test -race ./tests/ci/...
+#test-go12:
+#  stage: test
+#  script:
+#    - *installGo12
+#    - go12 test -v -cover ./tests/ci/...
+#    - go12 test -race ./tests/ci/...
 
-fmt-my-project:
-  stage: build
-  script:
-    - *installGo12
-    - MOD_FILES=$(find . -name "*.go"  -exec /go12/go/bin/go fmt {} \;)
-    - echo "FILES MODIFIED $MOD_FILES"
-    - if [ "$MOD_FILES" != "" ]; then false; fi
-
-bench-go12:
-  stage: test
-  script:
-    - *installGo12
-    - go12 test ./tests/benchmarking/... -bench=. -benchmem
-    - go12 test ./tests/benchmarking/... -bench=. -benchmem -race
+#bench-go12:
+#  stage: test
+#  script:
+#    - *installGo12
+#    - go12 test ./tests/benchmarking/... -bench=. -benchmem
+#    - go12 test ./tests/benchmarking/... -bench=. -benchmem -race
 
 
 .installGo13: &installGo13 |
   mkdir /go13
   yum install -y gcc
-  curl https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz  | tar -zxC /go13
+  curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
   ln -s /go13/go/bin/go /usr/bin/go13
   export GOPATH=/go
   go13 get ./...
 
 build-go13:
-  stage: build
+  stage: prebuild
   script:
     - *installGo13
     - go13 build -race ./...
