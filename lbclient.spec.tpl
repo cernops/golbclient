@@ -1,12 +1,12 @@
-%global provider	gitlab
-%global provider_tld	cern.ch
-%global project		lb-experts
+%global provider      gitlab
+%global provider_tld  cern.ch
+%global project       lb-experts
 %global provider_full %{provider}.%{provider_tld}/%{project}
-%global repo		golbclient
+%global repo          golbclient
 
-%global import_path	%{provider_full}/%{repo}
-%global gopath		%{_datadir}/gocode
-%global debug_package	%{nil}
+%global import_path   %{provider_full}/%{repo}
+%global gopath        %{_datadir}/gocode
+%global debug_package %{nil}
 
 Name: lbclient
 Version: #REPLACE_BY_VERSION#
@@ -14,9 +14,10 @@ Release: #REPLACE_BY_RELEASE#%{?dist}
 
 Summary: CERN DNS Load Balancer Client
 License: ASL 2.0
-URL: https://%{import_path}
+URL: https://github.com/cernops/%{repo}
+
 Source: %{name}-%{version}.tgz
-BuildRequires: golang >= 1.5
+BuildRequires: golang >= 1.13
 BuildRequires: checkpolicy
 %if 0%{?el6}%{?el7}
 BuildRequires: policycoreutils-python
@@ -31,15 +32,24 @@ Requires: net-snmp
 
 This is a concurrent implementation of the CERN LB client.
 
-The load balancing daemon dynamically handles the list of machines behind a given DNS alias to allow scaling and improve availability.
+The load balancing daemon dynamically handles the list of machines behind a
+given DNS alias to allow scaling and improve availability.
 
-The Domain Name System (DNS), the defacto standard for name resolution and esential for the network, is an open standard based protocol which allows the use of names instead of IP addresses on the network.
-Load balancing is an advanced function that can be provided by DNS, to load balance requests across several machines running the same service by using the same DNS name.
+The Domain Name System (DNS), the defacto standard for name resolution and
+esential for the network, is an open standard based protocol which allows
+the use of names instead of IP addresses on the network.
+
+Load balancing is an advanced function that can be provided by DNS, to load
+balance requests across several machines running the same service by using
+the same DNS name.
 
 The load balancing server requests each machine for its load status.
-The SNMP daemon, gets the request and calls the locally installed metric program, which delivers the load value in SNMP syntax to STDOUT. The SNMP daemon then passes this back to the load balancing server.
-The lowest loaded machine names are updated on the DNS servers via the DynDNS mechanism.
+The SNMP daemon, gets the request and calls the locally installed metric
+program, which delivers the load value in SNMP syntax to STDOUT. The SNMP
+daemon then passes this back to the load balancing server.
 
+The lowest loaded machine names are updated on the DNS servers via the
+DynDNS mechanism.
 
 %prep
 %setup -n %{name}-%{version} -q
@@ -62,7 +72,7 @@ GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
 
 %install
 # main package binary
-install -d -p %{buildroot}/usr/sbin/ %{buildroot}/usr/share/selinux/targeted/ %{buildroot}/usr/local/etc %{buildroot}/usr/local/sbin/
+install -d -p %{buildroot}/usr/local/sbin/ %{buildroot}/usr/share/selinux/targeted/ %{buildroot}/usr/local/etc/ %{buildroot}/usr/sbin/
 install -p -m0755 lbclient %{buildroot}/usr/sbin/lbclient
 install -p config/lbclient.pp  %{buildroot}/usr/share/selinux/targeted/lbclient.pp
 cd %{buildroot}/usr/local/sbin && ln -s ../../sbin/lbclient
@@ -86,6 +96,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Wed Aug 05 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3-2
+- Move to rpmci
 * Mon Jul 06 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3
 - Removal of the selinux when the rpm is removed
 * Tue Oct 08 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.2
