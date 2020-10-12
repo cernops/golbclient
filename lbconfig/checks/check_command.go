@@ -18,8 +18,8 @@ type Command struct{}
 */
 
 const (
-	CommandNotFoundCode 	= 127
-	CommandNotExecutable 	= 126
+	CommandNotFoundCode  = 127
+	CommandNotExecutable = 126
 )
 
 func (command Command) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
@@ -30,9 +30,9 @@ func (command Command) Run(contextLogger *logger.Entry, args ...interface{}) (in
 	if len(found) > 1 {
 		usrCmd := strings.TrimSpace(found[1])
 		contextLogger.Tracef("Attempting to run command [%s]", usrCmd)
-		out, err := runner.RunCommand(usrCmd, true, 0)
+		out, err, stderr := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
-			contextLogger.Errorf("The command [%s] failed. Error [%v]", usrCmd, err)
+			contextLogger.Errorf("The command [%s] failed. Error [%v] Stderr[%v]", usrCmd, err, stderr)
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if exitErr.Exited() {
 					if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
@@ -54,4 +54,3 @@ func (command Command) Run(contextLogger *logger.Entry, args ...interface{}) (in
 
 	return -1, fmt.Errorf("there was no command to execute in the line [%s]", line)
 }
-

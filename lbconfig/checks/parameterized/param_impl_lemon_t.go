@@ -2,11 +2,12 @@ package param
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
-	"regexp"
-	"strings"
 )
 
 type LemonImpl struct {
@@ -54,9 +55,9 @@ func (li LemonImpl) Run(contextLogger *logger.Entry, metrics []string, valueList
 	contextLogger.Debugf("Running the [lemon] cli path [%s] for the metrics [%s]", li.CommandPath, metric)
 	// Add the [lemon-cli] arguments
 
-	output, err := runner.Run(li.CommandPath, true, 0, "--script", "-m", metric)
+	output, err, stderr := runner.Run(li.CommandPath, true, 0, "--script", "-m", metric)
 	if err != nil {
-		return fmt.Errorf("failed to run the [lemon] cli with the error [%s]", err.Error())
+		return fmt.Errorf("failed to run the [lemon] cli with the error [%s] and Stderr[%s]", err.Error(), stderr)
 	}
 
 	// Abort if nothing is returned

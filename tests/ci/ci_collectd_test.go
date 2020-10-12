@@ -11,16 +11,16 @@ import (
 // TestCICollectdCLI : checks if the alternative [collectd] used in the CI pipeline is OK
 func TestCICollectdCLI(t *testing.T) {
 	logger.SetLevel(logger.ErrorLevel)
-	output, err := runner.Run("/usr/bin/collectdctl",
+	output, err, stderr := runner.Run("/usr/bin/collectdctl",
 		true, defaultTimeout, "getval", "test")
 	if err != nil {
-		logger.Errorf("An error was detected when running the CI [collectdctl]. Error [%s]", err.Error())
+		logger.Errorf("An error was detected when running the CI [collectdctl]. Error [%s] Stderr[%s]", err.Error(), stderr)
 		t.FailNow()
 	} else if len(strings.TrimSpace(output)) == 0 {
 		logger.Errorf("The CI [collectdctl] failed to return a row value for a pre-defined metric")
 		t.FailNow()
 	}
-	logger.Tracef("CI [collectdctl] output [%s]", output)
+	logger.Tracef("CI [collectdctl] output [%s] Stderr[%s]", output, stderr)
 }
 
 func TestCollectd(t *testing.T) {
@@ -35,10 +35,10 @@ func TestCollectd(t *testing.T) {
 			configuration: "../test/lbclient_collectd_check_fail.conf", shouldFail: true, expectedMetricValue: -15},
 		{title: "FailedConfigurationFileWithWrongKey",
 			configuration: "../test/lbclient_collectd_check_fail_with_wrong_key.conf",
-			shouldFail: true, expectedMetricValue: -15},
+			shouldFail:    true, expectedMetricValue: -15},
 		{title: "FailedConfigurationFileWithEmptyKey",
 			configuration: "../test/lbclient_collectd_check_fail_with_empty_key.conf",
-			shouldFail: true, expectedMetricValue: -15},
+			shouldFail:    true, expectedMetricValue: -15},
 	}
 
 	runMultipleTests(t, myTests)

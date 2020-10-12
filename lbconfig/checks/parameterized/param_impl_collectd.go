@@ -2,11 +2,12 @@ package param
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
-	"regexp"
-	"strings"
 )
 
 type CollectdImpl struct {
@@ -53,8 +54,8 @@ func (ci CollectdImpl) Run(contextLogger *logger.Entry, metrics []string, valueL
 		}
 
 		contextLogger.Debugf("Running the [collectd] path [%s] cli for the metric [%s]", ci.CommandPath, metricName)
-		rawOutput, err := runner.Run(ci.CommandPath, true, 0, "getval", metric)
-		contextLogger.Tracef("Raw output from [collectdctl] [%v]", rawOutput)
+		rawOutput, err, stderr := runner.Run(ci.CommandPath, true, 0, "getval", metric)
+		contextLogger.Tracef("Raw output from [collectdctl] [%v] Stderr[%v]", rawOutput, stderr)
 		if err != nil {
 			return fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
 		}
