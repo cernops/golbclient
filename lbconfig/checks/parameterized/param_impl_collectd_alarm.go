@@ -3,20 +3,22 @@ package param
 import (
 	"encoding/json"
 	"fmt"
-	logger "github.com/sirupsen/logrus"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"reflect"
 	"strings"
 	"sync"
+
+	logger "github.com/sirupsen/logrus"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
 type CollectdAlarmImpl struct {
 	CommandPath string
-	cache alarmMetricCache
+	cache       alarmMetricCache
 }
 
 // Needed for eventual concurrent map access
 var alarmsMutex = &sync.RWMutex{}
+
 // This is a tuple of metric to its corresponding state
 type alarmMetricCache map[string]string
 
@@ -66,7 +68,7 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 		for alarmState := range userRequiredStates {
 			go func(state string) {
 				contextLogger.Debugf("Running the [collectd] alarm cli [%s] for the state [%s]...", ci.CommandPath, state)
-				rawOutput, err := runner.Run(
+				rawOutput, err, stderr := runner.Run(
 					ci.CommandPath,
 					true,
 					0,
@@ -75,12 +77,12 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 					`| egrep -o "/.*" | cut -c 2- | sort | uniq`)
 
 				if err != nil {
-					resultsCh <-fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
+					resultsCh <- fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
 					return
 				}
 
-				contextLogger.Tracef("Raw output from [collectdctl] [%v]",
-					strings.Replace(rawOutput, "\n", " ", -1))
+				contextLogger.Tracef("Raw output from [collectdctl] [%v] Stderr[%v]",
+					strings.Replace(rawOutput, "\n", " ", -1), stderr)
 				cacheAllTheOutput := strings.Split(rawOutput, "\n")
 				for _, line := range cacheAllTheOutput {
 					if len(strings.TrimSpace(line)) == 0 {
@@ -96,7 +98,7 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 				}
 
 				contextLogger.Tracef("Cached all the metrics for state [%s]...", state)
-				resultsCh <-nil
+				resultsCh <- nil
 			}(alarmState)
 		}
 
@@ -126,7 +128,6 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 	contextLogger.Debugf("Metric [%s] requirements successfully validated...", metrics[0])
 	return nil
 }
-
 
 func (ci CollectdAlarmImpl) parseStates(states interface{}) (out []string, err error) {
 	switch v := states.(type) {
