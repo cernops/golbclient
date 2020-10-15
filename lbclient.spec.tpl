@@ -96,6 +96,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Wed Oct 14 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-1
+- New check for EOS
 * Wed Aug 05 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3-2
 - Move to rpmci
 * Mon Jul 06 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 2.1.3
