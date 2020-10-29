@@ -6,9 +6,13 @@ find_in_array() {
         find="${!1}"
 
         for metric in "${array[*]}"
-	do
-		printf "$metric" | grep -w "$find" | awk '{print $2" "$3}'
-	done
+	        do
+	            if [[ "${3}" == "all" ]]; then
+	                printf "$metric"
+	            else
+	                printf "$metric" | grep -w "$find" | awk '{print $2" "$3}'
+	            fi
+	        done
 }
 
 ## Get the supplied metrics
@@ -16,14 +20,49 @@ find_in_array() {
 db=(
 	"vmem/vmpage_number-writeback_temp value=0.000000e+00"
 	"cpu/percent-idle value=9.844851e+01"
+	"load/load-relative value=10.01e+01"
 	"cpu/percent-system value=3.356831e+01"
 	"test in=1.960003e+00\ntest out=3.241338e+01"
 )
 
+## Unknown DB
+db_unknown=(
+    "cpu/percent-idle"
+    "memory/memory-cached"
+)
+
+## Okay DB
+db_okay=(
+    "cpu/percent-system"
+)
+
+## Error DB
+db_error=(
+    "vmem/vmpage_number-writeback"
+)
+
+## Warning DB
+db_warning=(
+    "interface-eth0/if_dropped"
+)
+
+mode=${1}
 metric=${2}
 
 ## Iterate over the supplied metrics and find a value if they exist
 OIFS=$IFS
 IFS=$'\n'
-find_in_array metric db[*]
+
+if [[ ${1} == "listval" ]]; then
+    case "${2:6:10}" in
+        "UNKNOWN"|"unknown") find_in_array metric db_unknown[*] all ;;
+        "OKAY"|"okay") find_in_array metric db_okay[*] all ;;
+        "ERROR"|"error") find_in_array metric db_error[*] all ;;
+        "WARNING"|"warning") find_in_array metric db_warning[*] all ;;
+    esac
+else
+    find_in_array metric db[*]
+fi
+
+
 IFS=${OIFS}
