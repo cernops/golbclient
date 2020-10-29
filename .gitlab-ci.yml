@@ -1,114 +1,77 @@
 ---
-image: gitlab-registry.cern.ch/linuxsupport/cc7-base
-stages:
-  - build
-  - test
-  - build_rpm
-  - koji_scratch
-  - koji
-  - deploy_qa
-  - deploy_prod
+image: gitlab-registry.cern.ch/linuxsupport/cc7-base:latest
+
+include:
+  - 'https://gitlab.cern.ch/linuxsupport/rpmci/raw/master/rpm-ci.yml'
+  - project: lb-experts/golbclient
+    file: .gitlab-ci_go.yml
+    ref: rpmci
+
+variables:
+  KOJI_TAG: 'lb'
+  KOJI_TAG_6: 'ai6'
+  KOJI_TAG_7: 'ai7'
+
+  BUILD_6: 'True'
+  BUILD_7: 'True'
+  BUILD_8: 'True'
+
+  DIST_8: .el8
+  DIST_7: .ai7
+  DIST_6: .ai6
 
 
-before_script:
-  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
-  - pwd
-  - ls -al 
-  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
-  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
-  - ln -s $PREFIX/lb-experts/golbclient /go/src/gitlab.cern.ch/lb-experts/golbclient
+.patch_version: &patch_version |
+    RELEASE=`grep 'Release = "' lbclient.go | awk -F \" '{print $2}'`
+    VERSION=`grep 'Version = "' lbclient.go | awk -F \" '{print $2}'`
+    cat lbclient.spec.tpl  | sed "s/#REPLACE_BY_VERSION#/$VERSION/" | sed "s/#REPLACE_BY_RELEASE#/$RELEASE/" > lbclient.spec
+    
+.rpm_deps:
+  before_script:
+    - *patch_version
+    - yum-builddep -y *.spec
 
-#  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
-#  - ls -al /go/src/github.com/reguero/
-#  - ls -al /go/src/github.com/reguero/go-snmplib
-#  - echo "AND IN VENDOR"
-#  - ls -alR vendor
-#  - cd /go/src/gitlab.cern.ch/lb-experts/golbclient
-  - export SPEC=$(ls *spec)
-  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
-  - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
-  - klist
-  - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
+build_srpm7:
+  before_script:
+    - *patch_version
+    - yum-builddep -y --disableplugin=protectbase,priorities *.spec
 
-build-my-project:
-  stage: build
-  script:
-    - yum -y install golang git gcc
-    - export GOPATH=/go
-    - go get github.com/tools/godep
-    - /go/bin/godep restore
-    - /go/bin/godep go build
-    - /go/bin/godep go build -race
+build_rpm7:
+  before_script:
+    - *patch_version
+    - yum-builddep -y --disableplugin=protectbase,priorities *.spec
 
-fmt-my-project:
-  stage: build
-  script:
-    - yum -y install golang git gcc
-    - export GOPATH=/go
-    - MOD_FILES=$(find . -name "*.go"  -exec go fmt {} \;)
-    - echo "FILES MODIFIED $MOD_FILES"
-    - if [ "$MOD_FILES" != "" ]; then false; fi
+.openTestPorts: &openTestPorts |
+  yum install iproute nmap-ncat git gcc -y
+  nc -l      -p           22        &
+  nc -l      -p           21        &
+  nc -l      -p           2811      &
+  nc -l      -p           80        &
+  nc -l      -p           922       &
+  nc -l -u   -p           922       &
+  nc -l  127.0.0.1 202              &
+  sleep 1
+  cat /proc/net/tcp
+  cat /proc/net/tcp6
+  if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
+  ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
+  ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
-test-my-project:
+test-go13:
+  stage: test
+  before_script:
+    - *openTestPorts
+
+test-lbclient-binary:
   stage: test
   script:
-    - yum -y install golang git gcc
-    - export GOPATH=/go
-    - go get github.com/tools/godep
-    - /go/bin/godep restore
-    - /go/bin/godep go test -v -cover ./...
-    - /go/bin/godep go test -race 
-
-build_rpm:
-  stage: build_rpm
-  script:
-    - mkdir SOURCES
-    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
-  artifacts:
-    paths:
-      - SRPMS/
-    expire_in: 1 week
-
-
-kojicheck:
-  stage: koji_scratch
-  script:
-    - echo "Checking if $PKG_REL exists"
-    - if koji --config=.koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
-  allow_failure: true
-
-kojiscratch:
-  stage: koji_scratch
-  script:
-    - export SRPM="SRPMS/${PKG_REL}.src.rpm"
-    - echo "koji build --wait --scratch $KOJI_TARGET $SRPM"
-    - koji --config=.koji build --wait --scratch $KOJI_TARGET $SRPM
-
-koji:
-  stage: koji
-  script:
-    - export SRPM="SRPMS/${PKG_REL}.src.rpm"
-    - echo "koji build --wait $KOJI_TARGET $SRPM"
-    - koji --config=.koji build --wait $KOJI_TARGET $SRPM
-  only:
-    - tags
-
-tag_qa:
-  stage: deploy_qa
-  when: manual
-  only:
-    - tags
-  script:
-    - koji --config=.koji tag-pkg ${KOJI_TARGET}-qa ${PKG_REL}
-  allow_failure: false
-
-tag_prod:
-  stage: deploy_prod
-  when: manual
-  only:
-    - tags
-  script:
-    - koji --config=.koji tag-pkg ${KOJI_TARGET}-stable ${PKG_REL}
+    - yum -y install golang
+    - mkdir -p /usr/local/etc/
+    - echo "load constant 50000" > /usr/local/etc/lbclient.conf
+    - echo "lbalias=test.cern.ch" > /usr/local/etc/lbaliases
+    - cd /builds/lb-experts/golbclient
+    - go run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)integer(\n)50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
+    - echo "lbalias=test2.cern.ch" >> /usr/local/etc/lbaliases
+    - echo "load constant 40000" >> /usr/local/etc/lbclient.conf.test2.cern.ch
+    - go run lbclient.go | grep -Pzo ".1.3.6.1.4.1.96.255.1(\n)string(\n)test2.cern.ch=40000,test.cern.ch=50000" | if [ $(wc -l) -eq 3 ]; then true; else false; fi
 

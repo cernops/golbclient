@@ -1,0 +1,28 @@
+
+module lbclient 2.0;
+
+require {
+  type afs_t;
+  type collectd_t;
+  type initrc_t;
+  type shadow_t;
+  type snmpd_t;
+  type snmpd_t;
+  type unreserved_port_t;
+  type usr_t;
+  type var_spool_t;
+
+  class file { read open getattr append };
+  class tcp_socket name_connect;
+  class udp_socket write;
+  class unix_stream_socket connectto;
+}
+
+#============= snmpd_t ==============
+allow snmpd_t afs_t:udp_socket write;
+allow snmpd_t collectd_t:unix_stream_socket connectto;
+allow snmpd_t initrc_t:udp_socket write;
+allow snmpd_t shadow_t:file { read open getattr };
+allow snmpd_t unreserved_port_t:tcp_socket name_connect;
+allow snmpd_t usr_t:file append;
+allow snmpd_t var_spool_t:file { read open getattr };
