@@ -14,7 +14,7 @@ stages:
 .installKoji: &installKoji |
   yum -y install koji
   KOJI_USER=${KOJI_USER:-lbbuild}
-  KOJI_PASSWORD=${KOJI_PASSWORD:-$LBBUILD_PASSWORD}
+  KOJI_PASSWORD=${KOJI_PASSWORD:-$KOJICI_PWD}
   echo $KOJI_PASSWORD | kinit $KOJI_USER@CERN.CH
   klist
   printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
