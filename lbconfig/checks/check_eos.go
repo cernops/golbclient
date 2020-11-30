@@ -35,7 +35,7 @@ func DoEOSCheck(filehandle io.Reader, baseCmd string, contextLogger *logger.Entr
 	for scanner.Scan() {
 		line := scanner.Text()
 		match := eosEntry.FindStringSubmatch(line)
-		if (len(match) > 0) && (match[1] != "/eos/project") && (match[1] != "/eos/user") {
+		if len(match) > 0 {
 			usrCmd := baseCmd + match[1]
 			contextLogger.Tracef("Attempting to run command [%s]", usrCmd)
 			out, err, stderr := runner.RunCommand(usrCmd, true, 0)

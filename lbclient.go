@@ -15,7 +15,7 @@ const (
 	// Version number
 	Version = "2.2.0"
 	// Release number
-	Release = "2"
+	Release = "3"
 )
 
 func main() {
