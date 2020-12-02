@@ -29,7 +29,7 @@ func (ci CollectdImpl) Run(contextLogger *logger.Entry, metrics []string, valueL
 		contextLogger.Tracef("Looking for the collectd metric [%v]", metric)
 		// Remove square-brackets from metric
 		metric := regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
-		metricName := regexp.MustCompile("[a-zA-Z-_0-9]*([/][a-zA-Z_-]*)?([:][a-zA-Z-_0-9]+)?").FindAllString(metric, 1)[0]
+		metricName := regexp.MustCompile("[a-zA-Z-_0-9\\.]*([/][a-zA-Z_-]*)?([:][a-zA-Z-_0-9]+)?").FindAllString(metric, 1)[0]
 		// Extract slice from the metric
 		var value float64
 		var err error
