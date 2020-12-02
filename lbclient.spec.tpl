@@ -96,6 +96,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Wed Dec 02 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-4
+- Accept dots in collectd metric names to allow cvmfs checks
 * Mon Nov 30 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-3
 - Allow check for /eos/user and /eos/project
 * Wed Oct 14 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-1
