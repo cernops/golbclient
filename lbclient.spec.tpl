@@ -96,6 +96,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Tue Jan 12 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-5
+- Add rule to SElinux policy for collectd_var_run_t sock_file write to address problem in hap11
 * Wed Dec 02 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-4
 - Accept dots in collectd metric names to allow cvmfs checks
 * Mon Nov 30 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-3
