@@ -8,9 +8,9 @@ find_in_array() {
         for metric in "${array[*]}"
 	        do
 	            if [[ "${3}" == "all" ]]; then
-	                printf "$metric"
+	                printf "lxplus801.cern.ch/${metric}"
 	            else
-	                printf "$metric" | grep -w "$find" | awk '{print $2" "$3}'
+	                printf "lxplus801.cern.ch/${metric}" | grep -w "$find" | awk '{print $2" "$3}'
 	            fi
 	        done
 }
