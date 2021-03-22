@@ -13,9 +13,9 @@ const (
 	// OID : SNMP identifier
 	OID = ".1.3.6.1.4.1.96.255.1"
 	// Version number
-	Version = "2.2.0"
+	Version = "2.2.1"
 	// Release number
-	Release = "5"
+	Release = "0"
 )
 
 func main() {
