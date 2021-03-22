@@ -73,8 +73,7 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 					true,
 					0,
 					"listval",
-					fmt.Sprintf("state=%s", state),
-					`| egrep -o "/.*" | cut -c 2- | sort | uniq`)
+					fmt.Sprintf("state=%s", state))
 
 				if err != nil {
 					resultsCh <- fmt.Errorf("failed to run the [collectd] cli with the error [%s]", err.Error())
@@ -91,10 +90,11 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 					}
 
 					contextLogger.Trace("Attempting to cache state...")
+					slicedLine := strings.SplitN(line, "/", 2)
 					alarmsMutex.Lock()
-					ci.cache[line] = state
+					ci.cache[slicedLine[1]] = state
 					alarmsMutex.Unlock()
-					contextLogger.Tracef("Cached value for state [%s] with state [%s]...", line, state)
+					contextLogger.Tracef("Cached value for state [%s] with state [%s]...", slicedLine[1], state)
 				}
 
 				contextLogger.Tracef("Cached all the metrics for state [%s]...", state)
