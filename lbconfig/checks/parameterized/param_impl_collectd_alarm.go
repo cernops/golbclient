@@ -121,10 +121,11 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 		if ci.alarmWasFoundInCache(contextLogger.WithField("cache", fmt.Sprintf("%v", ci.cache)), metric, parsedStates) {
 			continue
 		}
-
-		return fmt.Errorf("the desired [metric:states] pair [%v:%v] was not found", metric, desiredStates)
+		(*valueList)["alarms"] = -15
+                contextLogger.Errorf("The metric [%v] is not in '%s'", metric, desiredStates)
+		return nil
 	}
-
+        (*valueList)["alarms"] = 1
 	contextLogger.Debugf("Metric [%s] requirements successfully validated...", metrics[0])
 	return nil
 }
