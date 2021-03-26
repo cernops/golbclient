@@ -82,7 +82,7 @@ func (g ParamCheck) Run(contextLogger *logger.Entry, args ...interface{}) (int, 
 
 	// Return before evaluating an expression
 	if g.isAlarm() {
-		return 1, nil
+		return parameters["alarms"].(int), nil
 	}
 
 	// Parse the expression
