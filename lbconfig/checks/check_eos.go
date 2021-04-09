@@ -31,7 +31,7 @@ func (eos EOS) Run(contextLogger *logger.Entry, args ...interface{}) (int, error
 func DoEOSCheck(filehandle io.Reader, baseCmd string, contextLogger *logger.Entry) (int, error) {
 	scanner := bufio.NewScanner(filehandle)
 	contextLogger.Trace("Checking the mount entries...")
-	eosEntry, _ := regexp.Compile("^[0-9A-Za-z_-]+ (/eos/[0-9A-Za-z_-]+) fuse .*")
+	eosEntry, _ := regexp.Compile("^[0-9A-Za-z_-]+ (/eos/[0-9A-Za-z_-]+|/eos/[0-9A-Za-z_-]+/[0-9A-Za-z_-]+) fuse .*")
 	for scanner.Scan() {
 		line := scanner.Text()
 		match := eosEntry.FindStringSubmatch(line)
