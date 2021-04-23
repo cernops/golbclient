@@ -96,6 +96,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Fri Apr 23 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.1-2
+- Accept new eos mountpoint configuration
 * Mon Mar 22 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.1-0
 - Fix the checks of collectd-alarms
 * Tue Jan 12 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-5
