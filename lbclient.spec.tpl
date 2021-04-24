@@ -65,6 +65,7 @@ semodule_package -m config/lbclient.mod -o config/lbclient.pp
 
 
 %build
+go mod init gitlab.cern.ch/lb-experts/golbclient
 go mod edit -replace gitlab.cern.ch/lb-experts/golbclient=$(pwd)
 go build -o lbclient
 
