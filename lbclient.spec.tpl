@@ -65,9 +65,8 @@ semodule_package -m config/lbclient.mod -o config/lbclient.pp
 
 
 %build
-mkdir -p src/%{provider_full}
-ln -s ../../../ src/%{provider_full}/%{repo}
-GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
+go mod edit -replace gitlab.cern.ch/lb-experts/golbclient=$(pwd)
+go build -o lbclient
 
 
 %install
