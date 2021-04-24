@@ -24,5 +24,4 @@ srpm: installgo
    
 rpm: srpm
 	echo "Creating the rpm"
-111
 	rpmbuild -bb --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
