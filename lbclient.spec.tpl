@@ -65,7 +65,6 @@ semodule_package -m config/lbclient.mod -o config/lbclient.pp
 
 
 %build
-go env -w GO111MODULE=auto
 go build -o lbclient -mod=vendor
 
 
