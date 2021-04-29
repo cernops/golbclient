@@ -65,9 +65,7 @@ semodule_package -m config/lbclient.mod -o config/lbclient.pp
 
 
 %build
-mkdir -p src/%{provider_full}
-ln -s ../../../ src/%{provider_full}/%{repo}
-GOPATH=$(pwd):%{gopath} go build -o lbclient %{import_path}
+go build -o lbclient -mod=vendor
 
 
 %install
@@ -96,6 +94,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Fri Apr 23 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.1-2
+- Accept new eos mountpoint configuration
 * Mon Mar 22 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.1-0
 - Fix the checks of collectd-alarms
 * Tue Jan 12 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.0-5
