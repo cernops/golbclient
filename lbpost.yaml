@@ -1,0 +1,11 @@
+#sample file with dummy data
+url: https://goermis.cern.ch/lb/api/v1/lbclient/
+cacert: /etc/ssl/certs/CERN-bundle.pem
+hostcert: /etc/ssl/certs/hostcert.pem
+hostkey: /etc/ssl/certs/hostkey.pem
+authtimeout: 5
+status:
+   - aliasname: alias1.cern.ch
+     secret: dGVzddsdA==
+   - aliasname: alias2.cern.ch
+     secret: ytFGsdfaQ==

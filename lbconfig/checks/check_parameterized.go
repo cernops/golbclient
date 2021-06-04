@@ -12,10 +12,10 @@ import (
 )
 
 type ParamCheckType = string
+
 const (
 	ALARM ParamCheckType = "alarm"
 )
-
 
 type ParamCheck struct {
 	Impl param.Parameterized
@@ -47,8 +47,6 @@ func (g ParamCheck) Run(contextLogger *logger.Entry, args ...interface{}) (int, 
 	if len(found) != 2 || (!isCheck && !isLoad) {
 		return -1, fmt.Errorf("incorrect syntax specified at [%s]. Please use (`load` or `check` `<cli>`)", line)
 	}
-
-
 
 	rawExpression := found[1]
 	// Log

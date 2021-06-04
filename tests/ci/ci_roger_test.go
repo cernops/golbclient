@@ -34,6 +34,6 @@ func TestRoger(t *testing.T) {
 			configuration: "../test/lbclient_roger.conf", expectedMetricValue: -13,
 			setup: createRogerFileDraining},
 	}
-	
+
 	runMultipleTests(t, myTests)
 }

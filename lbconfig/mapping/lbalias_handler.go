@@ -3,11 +3,12 @@ package mapping
 import (
 	"bytes"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/filehandler"
 
@@ -16,11 +17,11 @@ import (
 
 // ConfigurationMapping : object with the config
 type ConfigurationMapping struct {
-	ConfigFilePath 	string
-	AliasNames     	[]string
-	MetricValue    	int
+	ConfigFilePath string
+	AliasNames     []string
+	MetricValue    int
 	//ChecksDone     map[string]bool
-	Default			bool
+	Default bool
 }
 
 // NewConfiguration : Creates a Configuration object
@@ -36,8 +37,6 @@ func NewConfiguration(path string, aliasName ...string) *ConfigurationMapping {
 	cm.MetricValue = 0
 	return &cm
 }
-
-
 
 func (cm ConfigurationMapping) String() string {
 	out := bytes.Buffer{}
@@ -71,7 +70,7 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 				return nil
 			}
 			logger.Debugf("Checking the file [%v]", path)
-			if info.Name() ==  options.LbMetricDefaultFileName {
+			if info.Name() == options.LbMetricDefaultFileName {
 				defaultMapping = NewConfiguration(path)
 				logger.Trace("Added the default")
 			} else if strings.HasSuffix(info.Name(), ".cern.ch") && strings.HasPrefix(info.Name(), "lbclient.conf") {
@@ -125,12 +124,11 @@ func ReadLBConfigFiles(options appSettings.Options) (confFiles []*ConfigurationM
 	if defaultMapping != nil && len(defaultMapping.AliasNames) > 0 {
 		confFiles = append(confFiles, defaultMapping)
 	}
-
 	return confFiles, err
 }
 
 // GetReturnCode : checks if the return code should be a string or an integer
-func GetReturnCode(appOutput bytes.Buffer, lbConfMappings []*ConfigurationMapping) (metricType, metricValue string) {
+func GetReturnCode(appOutput bytes.Buffer, lbConfMappings []*ConfigurationMapping) (metricType, metricValue, postErmis string) {
 	if len(lbConfMappings) == 1 {
 		metricType = "integer"
 		metricValue = fmt.Sprintf("%v", lbConfMappings[0].MetricValue)
@@ -138,5 +136,6 @@ func GetReturnCode(appOutput bytes.Buffer, lbConfMappings []*ConfigurationMappin
 		metricType = "string"
 		metricValue = strings.TrimRight(appOutput.String(), ",")
 	}
+	postErmis = strings.TrimRight(appOutput.String(), ",")
 	return
 }

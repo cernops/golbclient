@@ -3,26 +3,27 @@ package lbconfig
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"strings"
+
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	fluentd "github.com/joonix/log"
 	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/helpers/appSettings"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
-	"os"
-	"strings"
 )
 
 // AppLauncher : Helper struct that encapsulates the logic of running [lbclient]
 type AppLauncher struct {
-	AppOptions              appSettings.Options
-	lbConfMappings          []*mapping.ConfigurationMapping
-	MetricType, MetricValue string
+	AppOptions                         appSettings.Options
+	lbConfMappings                     []*mapping.ConfigurationMapping
+	MetricType, MetricValue, PostErmis string
 }
 
 func init() {
 	logger.SetFormatter(&nested.Formatter{
-		ShowFullLevel: 	true,
-		FieldsOrder:	[]string{"EVALUATION", "CLI"},
+		ShowFullLevel: true,
+		FieldsOrder:   []string{"EVALUATION", "CLI"},
 	})
 }
 
@@ -95,9 +96,8 @@ func (l *AppLauncher) Run() error {
 		appOutput.WriteString(confMapping.String() + ",")
 	}
 
-	l.MetricType, l.MetricValue = mapping.GetReturnCode(appOutput, lbConfMappings)
+	l.MetricType, l.MetricValue, l.PostErmis = mapping.GetReturnCode(appOutput, lbConfMappings)
 	logger.Debugf("metric = [%s]", l.MetricValue)
-
 	return returnCode
 }
 
@@ -108,5 +108,5 @@ func (l *AppLauncher) Output(oid string) string {
 
 // PrintOutput : Prints the output of the application
 func (l *AppLauncher) PrintOutput(oid string) {
-	fmt.Printf(l.Output(oid))
+	fmt.Print(l.Output(oid))
 }

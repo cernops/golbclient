@@ -1,6 +1,5 @@
 // +build linux darwin
 
-
 package lbconfig
 
 import (
@@ -26,11 +25,11 @@ type ExpressionCode struct {
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 var allLBExpressions = map[string]ExpressionCode{
-	"NOLOGIN":         {code: 1, cli: checks.NoLogin{}},
-	"TMPFULL":         {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":       {code: 7, cli: checks.DaemonListening{	Metric: `{"port": 22, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
-	"WEBDAEMON":       {code: 8, cli: checks.DaemonListening{	Metric: `{"port": 80, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
-	"FTPDAEMON":       {code: 9, cli: checks.DaemonListening{	Metric: `{"port": 21, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"NOLOGIN": {code: 1, cli: checks.NoLogin{}},
+	"TMPFULL": {code: 6, cli: checks.TmpFull{}},
+	"SSHDAEMON": {code: 7, cli: checks.DaemonListening{Metric: `{"port": 22, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"WEBDAEMON": {code: 8, cli: checks.DaemonListening{Metric: `{"port": 80, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"FTPDAEMON": {code: 9, cli: checks.DaemonListening{Metric: `{"port": 21, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
 	"AFS":             {code: 10, cli: checks.AFS{}},
 	"GRIDFTPDAEMON":   {code: 11, cli: checks.DaemonListening{Metric: `{"port": 2811, "protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
 	"LEMON":           {code: 12, cli: checks.ParamCheck{Impl: param.LemonImpl{}}},
@@ -39,7 +38,7 @@ var allLBExpressions = map[string]ExpressionCode{
 	"COMMAND":         {code: 14, cli: checks.Command{}},
 	"COLLECTD":        {code: 15, cli: checks.ParamCheck{Impl: param.CollectdImpl{}}},
 	"COLLECTDLOAD":    {code: 15, cli: checks.ParamCheck{Impl: param.CollectdImpl{}}},
-	"COLLECTD_ALARMS": {code: 15, cli: checks.ParamCheck{Impl: param.CollectdAlarmImpl{}, Type:"alarm"}},
+	"COLLECTD_ALARMS": {code: 15, cli: checks.ParamCheck{Impl: param.CollectdAlarmImpl{}, Type: "alarm"}},
 	"CONSTANT":        {code: 16, cli: checks.MetricConstant{}},
 	"DAEMON":          {code: 17, cli: checks.DaemonListening{}},
 	"EOS":             {code: 18, cli: checks.EOS{}},
@@ -55,9 +54,9 @@ var allLBExpressions = map[string]ExpressionCode{
 // Evaluate : Evaluates a [lbalias] entry
 func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConfig bool) error {
 	contextLogger := logger.WithFields(logger.Fields{
-		"EVALUATION": 	"LOADING",
-		"CFG_PATH": 	cm.ConfigFilePath,
-		"MAX_TIMEOUT": 	timeout.String(),
+		"EVALUATION":   "LOADING",
+		"CFG_PATH":     cm.ConfigFilePath,
+		"MAX_TIMEOUT":  timeout.String(),
 		"CHECK_CONFIG": strconv.FormatBool(checkConfig),
 	})
 
@@ -104,8 +103,8 @@ func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConf
 			negRet := -allLBExpressions[myAction].code
 			ret, err := timer.ExecuteWithTimeoutRInt(timeout, allLBExpressions[myAction].cli.Run,
 				contextLogger.WithFields(logger.Fields{
-					"CLI": 			myAction,
-					"EVALUATION": 	"ONGOING",
+					"CLI":        myAction,
+					"EVALUATION": "ONGOING",
 				}), line, cm.AliasNames, cm.Default)
 
 			if err != nil {

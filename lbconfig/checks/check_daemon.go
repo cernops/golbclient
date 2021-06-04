@@ -21,7 +21,7 @@ type DaemonListening struct {
 	Ports []int
 	Hosts []string
 	// Backwards compatibility
-	Metric string
+	Metric        string
 	contextLogger *logger.Entry
 }
 
@@ -43,7 +43,7 @@ type daemonJSONContainer struct {
 
 // condFilePair : Helper struct to achieve code-reuse
 type condFilePair struct {
-	cond bool
+	cond     bool
 	filepath string
 }
 
@@ -215,7 +215,7 @@ func (daemon *DaemonListening) validateUniqueKeys(line interface{}) {
 // processMetricLine : this function is responsible for the extraction of the JSON Metric string from the
 // 	configuration line. Attempt to parse the extracted JSON or use the hardcoded Metric line if provided
 //	(backwards-compatibility) process. Fetch the required amount of lines that need to be seen in the output of netstat.
-func (daemon *DaemonListening) processMetricLine( metric string) error {
+func (daemon *DaemonListening) processMetricLine(metric string) error {
 	// If no values were given to the Listening struct (required due to the backwards compatibility requirements.
 	// 	For more information, see: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 	if len(daemon.Metric) != 0 {
