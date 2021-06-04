@@ -122,10 +122,10 @@ func (ci CollectdAlarmImpl) Run(contextLogger *logger.Entry, metrics []string, v
 			continue
 		}
 		(*valueList)["alarms"] = -15
-                contextLogger.Errorf("The metric [%v] is not in '%s'", metric, desiredStates)
+		contextLogger.Errorf("The metric [%v] is not in '%s'", metric, desiredStates)
 		return nil
 	}
-        (*valueList)["alarms"] = 1
+	(*valueList)["alarms"] = 1
 	contextLogger.Debugf("Metric [%s] requirements successfully validated...", metrics[0])
 	return nil
 }

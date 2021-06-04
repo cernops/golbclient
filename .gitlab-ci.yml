@@ -5,7 +5,7 @@ include:
   - 'https://gitlab.cern.ch/linuxsupport/rpmci/raw/master/rpm-ci.yml'
   - project: lb-experts/golbclient
     file: .gitlab-ci_go.yml
-    ref: rpmci
+    ref: togoermis
 
 variables:
   KOJI_TAG: 'lb'
@@ -54,7 +54,7 @@ build_rpm7:
   ln -s $PREFIX/lb-experts/golbclient/scripts/lemon-cli /usr/sbin/lemon-cli
   ln -s $PREFIX/lb-experts/golbclient/scripts/collectdctl /usr/bin/collectdctl
 
-test-go13:
+test-go15:
   stage: test
   before_script:
     - *openTestPorts

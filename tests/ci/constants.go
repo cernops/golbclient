@@ -25,18 +25,16 @@ type lbTest struct {
 	timeout              time.Duration
 	setup                func(*testing.T)
 	cleanup              func(*testing.T)
-	contextLogger		 *logger.Entry
+	contextLogger        *logger.Entry
 }
-
-
 
 func runEvaluate(t *testing.T, test lbTest) bool {
 	if test.contextLogger == nil {
 		test.contextLogger = logger.WithFields(logger.Fields{
-			"TEST":			test.title,
-			"SHOULD_FAIL":	strconv.FormatBool(test.shouldFail),
-			"SETUP":		test.setup,
-			"CLEANUP":		test.cleanup,
+			"TEST":        test.title,
+			"SHOULD_FAIL": strconv.FormatBool(test.shouldFail),
+			"SETUP":       test.setup,
+			"CLEANUP":     test.cleanup,
 		})
 	}
 
@@ -57,7 +55,7 @@ func runEvaluate(t *testing.T, test lbTest) bool {
 		}
 		defer func() {
 			if err := os.Remove(file.Name()); err != nil {
-				test.contextLogger.Warnf("An error occurred when attempting to remove the temporary test file [%s]. " +
+				test.contextLogger.Warnf("An error occurred when attempting to remove the temporary test file [%s]. "+
 					"Error [%s]", file.Name(), err.Error())
 			}
 		}()
@@ -100,9 +98,9 @@ func runMultipleTests(t *testing.T, myTests []lbTest) {
 	logger.SetLevel(logger.FatalLevel)
 	for _, myTest := range myTests {
 		logger.Infof("Running the test [%v]", myTest.title)
-		if t.Run(myTest.title, func(t *testing.T) {
+		if !t.Run(myTest.title, func(t *testing.T) {
 			runEvaluate(t, myTest)
-		}) != true {
+		}){
 			logger.Errorf("The command [%v] failed. Repeating with [TRACE] verbose level...", myTest.title)
 			logger.SetLevel(logger.TraceLevel)
 			runEvaluate(t, myTest)

@@ -17,7 +17,7 @@ func ExecuteWithTimeoutR(timeout time.Duration, f interface{}, args ...interface
 	fnName := getFunctionName(f)
 	logger.WithFields(logger.Fields{
 		"FUNCTION_W_TIMEOUT": fnName,
-		"TIMEOUT_VALUE": timeout.String()},
+		"TIMEOUT_VALUE":      timeout.String()},
 	).Debug("Executing function...")
 
 	r := make(chan interface{}, 1)
