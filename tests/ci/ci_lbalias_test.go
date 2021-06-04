@@ -78,7 +78,7 @@ func TestOneConfigFileMultipleAliases(t *testing.T) {
 		logger.Errorf("We got an error evaluating the alias [%v]", err)
 		t.Fail()
 	}
-	metricType, metricValue := mapping.GetReturnCode(appOutput, lbAliasesMappings)
+	metricType, metricValue, _ := mapping.GetReturnCode(appOutput, lbAliasesMappings)
 	logger.Infof("The return code is [%v] [%v]", metricType, metricValue)
 	if metricType != "integer" {
 		logger.Errorf("We were expecting to have an integer, and we got [%v] with value [%v]", metricType, metricValue)
@@ -111,7 +111,7 @@ func TestOneConfigFileMultipleAliasesString(t *testing.T) {
 			t.Fail()
 		}
 	}
-	metricType, metricValue := mapping.GetReturnCode(appOutput, lbAliasesMappings)
+	metricType, metricValue, _ := mapping.GetReturnCode(appOutput, lbAliasesMappings)
 	logger.Infof("The return code is [%v] [%v]", metricType, metricValue)
 
 	if metricType != "string" {

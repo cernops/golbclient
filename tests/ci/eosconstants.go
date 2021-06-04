@@ -86,9 +86,9 @@ func runMultipleEosTests(t *testing.T, myTests []eosTest) {
 	logger.SetLevel(logger.FatalLevel)
 	for _, myTest := range myTests {
 		logger.Infof("Running the test [%v]", myTest.title)
-		if t.Run(myTest.title, func(t *testing.T) {
+		if !t.Run(myTest.title, func(t *testing.T) {
 			runEOSCheck(t, myTest)
-		}) != true {
+		})  {
 			logger.Errorf("The command [%v] failed. Repeating with [TRACE] verbose level...", myTest.title)
 			logger.SetLevel(logger.TraceLevel)
 			runEOSCheck(t, myTest)

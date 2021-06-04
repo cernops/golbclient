@@ -14,6 +14,7 @@ Application Options:
       --ca=                    Set an alternative path for the lbaliases configuration file (default: /usr/local/etc/lbaliases)
   -c, --conf-name=             Set the default name to be used to lookup for the generic configuration file (default: lbclient.conf)
   -v, --version                Version of the file
+  -p, --post=                   post the load update to ermis. It takes as parameter the path of the configuration file lbpost.yaml.
 
 rotatecfg:
       --rotatecfg.enabled      Enable the automatic rotation of the log files. (default: false)

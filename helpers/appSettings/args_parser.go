@@ -15,12 +15,13 @@ type ExecutionConf struct {
 // Options : Supported application flags
 type Options struct {
 	/* Logging */
-	LoggerMode				string `short:"m" long:"logMode" default:"nested" description:"Logger mode [fluentd, fluentd_pretty, nested]"`
-	DebugLevel 				string `short:"d" long:"loglevel" default:"FATAL" description:"Logger level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]"`
+	LoggerMode string `short:"m" long:"logMode" default:"nested" description:"Logger mode [fluentd, fluentd_pretty, nested]"`
+	DebugLevel string `short:"d" long:"loglevel" default:"FATAL" description:"Logger level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]"`
 	/* Configuration files */
 	LbMetricConfDir         string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
 	LbAliasFile             string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`
 	LbMetricDefaultFileName string `short:"c" long:"conf-name" default:"lbclient.conf" description:"Set the default name to be used to lookup for the generic configuration file"`
+	LbPostFile              string `short:"p" long:"post" description:"Set the default file for the configuration of the ermis communication"`
 	/* Execution specific */
 	ExecutionConfiguration ExecutionConf `group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
 	/* Misc */

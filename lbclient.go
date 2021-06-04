@@ -58,4 +58,9 @@ func main() {
 		// Print the output
 		launcher.PrintOutput(OID)
 	}
+
+	//Send to Go-Ermis
+	if launcher.AppOptions.LbPostFile != "" {
+		launcher.PostToErmis(launcher.AppOptions.LbPostFile)
+	}
 }
