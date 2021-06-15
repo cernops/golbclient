@@ -1,6 +1,6 @@
 url: https://goermis.cern.ch/lb/api/v1/lbclient/
 cacert: /etc/ssl/certs/ca.pem
-hostcert: /etc/ssl/certs/hostcert.pem
+hostcert: /etc/ssl/certs/hostcert.pem #this cert is the one of goermis.cern.ch, which makes it a temp solution. 
 hostkey: /etc/ssl/certs/hostkey.pem
 authtimeout: 5
 status:
