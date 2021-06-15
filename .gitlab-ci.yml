@@ -5,7 +5,6 @@ include:
   - 'https://gitlab.cern.ch/linuxsupport/rpmci/raw/master/rpm-ci.yml'
   - project: lb-experts/golbclient
     file: .gitlab-ci_go.yml
-    ref: togoermis
 
 variables:
   KOJI_TAG: 'lb'
