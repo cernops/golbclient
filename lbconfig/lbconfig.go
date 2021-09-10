@@ -42,6 +42,7 @@ var allLBExpressions = map[string]ExpressionCode{
 	"CONSTANT":        {code: 16, cli: checks.MetricConstant{}},
 	"DAEMON":          {code: 17, cli: checks.DaemonListening{}},
 	"EOS":             {code: 18, cli: checks.EOS{}},
+	"REBOOT":          {code: 19, cli: checks.Reboot{}},
 	"XSESSIONS":       {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPPING":        {code: 6, cli: checks.CheckAttribute{}},
 	"SWAPING":         {code: 6, cli: checks.CheckAttribute{}},
