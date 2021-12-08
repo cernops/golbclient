@@ -94,6 +94,8 @@ semodule -i /usr/share/selinux/targeted/lbclient.pp
 
 
 %changelog
+* Wed Dec 08 2021 Pablo Saiz <pablo.saiz@cern.ch>           - 2.2.1-3
+- New check for scheduled reboots
 * Fri Apr 23 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.1-2
 - Accept new eos mountpoint configuration
 * Mon Mar 22 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 2.2.1-0
