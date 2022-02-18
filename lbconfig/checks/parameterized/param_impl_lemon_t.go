@@ -2,11 +2,12 @@ package param
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 	"regexp"
 	"strings"
+
+	logger "github.com/sirupsen/logrus"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/parser"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
 type LemonImpl struct {
@@ -25,7 +26,7 @@ func (li LemonImpl) Name() string {
 }
 
 // Run : Runs the [lemon-cli] for the found metric's list and populates the expression [valueList] with the values fetched from the CLI.
-func (li LemonImpl) Run(metrics []string, valueList *map[string]interface{}) error {
+func (li LemonImpl) Run(contextLogger *logger.Entry, metrics []string, valueList *map[string]interface{}) error {
 	if len(li.CommandPath) == 0 {
 		li.CommandPath = "/usr/sbin/lemon-cli"
 	}
@@ -35,28 +36,28 @@ func (li LemonImpl) Run(metrics []string, valueList *map[string]interface{}) err
 	// Remove square-brackets from metric
 	metric = regexp.MustCompile("[\\[\\]]").ReplaceAllString(metric, "")
 	// Create the slices map
-	logger.Trace("Metric [%s]", metric)
+	contextLogger.Tracef("Metric [%s]", metric)
 	slicesMap := map[int]sliceEntry{}
 	slices := regexp.MustCompile("[0-9]{2,}[:][0-9]").FindAllString(metric, -1)
-	logger.Trace("Found slices [%v]", slices)
+	contextLogger.Tracef("Found slices [%v]", slices)
 
 	for i, slice := range slices {
 		slice = regexp.MustCompile("[ ]").ReplaceAllString(slice, "")
-		logger.Trace("Processing slice [%s]", slice)
+		contextLogger.Tracef("Processing slice [%s]", slice)
 		ps := strings.Split(slice, ":")
 		slicesMap[i] = sliceEntry{fmt.Sprintf("[%s]", ps[0]), parser.ParseInterfaceAsInteger(ps[1]), slice}
 	}
 	// Log
-	logger.Debug("Slices map [%v]", slicesMap)
+	contextLogger.Debugf("Slices map [%v]", slicesMap)
 	// Remove the slice from the metric
 	metric = regexp.MustCompile("[:][0-9]+").ReplaceAllString(metric, "")
 	// Run the CLI with all the metrics found
-	logger.Debug("Running the [lemon] cli path [%s] for the metrics [%s]", li.CommandPath, metric)
+	contextLogger.Debugf("Running the [lemon] cli path [%s] for the metrics [%s]", li.CommandPath, metric)
 	// Add the [lemon-cli] arguments
 
-	output, err := runner.Run(li.CommandPath, true, 0, "--script", "-m", metric)
+	output, err, stderr := runner.Run(li.CommandPath, true, 0, "--script", "-m", metric)
 	if err != nil {
-		return fmt.Errorf("failed to run the [lemon] cli with the error [%s]", err.Error())
+		return fmt.Errorf("failed to run the [lemon] cli with the error [%s] and Stderr[%s]", err.Error(), stderr)
 	}
 
 	// Abort if nothing is returned
@@ -72,7 +73,7 @@ func (li LemonImpl) Run(metrics []string, valueList *map[string]interface{}) err
 		outputMap[fmt.Sprintf("[%s]", ps[1])] = ps[3:]
 	}
 
-	logger.Trace("Output map [%v]", outputMap)
+	contextLogger.Tracef("Output map [%v]", outputMap)
 
 	// Assign sliced metrics
 	for _, slicedMetric := range slicesMap {
@@ -81,23 +82,23 @@ func (li LemonImpl) Run(metrics []string, valueList *map[string]interface{}) err
 			// Fail the whole expression if the index is out-of-bounds
 			return fmt.Errorf("the lemon slice is out of bounds")
 		}
-		logger.Trace("Assigning sliced metric [%s] to value [%s]", slicedMetric.mname, outputMap[slicedMetric.name][si])
+		contextLogger.Tracef("Assigning sliced metric [%s] to value [%s]", slicedMetric.mname, outputMap[slicedMetric.name][si])
 		(*valueList)[slicedMetric.mname] = parser.ParseInterfaceAsFloat(outputMap[slicedMetric.name][si])
-		logger.Trace("Value list [%v]", *valueList)
+		contextLogger.Tracef("Value list [%v]", *valueList)
 	}
 
 	// Assign non-slices metrics
 	for _, mname := range metrics {
 		if !strings.Contains(mname, ":") && len(outputMap[mname]) != 0 {
-			logger.Trace("Assigning non-slices metric [%s]", mname)
+			contextLogger.Tracef("Assigning non-slices metric [%s]", mname)
 			runes := []rune(mname)
 			normName := string(runes[1 : len(runes)-1])
 			(*valueList)[normName] = parser.ParseInterfaceAsFloat(outputMap[mname][0])
-			logger.Trace("Value list [%v]", *valueList)
+			contextLogger.Tracef("Value list [%v]", *valueList)
 		}
 	}
 
 	// Log
-	logger.Trace("Value map [%v]", *valueList)
+	contextLogger.Tracef("Value map [%v]", *valueList)
 	return nil
 }

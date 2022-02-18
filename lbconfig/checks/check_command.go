@@ -1,33 +1,56 @@
 package checks
 
 import (
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
-	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
+	"fmt"
+	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
+
+	logger "github.com/sirupsen/logrus"
+	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/utils/runner"
 )
 
-type Command struct {}
+type Command struct{}
 
 /*
 	@TODO use the runner API to enable pipped commands support
 */
 
-func (command Command) Run(args ...interface{}) (interface{}, error) {
+const (
+	CommandNotFoundCode  = 127
+	CommandNotExecutable = 126
+)
+
+func (command Command) Run(contextLogger *logger.Entry, args ...interface{}) (int, error) {
 	cmd, _ := regexp.Compile("(?i)(^check[ ]+command)")
 	line := args[0].(string)
 	found := cmd.Split(line, -1)
 
 	if len(found) > 1 {
 		usrCmd := strings.TrimSpace(found[1])
-		logger.Trace("Attempting to run command [%s]", usrCmd)
-		out, err := runner.RunCommand(usrCmd, true, 0)
+		contextLogger.Tracef("Attempting to run command [%s]", usrCmd)
+		out, err, stderr := runner.RunCommand(usrCmd, true, 0)
 		if err != nil {
-			return false, err
+			contextLogger.Errorf("The command [%s] failed. Error [%v] Stderr[%v]", usrCmd, err, stderr)
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				if exitErr.Exited() {
+					if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+						if status.ExitStatus() == CommandNotFoundCode || status.ExitStatus() == CommandNotExecutable {
+							// If command not found or not executable
+							return -1, err
+						}
+					}
+					// If command exited with status != 0
+					return -1, nil
+				}
+			}
+			return -1, err
 		}
 
-		logger.Debug("Command output [%s]", out)
-		return true, nil
+		contextLogger.Debugf("Command output [%s]", out)
+		return 1, nil
 	}
-	return false, nil
+
+	return -1, fmt.Errorf("there was no command to execute in the line [%s]", line)
 }

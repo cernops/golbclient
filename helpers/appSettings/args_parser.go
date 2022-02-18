@@ -1,38 +1,33 @@
 package appSettings
 
 import (
-	"github.com/jessevdk/go-flags"
 	"time"
+
+	"github.com/jessevdk/go-flags"
 )
 
-// LogRotateCfg : Encapsulated options to be used to configure the rotation of the log files
-type LogRotateCfg struct {
-	Enabled     bool `long:"enabled" description:"Enable the automatic rotation of the log files. (default: false)"`
-	LineLimit   int  `long:"linelimit" default:"5000" description:"The maximum amount of lines per log file."`
-	BackupLimit int  `long:"backuplimit" default:"9" description:"The maximum amount of backups."`
-	MsgBuffer   int  `long:"msgBuffer" default:"100" description:"The message buffer capacity."`
-}
-
+// ExecutionConf options for the execution
 type ExecutionConf struct {
-	MetricTimeout time.Duration `long:"timeout" default:"30s" description:"The timeout value used when executing a metric line"`
+	MetricTimeout       time.Duration `hidden:"true" long:"timeout" default:"30s" description:"The timeout value used when executing a metric line"`
+	CheckConfigFilePath string        `short:"t" long:"checkconfig" description:"Checks that the supplied configuration file is correct. Returns 0 if it is valid"  `
 }
 
 // Options : Supported application flags
 type Options struct {
 	/* Logging */
-	LogAutoFileRotation 		LogRotateCfg `group:"rotatecfg" namespace:"rotatecfg" env-namespace:"rotatecfg" description:"Location of the of log file"`
-	LogFileLocation     		string       `short:"l" long:"log" default:"log/app.log" description:"Location of the of log file"`
-	ConsoleDebugLevel   		string       `short:"d" long:"loglevel" default:"FATAL" description:"Console debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]"`
-	FileDebugLevel      		string       `long:"fdevel" default:"TRACE" description:"File debug level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]"`
-	FileLoggingEnabled			bool		 `long:"flog" description:"Activate the file logging service"`
+	LoggerMode string `short:"m" long:"logMode" default:"nested" description:"Logger mode [fluentd, fluentd_pretty, nested]"`
+	DebugLevel string `short:"d" long:"loglevel" default:"FATAL" description:"Logger level [TRACE, DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]"`
 	/* Configuration files */
-	LbMetricConfDir         	string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
-	LbAliasFile             	string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`
-	LbMetricDefaultFileName 	string `short:"c" long:"conf-name" default:"lbclient.conf" description:"Set the default name to be used to lookup for the generic configuration file"`
+	LbMetricConfDir         string `long:"cm" default:"/usr/local/etc/" description:"Set the directory where the client should fetch the configuration files from"`
+	LbAliasFile             string `long:"ca" default:"/usr/local/etc/lbaliases" description:"Set an alternative path for the lbaliases configuration file"`
+	LbMetricDefaultFileName string `short:"c" long:"conf-name" default:"lbclient.conf" description:"Set the default name to be used to lookup for the generic configuration file"`
+	LbPostFile              string `short:"p" long:"post" description:"Set the default file for the configuration of the ermis communication"`
 	/* Execution specific */
-	ExecutionConfiguration 		ExecutionConf `hidden:"true" group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
+	ExecutionConfiguration ExecutionConf `group:"exec" namespace:"exec" env-namespace:"exec" description:"Execution specific instructions"`
 	/* Misc */
-	Version 					bool `short:"v" long:"version" description:"Version of the file"`
+	Version bool   `short:"v" long:"version" description:"Version of the file"`
+	GData   string `short:"g" long:"gdata" description:"Option needed by the snmp calls"`
+	NData   string `short:"n" long:"ndata" description:"Option needed by the snmp calls"`
 }
 
 // ParseApplicationSettings : Helper function to handle the parsing of the @see AppArgs schema against a given slice of

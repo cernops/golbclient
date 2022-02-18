@@ -1,0 +1,10 @@
+url: https://goermis02.cern.ch/lb/api/v1/lbclient/
+cacert: /etc/ssl/certs/ca.pem
+hostcert: /etc/ssl/certs/hostcert.pem
+hostkey: /etc/ssl/certs/hostkey.pem
+authtimeout: 5
+status:
+   - aliasname: test1.cern.ch
+     secret: dGVzddsdA==
+   - aliasname: test2.cern.ch
+     secret: ytFGsdfaQ==

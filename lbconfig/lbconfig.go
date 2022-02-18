@@ -1,8 +1,10 @@
+// +build linux darwin
+
 package lbconfig
 
 import (
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbclient/helpers/logger"
+	logger "github.com/sirupsen/logrus"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/checks/parameterized"
 	"gitlab.cern.ch/lb-experts/golbclient/lbconfig/mapping"
@@ -23,21 +25,27 @@ type ExpressionCode struct {
 
 // @TODO: add values to the wiki page: http://configdocs.web.cern.ch/configdocs/dnslb/lbclientcodes.html
 var allLBExpressions = map[string]ExpressionCode{
-	"NOLOGIN":       {code: 1, cli: checks.NoLogin{}},
-	"TMPFULL":       {code: 6, cli: checks.TmpFull{}},
-	"SSHDAEMON":     {code: 7, cli: checks.DaemonListening{Port: 22}},
-	"WEBDAEMON":     {code: 8, cli: checks.DaemonListening{Port: 80}},
-	"FTPDAEMON":     {code: 9, cli: checks.DaemonListening{Port: 21}},
-	"AFS":           {code: 10, cli: checks.AFS{}},
-	"GRIDFTPDAEMON": {code: 11, cli: checks.DaemonListening{Port: 2811}},
-	"LEMON":         {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
-	"LEMONLOAD":     {code: 12, cli: checks.ParamCheck{Type: param.LemonImpl{}}},
-	"ROGER":         {code: 13, cli: checks.RogerState{}},
-	"COMMAND":       {code: 14, cli: checks.Command{}},
-	"COLLECTD":      {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
-	"COLLECTDLOAD":  {code: 15, cli: checks.ParamCheck{Type: param.CollectdImpl{}}},
-	"XSESSIONS":     {code: 6, cli: checks.CheckAttribute{}},
-	"SWAPPING":      {code: 6, cli: checks.CheckAttribute{}},
+	"NOLOGIN": {code: 1, cli: checks.NoLogin{}},
+	"TMPFULL": {code: 6, cli: checks.TmpFull{}},
+	"SSHDAEMON": {code: 7, cli: checks.DaemonListening{Metric: `{"port": 22, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"WEBDAEMON": {code: 8, cli: checks.DaemonListening{Metric: `{"port": 80, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"FTPDAEMON": {code: 9, cli: checks.DaemonListening{Metric: `{"port": 21, 	"protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"AFS":             {code: 10, cli: checks.AFS{}},
+	"GRIDFTPDAEMON":   {code: 11, cli: checks.DaemonListening{Metric: `{"port": 2811, "protocol": "tcp", "ip":["ipv4", "ipv6"]}`}},
+	"LEMON":           {code: 12, cli: checks.ParamCheck{Impl: param.LemonImpl{}}},
+	"LEMONLOAD":       {code: 12, cli: checks.ParamCheck{Impl: param.LemonImpl{}}},
+	"ROGER":           {code: 13, cli: checks.RogerState{}},
+	"COMMAND":         {code: 14, cli: checks.Command{}},
+	"COLLECTD":        {code: 15, cli: checks.ParamCheck{Impl: param.CollectdImpl{}}},
+	"COLLECTDLOAD":    {code: 15, cli: checks.ParamCheck{Impl: param.CollectdImpl{}}},
+	"COLLECTD_ALARMS": {code: 15, cli: checks.ParamCheck{Impl: param.CollectdAlarmImpl{}, Type: "alarm"}},
+	"CONSTANT":        {code: 16, cli: checks.MetricConstant{}},
+	"DAEMON":          {code: 17, cli: checks.DaemonListening{}},
+	"EOS":             {code: 18, cli: checks.EOS{}},
+	"REBOOT":          {code: 19, cli: checks.Reboot{}},
+	"XSESSIONS":       {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPPING":        {code: 6, cli: checks.CheckAttribute{}},
+	"SWAPING":         {code: 6, cli: checks.CheckAttribute{}},
 }
 
 /*
@@ -45,99 +53,103 @@ var allLBExpressions = map[string]ExpressionCode{
 */
 
 // Evaluate : Evaluates a [lbalias] entry
-func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration) error {
-	logger.Debug("Evaluating the configuration file [%s] for aliases [%v]", cm.ConfigFilePath, cm.AliasNames)
+func Evaluate(cm *mapping.ConfigurationMapping, timeout time.Duration, checkConfig bool) error {
+	contextLogger := logger.WithFields(logger.Fields{
+		"EVALUATION":   "LOADING",
+		"CFG_PATH":     cm.ConfigFilePath,
+		"MAX_TIMEOUT":  timeout.String(),
+		"CHECK_CONFIG": strconv.FormatBool(checkConfig),
+	})
+
+	contextLogger.Debug("Started the evaluation of the the configuration file...")
 
 	// Create a string array containing all the checksToExecute to be performed
 	var checksToExecute []string
 	for key := range allLBExpressions {
-		checksToExecute = append(checksToExecute, fmt.Sprintf("(%s)", key))
+		if key != "CONSTANT" {
+			checksToExecute = append(checksToExecute, fmt.Sprintf("(%s)", key))
+		}
 	}
 
 	// Attempt to read the configuration file
 
 	lines, err := filehandler.ReadAllLinesFromFile(cm.ConfigFilePath)
 	if err != nil {
-		logger.Error("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
+		contextLogger.Errorf("Fatal error when attempting to open the alias configuration file [%s]", err.Error())
 		return err
 	}
 	// Read the configuration file using the scanner API
-	logger.Debug("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
+	contextLogger.Debugf("Successfully opened the alias configuration file [%v]", cm.ConfigFilePath)
 
 	// Detect all comments
-	comment, _ := regexp.Compile("^(#.*)?$")
-	// Detect all checksToExecute to be made
-	actions, _ := regexp.Compile("(?i)^CHECK (" + strings.Join(checksToExecute, "|") + ")")
-	// Detect all loads to be made
-	constant, _ := regexp.Compile("(?i)^LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)")
+	comment := regexp.MustCompile("^[ \t]*(#.*)?$")
+	// Detect all actions (checks or loads) to be made
+	checksFormat := "^[ ]*CHECK (" + strings.Join(checksToExecute, "|") + ")"
+	loadsFormat := "^[ ]*LOAD ((LEMON)|(COLLECTD)|(CONSTANT))( )*(.*)"
+	actions := regexp.MustCompile(fmt.Sprintf(`(?i)((%s)|(%s))`, checksFormat, loadsFormat))
 
 	// Read the configuration file line-by-line
 	for _, line := range lines {
 		if comment.MatchString(line) {
 			continue
 		}
-		runningChecks := actions.FindStringSubmatch(line)
-		if len(runningChecks) > 0 {
-			/********************************** CHECKS **********************************/
-			myAction 	:= strings.ToUpper(runningChecks[1])
-			negRet		:= -allLBExpressions[myAction].code
-			ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[myAction].cli.Run, line, cm.AliasNames, cm.Default)
-			if err != nil || ret == false {
-				cm.MetricValue = negRet
-				return fmt.Errorf("the check of [%s] failed. Stopping execution with code [%d]",
-					myAction, cm.MetricValue)
+		foundActions := actions.FindStringSubmatch(line)
+		if len(foundActions) > 0 {
+			/********************************** ACTIONS **********************************/
+			myAction := strings.ToUpper(strings.Split(line, " ")[1])
+			if _, ok := allLBExpressions[myAction]; !ok {
+				return fmt.Errorf("the given action (check or load) metric [%s] is not supported", myAction)
 			}
-			continue
-		}
-		loads := constant.FindStringSubmatch(line)
-		if len(loads) > 0 {
-			/********************************** LOADS **********************************/
-			cliName := strings.ToUpper(loads[1])
-			negRet 	:= -allLBExpressions[cliName].code
-			if cliName == "LEMON" || cliName == "COLLECTD" {
-				ret, err := timer.ExecuteWithTimeoutR(timeout, allLBExpressions[cliName].cli.Run, line)
-				if err != nil && len(ret.([]interface{})) != 0 {
-					cm.MetricValue = negRet
-					return fmt.Errorf("metric [%s] returned a negative number [%v]", cliName, ret)
-				}
+			isLoad := regexp.MustCompile(`(?i)^LOAD`).MatchString(line)
+			negRet := -allLBExpressions[myAction].code
+			ret, err := timer.ExecuteWithTimeoutRInt(timeout, allLBExpressions[myAction].cli.Run,
+				contextLogger.WithFields(logger.Fields{
+					"CLI":        myAction,
+					"EVALUATION": "ONGOING",
+				}), line, cm.AliasNames, cm.Default)
 
-				retVal := ret.([]interface{})[0].(int32)
-				cm.MetricValue += int(retVal)
-			} else {
-				constant := strings.TrimSpace(regexp.MustCompile("(?i)(load constant)").Split(loads[0], -1)[1])
-				if !cm.AddConstant(constant) {
-					return fmt.Errorf("failed to load the constant value [%v]", constant)
-				}
+			if err != nil {
+				cm.MetricValue = negRet
+				return err
 			}
-			// Added metric value to the total in case of no problems
-			continue
+			if ret < 0 && !checkConfig {
+				cm.MetricValue = negRet
+				return nil
+			}
+			if isLoad {
+				cm.MetricValue += ret
+			}
+
+		} else {
+			// If none of the regexps were found, then it is assumed that there is a user-made mistake in the configuration file
+			cm.MetricValue = -1
+			return fmt.Errorf("unable to parse the configuration metric line [%s]. Stopping execution with "+
+				"code [%d]", line, cm.MetricValue)
 		}
-		// If none of the regexs were found, then it is assumed that there is a user-made mistake in the configuration file
-		logger.Error("Unable to parse the configuration file line [%s]", line)
 	}
 
 	if cm.MetricValue == 0 {
-		logger.Info("No metric value was found. Defaulting to the generic load calculation")
+		contextLogger.Infof("No metric value was found. Defaulting to the generic load calculation")
 		cm.MetricValue = defaultLoad()
 	}
 
 	// Log
-	logger.Trace("Final metric value [%d]", cm.MetricValue)
+	contextLogger.WithField("EVALUATION", "FINISHED").Tracef("Final metric value [%d]", cm.MetricValue)
 
 	return nil
 }
 
 func defaultLoad() int {
 	swap := swapFree()
-	logger.Debug("Result of swap formula = %f", swap)
+	logger.Debugf("Result of swap formula = %f", swap)
 	cpuLoad := cpuLoad()
-	logger.Debug("Result of cpu formula = %f", cpuLoad)
+	logger.Debugf("Result of cpu formula = %f", cpuLoad)
 	swapping := float32(0)
 	fSm, nbProcesses, users := sessionManager()
-	logger.Debug("Number of processes = %d", int(nbProcesses))
-	logger.Debug("Number of users logged in = %d ", int(users))
+	logger.Debugf("Number of processes = %d", int(nbProcesses))
+	logger.Debugf("Number of users logged in = %d ", int(users))
 	myLoad := (((swap + users/25.) / 2.) + (2. * swapping) + (3. * cpuLoad) + (2. * fSm)) / 6.
-	logger.Debug("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, " +
+	logger.Debugf("LOAD = %f, swap = %.3f, users = %.0f, swapping = %.3f, "+
 		"cpuLoad = %.3f, f_sm = %.3f", myLoad, swap, users, swapping, cpuLoad, fSm)
 	return int(myLoad * 1000)
 
@@ -146,7 +158,7 @@ func defaultLoad() int {
 func swapFree() float32 {
 	lines, err := filehandler.ReadAllLinesFromFile("/proc/meminfo")
 	if err != nil {
-		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/meminfo", err.Error())
+		logger.Errorf("Error opening the file [%s]. Error [%s]", "/proc/meminfo", err.Error())
 		return -2
 	}
 	memoryMap := map[string]int{}
@@ -157,7 +169,7 @@ func swapFree() float32 {
 			memoryMap[match[1]], _ = strconv.Atoi(match[8])
 		}
 	}
-	logger.Debug("Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
+	logger.Debugf("Mem:  %d %d\nCommit:  %d %d\nSwap: %d %d",
 		memoryMap["MemTotal"], memoryMap["MemFree"], memoryMap["CommitLimit"],
 		memoryMap["Committed_AS"], memoryMap["SwapTotal"], memoryMap["SwapFree"])
 
@@ -180,7 +192,7 @@ func swapFree() float32 {
 func cpuLoad() float32 {
 	line, err := filehandler.ReadFirstLineFromFile("/proc/loadavg")
 	if err != nil {
-		logger.Error("Error opening the file [%s]. Error [%s]", "/proc/loadavg", err.Error())
+		logger.Errorf("Error opening the file [%s]. Error [%s]", "/proc/loadavg", err.Error())
 		return -2
 	}
 	cpu := strings.Split(line, " ")
@@ -191,7 +203,7 @@ func cpuLoad() float32 {
 func sessionManager() (float32, float32, float32) {
 	out, err := exec.Command("/bin/ps", "auxw").Output()
 	if err != nil {
-		logger.Error("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
+		logger.Errorf("Error while executing the command [%s]. Error [%s]", "ps", err.Error())
 		return -10, -10, -10
 	}
 
@@ -199,9 +211,9 @@ func sessionManager() (float32, float32, float32) {
 	fSm, nbProcesses := 0.0, -1.0
 	users := map[string]bool{}
 	// There are 3 processes per gnome sesion, and 4 for the fvm
-	gnome  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
-	fvm  	:= regexp.MustCompile("^([^ ]+ +){10}[^ ]*fvwm")
-	user	:= regexp.MustCompile("^([^ ]+)")
+	gnome := regexp.MustCompile("^([^ ]+ +){10}[^ ]*((gnome-session)|(kdesktop))")
+	fvm := regexp.MustCompile("^([^ ]+ +){10}[^ ]*fvwm")
+	user := regexp.MustCompile("^([^ ]+)")
 
 	for _, line := range strings.Split(string(out), "\n") {
 		nbProcesses++
