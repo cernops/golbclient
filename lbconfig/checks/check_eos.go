@@ -42,7 +42,7 @@ func DoEOSCheck(filehandle io.Reader, baseCmd string, contextLogger *logger.Entr
 			if err != nil {
 				contextLogger.Errorf("The command [%s] failed. Error [%v] Stderr[%v]", usrCmd, err, stderr)
 				if stderr != "" {
-					if strings.Contains(stderr, "Transport endpoint is not connected") || strings.Contains(stderr, "Operation not supported") {
+					if strings.Contains(stderr, "Transport endpoint is not connected") || strings.Contains(stderr, "Operation not supported") || strings.Contains(stderr, "Input/output error") {
 						return -1, nil
 					}
 				}
