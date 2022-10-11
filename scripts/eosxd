@@ -22,6 +22,7 @@ if [[ ${oper} == "get" ]]; then
             "/eos/home-t") errorExit "Transport endpoint is not connected"  ;;
             "/eos/project-o") errorExit "Operation not supported" ;;
             "/eos/home-n") errorExit "No such attribute" ;;
+            "/eos/home-i") errorExit "Input/output error" ;;
 	    *) normalExit ;;
         esac
     fi
