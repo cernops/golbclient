@@ -24,7 +24,6 @@ BuildRequires: policycoreutils-python
 %else
 BuildRequires: policycoreutils-python-utils
 %endif
-ExclusiveArch: x86_64
 Requires: net-snmp
 
 %description
